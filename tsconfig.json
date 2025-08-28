@@ -13,7 +13,6 @@
     "noUnusedLocals": true,
     "esModuleInterop": true,
     "baseUrl": ".",
-    "resolveJsonModule": true,
-    "types": ["node"]
+    "resolveJsonModule": true
   }
 }
