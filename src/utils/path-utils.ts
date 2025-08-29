@@ -9,6 +9,7 @@ class PathUtils {
   private static _sourceDirectory: string | null = null
   private static _decodedBase: string | null = null
   private static _publicDir: string | null = null
+  private static _outDir: string | null = null
   private static _root: string | null = null
 
   private static getConfig(): ResolvedConfig {
@@ -20,7 +21,7 @@ class PathUtils {
     return PathUtils._config
   }
 
-  private static getDecodedBase(): string {
+  public static getDecodedBase(): string {
     if (!PathUtils._decodedBase) {
       const config = PathUtils.getConfig()
       PathUtils._decodedBase = path.normalize(decodeURI(config.base))
@@ -28,7 +29,7 @@ class PathUtils {
     return PathUtils._decodedBase
   }
 
-  private static getSourceDirectory(): string {
+  public static getSourceDirectory(): string {
     if (!PathUtils._sourceDirectory) {
       const config = PathUtils.getConfig()
       const normalizedEntry = path.normalize((config.build.lib as LibraryOptions).entry.toString())
@@ -42,7 +43,7 @@ class PathUtils {
     return PathUtils._sourceDirectory
   }
 
-  private static getPublicDir(): string {
+  public static getPublicDir(): string {
     if (!PathUtils._publicDir) {
       const config = PathUtils.getConfig()
       PathUtils._publicDir = path.normalize(path.resolve(config.publicDir))
@@ -50,12 +51,30 @@ class PathUtils {
     return PathUtils._publicDir
   }
 
-  private static getRoot(): string {
+  public static getOutDir(): string {
+    if (!PathUtils._outDir) {
+      const config = PathUtils.getConfig()
+      PathUtils._outDir = path.normalize(path.resolve(config.build.outDir))
+    }
+    return PathUtils._outDir
+  }
+
+  public static getRoot(): string {
     if (!PathUtils._root) {
       const config = PathUtils.getConfig()
       PathUtils._root = path.normalize(config.root)
     }
     return PathUtils._root
+  }
+
+  public static getOutDirFile(p: string): string {
+    const file = path.join(PathUtils.getOutDir(), p)
+    return fs.existsSync(file) ? file : ''
+  }
+
+  public static getPublicDirFile(p: string): string {
+    const file = path.join(PathUtils.getPublicDir(), p)
+    return fs.existsSync(file) ? file : ''
   }
 
   public static normalize(p: string): string {
@@ -96,6 +115,13 @@ class PathUtils {
       },
     )
     return path.join(decodedBase, pathToTransform)
+  }
+
+  public static getLanguageSourcePath(p: string, lang: string): string {
+    const dir = path.parse(p).dir
+    const lastDirName = path.basename(dir)
+    const finalSegments = lastDirName === lang ? dir : path.join(dir, lang)
+    return path.join(PathUtils.getSourceDirectory(), finalSegments)
   }
 }
 

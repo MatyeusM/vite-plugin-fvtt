@@ -1,48 +1,34 @@
-import path from 'path'
-import fs from 'fs-extra'
 import { context, FoundryVTTManifest } from 'src/context'
-import { ResolvedConfig } from 'vite'
 import logger from 'src/utils/logger'
-
-function flattenKeys(obj: object, prefix = ''): Record<string, string> {
-  const result: Record<string, string> = {}
-  for (const [key, val] of Object.entries(obj)) {
-    const fullKey = prefix ? `${prefix}.${key}` : key
-    if (val && typeof val === 'object' && !Array.isArray(val)) {
-      Object.assign(result, flattenKeys(val, fullKey))
-    } else {
-      result[fullKey] = val
-    }
-  }
-  return result
-}
+import { flattenKeys } from './transformer'
+import loadLanguage from './loader'
 
 export default function validator(): void {
-  const config = context.config as ResolvedConfig
   const manifest = context.manifest as FoundryVTTManifest
 
-  const files = manifest.languages.map(lang => ({
-    path: path.posix.join(config.root, config.build.outDir, lang.path),
-    language: lang.lang,
-  }))
-  const baseLanguage = files.find(file => file.language === 'en') // foundry-vtt fallback language
-  if (!baseLanguage) {
-    logger.error('Base language "en" not found')
+  const baseLanguageData = loadLanguage('en', true)
+  if (baseLanguageData.size === 0) {
+    logger.error('Base language "en" not found or could not be loaded.')
     return
   }
+  const base = flattenKeys(baseLanguageData.values().next().value)
 
-  const base = flattenKeys(fs.readJsonSync(baseLanguage.path))
+  for (const lang of manifest.languages) {
+    if (lang.lang === 'en') continue // Skip the base language itself
 
-  for (const file of files) {
-    if (file.language === baseLanguage.language) continue
+    const currentLanguageData = loadLanguage(lang.lang, true)
+    if (currentLanguageData.size === 0) {
+      console.warn(`Summary for language [${lang.lang}]: Could not be loaded.`)
+      continue
+    }
+    const current = flattenKeys(currentLanguageData.values().next().value)
 
-    const current = flattenKeys(fs.readJsonSync(file.path))
-    const missing = Object.keys(base).filter(k => !(k in current))
-    const extra = Object.keys(current).filter(k => !(k in base))
+    const missing = Object.keys(base).filter(key => !(key in current))
+    const extra = Object.keys(current).filter(key => !(key in base))
 
-    console.log(`Summary for language [${file.language}]:`)
-    if (missing.length) console.warn(`  Missing keys: ${missing.length}`, missing.slice(0, 5))
-    if (extra.length) console.warn(`  Extra keys: ${extra.length}`, extra.slice(0, 5))
-    if (!missing.length && !extra.length) console.log('  ✅ All keys match.')
+    console.log(`Summary for language [${lang.lang}]:`)
+    if (missing.length) console.warn(`\tMissing keys: ${missing.length}`, missing.slice(0, 5))
+    if (extra.length) console.warn(`\tExtra keys: ${extra.length}`, extra.slice(0, 5))
+    if (!missing.length && !extra.length) console.log('\t✅ All keys match.')
   }
 }

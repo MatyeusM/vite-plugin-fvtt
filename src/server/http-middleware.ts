@@ -1,9 +1,8 @@
-import fs from 'fs-extra'
 import { context, FoundryVTTManifest } from 'src/context'
-import { buildExpectedSrcPath, buildLanguage } from '../i18n/transformer.mjs'
-import { languageTracker } from 'src/server/trackers/language-tracker'
 import { LibraryOptions, ResolvedConfig, ViteDevServer } from 'vite'
 import path from 'src/utils/path-utils'
+import loadLanguage from 'src/language/loader'
+import { transform } from 'src/language/transformer'
 
 export default function httpMiddlewareHook(server: ViteDevServer) {
   server.middlewares.use((req, res, next) => {
@@ -31,15 +30,12 @@ export default function httpMiddlewareHook(server: ViteDevServer) {
     )
 
     if (languages.length === 1) {
-      const language = languages[0]
-      const localPublicPath = path.posix.join(config.publicDir, language.path)
-      const expectedSrcPath = buildExpectedSrcPath(config, language)
-      if (!fs.existsSync(localPublicPath)) {
-        res.setHeader('Content-Type', 'application/json')
-        res.end(buildLanguage(expectedSrcPath, language.lang))
-      } else {
-        languageTracker.addFile(language.lang, localPublicPath)
-      }
+      const lang = languages[0].lang
+      const language = loadLanguage(lang)
+      const jsonData = transform(language)
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify(jsonData, null, 2))
+      return
     }
     next()
   })
