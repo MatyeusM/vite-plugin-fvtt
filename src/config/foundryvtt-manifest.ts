@@ -1,5 +1,5 @@
 import fs from 'fs-extra'
-import path from 'path'
+import path from 'path/posix'
 import { UserConfig } from 'vite'
 import { context, FoundryVTTManifest } from 'src/context'
 
@@ -14,8 +14,8 @@ export default function loadManifest(config: UserConfig): FoundryVTTManifest {
     `${publicDir}/module.json`,
   ]
 
-  const foundPath = MANIFEST_LOCATIONS.map((relPath) => path.resolve(process.cwd(), relPath)).find(
-    (absPath) => fs.pathExistsSync(absPath),
+  const foundPath = MANIFEST_LOCATIONS.map(relPath => path.resolve(process.cwd(), relPath)).find(
+    absPath => fs.pathExistsSync(absPath),
   )
 
   if (!foundPath) {
@@ -29,7 +29,6 @@ export default function loadManifest(config: UserConfig): FoundryVTTManifest {
     data.manifestType = foundPath.includes('module.json') ? 'module' : 'system'
 
     return data as FoundryVTTManifest
-    // eslint-disable-next-line
   } catch (err: any) {
     throw new Error(`Failed to read manifest at ${foundPath}: ${err?.message || err}`)
   }

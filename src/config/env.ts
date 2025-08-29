@@ -1,5 +1,5 @@
 import dotenv from 'dotenv'
-import path from 'node:path'
+import path from 'path/posix'
 import { ENVOptions } from 'src/context'
 
 export default function loadEnv(): ENVOptions {
