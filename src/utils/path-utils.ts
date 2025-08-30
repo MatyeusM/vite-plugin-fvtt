@@ -24,7 +24,7 @@ class PathUtils {
   public static getDecodedBase(): string {
     if (!PathUtils._decodedBase) {
       const config = PathUtils.getConfig()
-      PathUtils._decodedBase = path.normalize(decodeURI(config.base))
+      PathUtils._decodedBase = PathUtils.normalize(decodeURI(config.base))
     }
     return PathUtils._decodedBase
   }
@@ -32,7 +32,9 @@ class PathUtils {
   public static getSourceDirectory(): string {
     if (!PathUtils._sourceDirectory) {
       const config = PathUtils.getConfig()
-      const normalizedEntry = path.normalize((config.build.lib as LibraryOptions).entry.toString())
+      const normalizedEntry = PathUtils.normalize(
+        (config.build.lib as LibraryOptions).entry.toString(),
+      )
       const segments = normalizedEntry
         .split(path.sep)
         .filter(Boolean)
@@ -46,7 +48,7 @@ class PathUtils {
   public static getPublicDir(): string {
     if (!PathUtils._publicDir) {
       const config = PathUtils.getConfig()
-      PathUtils._publicDir = path.normalize(path.resolve(config.publicDir))
+      PathUtils._publicDir = PathUtils.normalize(path.resolve(config.publicDir))
     }
     return PathUtils._publicDir
   }
@@ -54,7 +56,7 @@ class PathUtils {
   public static getOutDir(): string {
     if (!PathUtils._outDir) {
       const config = PathUtils.getConfig()
-      PathUtils._outDir = path.normalize(path.resolve(config.build.outDir))
+      PathUtils._outDir = PathUtils.normalize(path.resolve(config.build.outDir))
     }
     return PathUtils._outDir
   }
@@ -62,7 +64,7 @@ class PathUtils {
   public static getRoot(): string {
     if (!PathUtils._root) {
       const config = PathUtils.getConfig()
-      PathUtils._root = path.normalize(config.root)
+      PathUtils._root = PathUtils.normalize(config.root)
     }
     return PathUtils._root
   }
@@ -98,9 +100,9 @@ class PathUtils {
 
   public static foundryVTTUrlToLocal(p: string): string | null {
     const decodedBase = PathUtils.getDecodedBase()
-    let pathToTransform = PathUtils.normalize(p)
+    let pathToTransform = PathUtils.normalize('/' + p)
     if (!pathToTransform.startsWith(decodedBase)) return null
-    pathToTransform = pathToTransform.slice(decodedBase.length)
+    pathToTransform = path.relative(decodedBase, pathToTransform)
     return PathUtils.findLocalFilePath(pathToTransform)
   }
 

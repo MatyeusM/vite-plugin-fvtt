@@ -1,5 +1,6 @@
 // abstract-file-tracker.ts
 import path from 'path/posix'
+import logger from 'src/utils/logger'
 import { FSWatcher, ResolvedConfig, ViteDevServer } from 'vite'
 
 interface FileUpdateEvent {
@@ -29,6 +30,8 @@ export abstract class AbstractFileTracker<T> {
     this.watcher.on('change', changedPath => {
       const value = this.tracked.get(changedPath)
       if (!value) return
+
+      logger.info(`Attempting to hot reload ${changedPath}`)
 
       const eventData = this.getEventData(changedPath, value)
       server.ws.send({

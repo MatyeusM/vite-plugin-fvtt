@@ -11,6 +11,7 @@ import validateI18nBuild from 'src/language/validator'
 import loadLanguage from 'src/language/loader'
 import path from 'src/utils/path-utils'
 import { transform } from './language/transformer'
+import logger from 'src/utils/logger'
 
 export default function foundryVTTPlugin(): Plugin {
   context.env = loadEnv()
@@ -34,7 +35,7 @@ export default function foundryVTTPlugin(): Plugin {
         if (await fs.pathExists(src)) {
           const dest = posix.join(outDir, file)
           await fs.copy(src, dest)
-          console.log(`Copied ${file} >>> ${dest}`)
+          logger.info(`Copied ${file} >>> ${dest}`)
         }
       }
 

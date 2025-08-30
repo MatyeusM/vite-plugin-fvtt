@@ -8,10 +8,10 @@ if (import.meta.hot) {
     foundry.applications.instances.forEach(appV2 => appV2.render(true))
   }
 
-  import.meta.hot.on('foundryvtt-template-update', ({ path }) => {
+  import.meta.hot.on('foundryvtt-template-update', async ({ path }) => {
     console.log('Vite | Force reload template', path)
     Handlebars.unregisterPartial(path)
-    foundry.applications.handlebars.getTemplate(path)
+    await foundry.applications.handlebars.getTemplate(path)
     refreshApplications()
   })
 

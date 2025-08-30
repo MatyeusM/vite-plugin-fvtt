@@ -11,7 +11,9 @@ export class HandlebarsTracker extends AbstractFileTracker<boolean> {
   }
 
   protected getEventData(changedPath: string): object {
-    return { path: path.localToFoundryVTTUrl(changedPath) }
+    let foundryvttPath = path.localToFoundryVTTUrl(changedPath)
+    if (foundryvttPath.startsWith('/')) foundryvttPath = foundryvttPath.slice(1)
+    return { path: foundryvttPath }
   }
 }
 

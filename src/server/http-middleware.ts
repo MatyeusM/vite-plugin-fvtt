@@ -3,6 +3,7 @@ import { LibraryOptions, ResolvedConfig, ViteDevServer } from 'vite'
 import path from 'src/utils/path-utils'
 import loadLanguage from 'src/language/loader'
 import { transform } from 'src/language/transformer'
+import logger from 'src/utils/logger'
 
 export default function httpMiddlewareHook(server: ViteDevServer) {
   server.middlewares.use((req, res, next) => {
@@ -10,7 +11,7 @@ export default function httpMiddlewareHook(server: ViteDevServer) {
 
     // This is a defensive check to make sure we don't handle requests
     // that don't belong to our module or system.
-    if (path.isFoundryVTTUrl(req.url ?? '')) {
+    if (!path.isFoundryVTTUrl(req.url ?? '')) {
       next()
       return
     }
@@ -20,6 +21,7 @@ export default function httpMiddlewareHook(server: ViteDevServer) {
     const cssEntry = cssFileName ? path.localToFoundryVTTUrl(`${cssFileName}.css`) : null
 
     if (path.normalize(req.url ?? '') === cssEntry) {
+      logger.info(`Blocking CSS entry to ${req.url}`)
       res.setHeader('Content-Type', 'text/css')
       res.end('/* The cake is in another castle. */')
       return

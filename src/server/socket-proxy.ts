@@ -24,8 +24,9 @@ export default function socketProxy(server: ViteDevServer) {
       if (event === 'template') {
         const localPath = path.foundryVTTUrlToLocal(args[0])
         if (localPath) {
-          if (!maybeAck) maybeAck({ html: fs.readFileSync(localPath, 'utf8'), success: true })
+          if (maybeAck) maybeAck({ html: fs.readFileSync(localPath, 'utf8'), success: true })
           handlebarsTracker.addFile(true, localPath)
+          return
         }
       }
 
