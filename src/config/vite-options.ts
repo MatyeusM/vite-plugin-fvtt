@@ -1,4 +1,4 @@
-import path from 'path'
+import path from 'path/posix'
 import { LibraryFormats, LibraryOptions, UserConfig } from 'vite'
 import { context } from 'src/context'
 import logger from 'src/utils/logger'
