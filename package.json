@@ -16,9 +16,15 @@
     "url": "git+https://github.com/MatyeusM/vite-plugin-foundryvtt.git"
   },
   "license": "MIT",
-  "author": "MatyeusM",
+  "author": "MatyeusM (https://github.com/MatyeusM)",
   "type": "module",
-  "main": "dist/index.mjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "dev": "tsdown --watch",
     "build": "tsdown"
