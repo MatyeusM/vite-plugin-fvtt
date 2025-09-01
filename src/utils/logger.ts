@@ -13,7 +13,7 @@ class Logger {
     error: '\x1b[31m', // red
   }
 
-  constructor({ namespace = 'vite-plugin-foundryvtt' }: LoggerOptions = {}) {
+  constructor({ namespace = 'vite-plugin-fvtt' }: LoggerOptions = {}) {
     this.namespace = namespace
   }
 

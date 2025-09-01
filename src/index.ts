@@ -17,7 +17,7 @@ export default function foundryVTTPlugin(): Plugin {
   context.env = loadEnv()
 
   return {
-    name: 'vite-plugin-foundryvtt',
+    name: 'vite-plugin-fvtt',
     config(config) {
       context.manifest = loadManifest(config)
       return createPartialViteConfig(config)

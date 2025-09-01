@@ -1,5 +1,5 @@
 {
-  "name": "vite-plugin-foundryvtt",
+  "name": "vite-plugin-fvtt",
   "version": "0.1.0",
   "description": "A Vite plugin for module and system development for Foundry VTT",
   "keywords": [
@@ -7,13 +7,13 @@
     "vite-plugin",
     "foundryvtt"
   ],
-  "homepage": "https://github.com/MatyeusM/vite-plugin-foundryvtt#readme",
+  "homepage": "https://github.com/MatyeusM/vite-plugin-fvtt#readme",
   "bugs": {
-    "url": "https://github.com/MatyeusM/vite-plugin-foundryvtt/issues"
+    "url": "https://github.com/MatyeusM/vite-plugin-fvtt/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MatyeusM/vite-plugin-foundryvtt.git"
+    "url": "git+https://github.com/MatyeusM/vite-plugin-fvtt.git"
   },
   "license": "MIT",
   "author": "MatyeusM (https://github.com/MatyeusM)",

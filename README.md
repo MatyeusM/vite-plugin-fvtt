@@ -1,4 +1,4 @@
-# **vite-plugin-foundryvtt**
+# **vite-plugin-fvtt**
 
 A powerful [Vite](https://vitejs.dev/) plugin to **streamline and automate** the development of Foundry VTT modules and systems. It handles manifest resolution, asset copying, language file composition, and template handling with **minimal setup**, letting you focus on your code.
 
@@ -15,14 +15,14 @@ Place your `module.json` or `system.json` manifest in either your **project root
 
 ### **2. Add the Plugin to your Vite Config**
 
-Install the plugin with `npm i -D vite-plugin-foundryvtt`.
+Install the plugin with `npm i -D vite-plugin-fvtt`.
 
 Add the plugin to your vite.config.js. The **build.lib.entry** field is required, most of the other settings are infer'd by the plugin from your foundry manifest.
 
 ```js
 // vite.config.js
 import { defineConfig } from 'vite';
-import foundryVTT from 'vite-plugin-foundryvtt';
+import foundryVTT from 'vite-plugin-fvtt';
 
 export default defineConfig({
   plugins: [foundryVTT()],
