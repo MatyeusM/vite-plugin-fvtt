@@ -14,7 +14,7 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
     logger.warn('No output file specified in manifest, using default "bundle"')
 
   if (!context.manifest?.styles?.length) logger.warn('No CSS file found in manifest')
-  const cssFileName = path.parse(context.manifest?.styles[0] ?? '').name
+  const cssFileName = path.parse(context.manifest?.styles[0] ?? 'bundle.css').name
 
   const foundryPort = context.env?.foundryPort ?? 30000
   const foundryUrl = context.env?.foundryUrl ?? 'localhost'
