@@ -1,5 +1,5 @@
 import fs from 'fs-extra'
-import { sync } from 'glob'
+import { globSync } from 'tinyglobby'
 import posix from 'path/posix'
 import { context, FoundryVTTManifest } from 'src/context'
 import { languageTracker } from 'src/server/trackers/language-tracker'
@@ -25,7 +25,7 @@ function getLocalLanguageFiles(lang: string, outDir: boolean = false): string[] 
     logger.warn(`No language folder found at: ${sourcePath}`)
     return []
   }
-  return sync(posix.join(sourcePath, '**/*.json'))
+  return globSync(posix.join(sourcePath, '**/*.json'))
 }
 
 export default function loadLanguage(lang: string, outDir: boolean = false): Map<string, any> {
