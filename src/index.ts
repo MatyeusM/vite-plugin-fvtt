@@ -19,7 +19,7 @@ export default function foundryVTTPlugin(): Plugin {
   return {
     name: 'vite-plugin-fvtt',
     config(config) {
-      context.manifest = loadManifest(config)
+      context.manifest = loadManifest(config) ?? undefined
       return createPartialViteConfig(config)
     },
     configResolved(config) {

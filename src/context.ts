@@ -7,6 +7,7 @@ export type FoundryVTTManifest = {
   scripts: string[]
   styles: string[]
   languages: { lang: string; path: string }[]
+  packs: { path: string }[]
 }
 
 export type ENVOptions = { foundryUrl: string; foundryPort: number }
