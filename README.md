@@ -52,21 +52,21 @@ The Vite dev server will run on `FOUNDRY_PORT + 1`, where you will need to open 
 
 The plugin automatically detects your manifest file (`module.json` or `system.json`) in the project **root** or `public/` folder.
 
-This plugin shapes the output depending on your manifest; it tries to automatically discover the relevant files in the `root`, `source`, and `public` folders to build the output files. The `public` folder is defined by the Vite config file. The plugin determines the `source` directory based on your `lib.entry` path. For example, if your entry is `mysource/` is considered your source directory.
+This plugin shapes the output depending on your manifest; it tries to automatically discover the relevant files in the `root`, `source`, and `public` folders to build the output files. The `public` folder is defined by the Vite config file. The plugin determines the `source` directory based on your `lib.entry` path. For example, if your `lib.entry` is './mysource/package/main.js', the `mysource/` directory is considered your source directory.
 
 💡 Your entry file should always import your main stylesheet; the manifest dictates how everything is named and output.
 
 ### **3. ESModules, Scripts & Styles**
 
-`esmodules` and `scripts` declared in your manifest are automatically created from your `lib.entry`. However, since Vite compiles the esmodule or script, the plugin expects exactly one entry in one of those files.
+`esmodules` and `scripts` declared in your manifest are automatically created from your `lib.entry`. Since Vite compiles the module, the plugin expects the `esmodules` or `scripts` entry in your manifest to only point to a single JavaScript file.
 
 Stylesheets (CSS/SCSS/LESS) should be imported in your entry file; the plugin ensures they are outputted as the correct file.
 
 ### **4. Template Handling**
 
-Templates work in HMR properly on the development server; they are autodiscovered as discussed in [2. Manifest & Asset Resolution](#2-manifest--asset-resolution). The development server intercepts the websocket traffic and sends the local templates instead of Foundry VTT's, if present. e.g. a template request to `/systems/mysystem/tpl/character-header.hbs` might be rerouted to `public/tpl/character-header.hbs`. Folder structure inside your project is mirrored, apart from the `system`/`module` specific prefix.
+Templates work in HMR properly on the development server; they are autodiscovered as discussed in [2. Manifest & Asset Resolution](#2-manifest--asset-resolution). The development server intercepts the websocket traffic and sends the local templates instead of Foundry VTT's, if present. e.g., a template request to `/systems/mysystem/tpl/character-header.hbs` might be rerouted to `public/tpl/character-header.hbs`. Folder structure inside your project is mirrored, apart from the `system`/`module` specific prefix.
 
-### 4. **Language File Merging**
+### **5. Language File Merging**
 
 Supports both complete and partial translation workflows:
 
@@ -87,15 +87,11 @@ my-module/
 │     ├─ spells.json
 │     ├─ abilities.json
 │     └─ general.json
-├─ public/
+├─ public/            # For static assets (templates, images)
 │  ├─ module.json     # Your module's manifest file (or system.json).
 │  └─ templates/      # HTML template files for your module.
 ├─ vite.config.js     # Your Vite configuration file.
 ```
-
-## **🐛 Known Issues & Troubleshooting**
-
-* **App V2:** HMR for Foundry VTT's new App V2 has not been fully tested. If you encounter issues, please open a GitHub issue.
 
 ---
 
