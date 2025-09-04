@@ -8,7 +8,7 @@ import createPartialViteConfig from 'src/config/vite-options'
 import jsToInject from 'src/server/hmr-client'
 import setupDevServer from 'src/server'
 import validateI18nBuild from 'src/language/validator'
-import loadLanguage from 'src/language/loader'
+import loadLanguage, { getLocalLanguageFiles } from 'src/language/loader'
 import path from 'src/utils/path-utils'
 import { transform } from './language/transformer'
 import logger from 'src/utils/logger'
@@ -25,14 +25,15 @@ export default function foundryVTTPlugin(): Plugin {
     configResolved(config) {
       context.config = config
     },
-    async closeBundle() {
-      if (context.config?.mode !== 'production') return
-      const outDir = posix.resolve(process.cwd(), context.config.build.outDir)
+    async writeBundle() {
+      if (!context.config) return
+      const outDir = path.getOutDir()
       const candidates = ['system.json', 'module.json']
 
       for (const file of candidates) {
-        const src = posix.resolve(process.cwd(), file)
-        if (await fs.pathExists(src)) {
+        const src = posix.resolve(file)
+        if (!path.getOutDirFile(file) && fs.existsSync(src)) {
+          this.addWatchFile(src)
           const dest = posix.join(outDir, file)
           await fs.copy(src, dest)
           logger.info(`Copied ${file} >>> ${dest}`)
@@ -42,11 +43,17 @@ export default function foundryVTTPlugin(): Plugin {
       const languages = context.manifest?.languages ?? []
       if (languages.length > 0) {
         for (const language of languages) {
-          if (path.getOutDirFile(language.path) !== '') continue
+          if (path.getOutDirFile(language.path)) continue
+          getLocalLanguageFiles(language.lang).forEach(langFile => this.addWatchFile(langFile))
           const languageDataRaw = loadLanguage(language.lang)
           const languageData = transform(languageDataRaw)
-          fs.writeJSONSync(posix.join(path.getOutDir(), language.path), languageData)
+          fs.writeJSONSync(posix.join(outDir, language.path), languageData)
         }
+      }
+    },
+    closeBundle() {
+      const languages = context.manifest?.languages ?? []
+      if (languages.length > 0) {
         validateI18nBuild()
       }
     },

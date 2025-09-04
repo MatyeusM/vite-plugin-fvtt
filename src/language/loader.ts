@@ -6,7 +6,7 @@ import { languageTracker } from 'src/server/trackers/language-tracker'
 import logger from 'src/utils/logger'
 import path from 'src/utils/path-utils'
 
-function getLocalLanguageFiles(lang: string, outDir: boolean = false): string[] {
+export function getLocalLanguageFiles(lang: string, outDir: boolean = false): string[] {
   const manifest = context.manifest as FoundryVTTManifest
   const language = manifest.languages.find(l => l.lang === lang)
   if (!language) logger.fail(`Cannot find language "${lang}"`)
