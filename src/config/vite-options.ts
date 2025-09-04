@@ -26,6 +26,16 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
 
   return {
     base,
+    build: {
+      minify: 'esbuild',
+      lib: { cssFileName, entry: entry as string, fileName, formats, name: context.manifest?.id },
+    },
+    define: {
+      __FVTT_PLUGIN__: {
+        id: context.manifest?.id,
+        isSystem: context.manifest?.manifestType === 'system',
+      },
+    },
     esbuild: config.esbuild ?? {
       minifyIdentifiers: false,
       minifySyntax: true,
@@ -35,10 +45,6 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
     server: {
       port: foundryPort + 1,
       proxy: { [`^(?!${base})`]: `http://${foundryUrl}:${foundryPort}` },
-    },
-    build: {
-      minify: 'esbuild',
-      lib: { cssFileName, entry: entry as string, fileName, formats, name: context.manifest?.id },
     },
   }
 }
