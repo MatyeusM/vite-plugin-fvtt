@@ -5,6 +5,7 @@
 ### Added
 
 - Automatic compiling of packs for watch and build mode, when discovered.
+- Option to skip the automatic compilation of packs `{ buildPacks: false }`.
 - Documenting the changes in a `CHANGELOG.md` for the plugin.
 
 ## [0.1.4] - 2025-09-06

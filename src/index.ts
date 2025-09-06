@@ -14,7 +14,7 @@ import logger from 'src/utils/logger'
 import path from 'src/utils/path-utils'
 import { compileManifestPacks } from './packs/compile-packs'
 
-export default function foundryVTTPlugin(): Plugin {
+export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin {
   context.env = loadEnv()
 
   return {
@@ -52,7 +52,7 @@ export default function foundryVTTPlugin(): Plugin {
         }
       }
 
-      await compileManifestPacks()
+      if (options.buildPacks) await compileManifestPacks()
     },
     closeBundle() {
       const languages = context.manifest?.languages ?? []

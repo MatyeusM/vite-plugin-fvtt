@@ -24,9 +24,8 @@ export async function compileManifestPacks() {
       continue
     }
 
-    const hasYaml = fs
-      .readdirSync(chosenSrc)
-      .some(file => file.endsWith('.yaml') || file.endsWith('.yml'))
+    const entries = fs.readdirSync(chosenSrc, { recursive: true, encoding: 'utf8' })
+    const hasYaml = entries.some(entry => entry.endsWith('.yaml') || entry.endsWith('.yml'))
 
     await compilePack(chosenSrc, dest, { yaml: hasYaml, recursive: true })
     logger.info(`Compiled pack ${pack.path} (${hasYaml ? 'YAML' : 'JSON'}) from ${chosenSrc}`)
