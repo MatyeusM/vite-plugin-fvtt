@@ -12,6 +12,7 @@ import setupDevServer from 'src/server'
 import jsToInject from 'src/server/hmr-client'
 import logger from 'src/utils/logger'
 import path from 'src/utils/path-utils'
+import { compileManifestPacks } from './packs/compile-packs'
 
 export default function foundryVTTPlugin(): Plugin {
   context.env = loadEnv()
@@ -50,6 +51,8 @@ export default function foundryVTTPlugin(): Plugin {
           fs.writeJSONSync(posix.join(outDir, language.path), languageData)
         }
       }
+
+      await compileManifestPacks()
     },
     closeBundle() {
       const languages = context.manifest?.languages ?? []
