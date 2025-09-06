@@ -1,4 +1,3 @@
-import path from 'path/posix'
 import { LibraryFormats, LibraryOptions, UserConfig } from 'vite'
 import { context } from 'src/context'
 import logger from 'src/utils/logger'
@@ -9,12 +8,19 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
   const formats: LibraryFormats[] = useEsModules ? ['es'] : ['umd']
 
   const fileName =
-    (useEsModules ? context.manifest?.esmodules[0] : context.manifest?.scripts?.[0]) ?? 'bundle'
-  if (fileName === 'bundle')
-    logger.warn('No output file specified in manifest, using default "bundle"')
+    (useEsModules ? context.manifest?.esmodules[0] : context.manifest?.scripts?.[0]) ??
+    'scripts/bundle.js'
+  if (!(useEsModules || context.manifest?.scripts?.[0]))
+    logger.warn(
+      'No output file specified in manifest, using default "bundle" in the "scripts/" folder',
+    )
 
   if (!context.manifest?.styles?.length) logger.warn('No CSS file found in manifest')
-  const cssFileName = path.parse(context.manifest?.styles[0] ?? 'bundle.css').name
+  const cssFileName = context.manifest?.styles[0] ?? 'styles/bundle.css'
+  if (!context.manifest?.styles[0])
+    logger.warn(
+      'No output css file specified in manifest, using default "bundle" in the "styles/" folder',
+    )
 
   const foundryPort = context.env?.foundryPort ?? 30000
   const foundryUrl = context.env?.foundryUrl ?? 'localhost'
@@ -24,11 +30,31 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
   if (typeof entry !== 'string')
     logger.fail('Only a singular string entry is supported for build.lib.entry')
 
+  const isWatch = process.argv.includes('--watch') || !!config.build?.watch
+
   return {
     base,
     build: {
+      emptyOutDir: config.build?.emptyOutDir ?? !isWatch,
+      lib: {
+        entry: entry as string,
+        formats,
+        name: context.manifest?.id ?? 'bundle',
+        cssFileName: 'bundle',
+      },
       minify: 'esbuild',
-      lib: { cssFileName, entry: entry as string, fileName, formats, name: context.manifest?.id },
+      rollupOptions: {
+        output: {
+          entryFileNames: fileName,
+          assetFileNames: assetInfo => {
+            const names = assetInfo.names ?? []
+            if (names.some(n => n.endsWith('.css'))) {
+              return cssFileName
+            }
+            return '[name][extname]'
+          },
+        },
+      },
     },
     define: {
       __FVTT_PLUGIN__: {
