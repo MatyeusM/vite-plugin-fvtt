@@ -5,13 +5,13 @@ import { context } from 'src/context'
 import loadEnv from 'src/config/env'
 import loadManifest from 'src/config/foundryvtt-manifest'
 import createPartialViteConfig from 'src/config/vite-options'
-import jsToInject from 'src/server/hmr-client'
-import setupDevServer from 'src/server'
-import validateI18nBuild from 'src/language/validator'
 import loadLanguage, { getLocalLanguageFiles } from 'src/language/loader'
-import path from 'src/utils/path-utils'
-import { transform } from './language/transformer'
+import { transform } from 'src/language/transformer'
+import validateI18nBuild from 'src/language/validator'
+import setupDevServer from 'src/server'
+import jsToInject from 'src/server/hmr-client'
 import logger from 'src/utils/logger'
+import path from 'src/utils/path-utils'
 
 export default function foundryVTTPlugin(): Plugin {
   context.env = loadEnv()
@@ -60,7 +60,7 @@ export default function foundryVTTPlugin(): Plugin {
     // all server behaviour
     load(id) {
       const config = context.config as ResolvedConfig
-      const jsFileName = (config.build.lib as LibraryOptions).fileName as string
+      const jsFileName = (config.build.rollupOptions?.output as any)!.entryFileNames
       if (id === jsFileName || id === `/${jsFileName}`) {
         const entryPath = posix.resolve((config.build.lib as LibraryOptions).entry as string)
         const viteId = `/@fs/${entryPath}`
