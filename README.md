@@ -6,6 +6,8 @@ It handles manifest resolution, asset copying, language file composition, and te
 
 The plugin's core goal is to enable a robust HMR workflow via Vite's development server, freeing you from Foundry VTT's native HMR and build watch commands.
 
+[**Changelog**](CHANGELOG.md)
+
 ## **🚀 Getting Started**
 
 ### **Step 1. Setup a Foundry VTT Project**
