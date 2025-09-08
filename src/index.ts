@@ -11,7 +11,6 @@ import validateI18nBuild from 'src/language/validator'
 import { compileManifestPacks } from 'src/packs/compile-packs'
 import setupDevServer from 'src/server'
 import jsToInject from 'src/server/hmr-client'
-import logger from 'src/utils/logger'
 import path from 'src/utils/path-utils'
 
 export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin {
@@ -27,6 +26,21 @@ export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin
       context.config = config
     },
     async generateBundle() {
+      const manifestCandidates = ['system.json', 'module.json']
+
+      for (const file of manifestCandidates) {
+        const src = posix.resolve(file)
+        if (!path.getPublicDirFile(file) && fs.existsSync(src)) {
+          this.addWatchFile(src)
+          const manifest = fs.readJsonSync(src)
+          this.emitFile({
+            type: 'asset',
+            fileName: file,
+            source: JSON.stringify(manifest, null, 2),
+          })
+        }
+      }
+
       const languages = context.manifest?.languages ?? []
       if (languages.length > 0) {
         for (const language of languages) {
@@ -43,20 +57,6 @@ export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin
       }
     },
     async writeBundle() {
-      if (!context.config) return
-      const outDir = path.getOutDir()
-      const candidates = ['system.json', 'module.json']
-
-      for (const file of candidates) {
-        const src = posix.resolve(file)
-        if (!path.getOutDirFile(file) && fs.existsSync(src)) {
-          this.addWatchFile(src)
-          const dest = posix.join(outDir, file)
-          await fs.copy(src, dest)
-          logger.info(`Copied ${file} >>> ${dest}`)
-        }
-      }
-
       if (options.buildPacks) await compileManifestPacks()
     },
     closeBundle() {
