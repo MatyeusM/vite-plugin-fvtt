@@ -102,7 +102,11 @@ Supports both complete and partial translation workflows:
 
 Merging follows your manifest’s declared language paths, searching in root or source directories.
 
-⚠️ **Note:** HMR works for language files, but non-English locales may not reload as expected.
+### **6. Packs**
+
+Packs are tried to be auto-discovered in the source directory. If the paths match, they are automatically compiled.
+
+**Note:** Packs are currently not watched for changes.
 
 ### **Example Project Structure**
 
