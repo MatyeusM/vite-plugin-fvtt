@@ -8,11 +8,11 @@ import createPartialViteConfig from 'src/config/vite-options'
 import loadLanguage, { getLocalLanguageFiles } from 'src/language/loader'
 import { transform } from 'src/language/transformer'
 import validateI18nBuild from 'src/language/validator'
+import { compileManifestPacks } from 'src/packs/compile-packs'
 import setupDevServer from 'src/server'
 import jsToInject from 'src/server/hmr-client'
 import logger from 'src/utils/logger'
 import path from 'src/utils/path-utils'
-import { compileManifestPacks } from './packs/compile-packs'
 
 export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin {
   context.env = loadEnv()
@@ -44,7 +44,7 @@ export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin
       const languages = context.manifest?.languages ?? []
       if (languages.length > 0) {
         for (const language of languages) {
-          if (path.getOutDirFile(language.path)) continue
+          if (path.getPublicDirFile(language.path)) continue
           getLocalLanguageFiles(language.lang).forEach(langFile => this.addWatchFile(langFile))
           const languageDataRaw = loadLanguage(language.lang)
           const languageData = transform(languageDataRaw)
