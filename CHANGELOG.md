@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed language generation to not error out on mixed entries.
+
 
 ## [0.2.0] - 2025-09-08
 

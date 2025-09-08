@@ -26,6 +26,22 @@ export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin
     configResolved(config) {
       context.config = config
     },
+    async generateBundle() {
+      const languages = context.manifest?.languages ?? []
+      if (languages.length > 0) {
+        for (const language of languages) {
+          if (path.getPublicDirFile(language.path)) continue
+          getLocalLanguageFiles(language.lang).forEach(langFile => this.addWatchFile(langFile))
+          const languageDataRaw = loadLanguage(language.lang)
+          const languageData = transform(languageDataRaw)
+          this.emitFile({
+            type: 'asset',
+            fileName: posix.join(language.path),
+            source: JSON.stringify(languageData, null, 2),
+          })
+        }
+      }
+    },
     async writeBundle() {
       if (!context.config) return
       const outDir = path.getOutDir()
@@ -38,17 +54,6 @@ export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin
           const dest = posix.join(outDir, file)
           await fs.copy(src, dest)
           logger.info(`Copied ${file} >>> ${dest}`)
-        }
-      }
-
-      const languages = context.manifest?.languages ?? []
-      if (languages.length > 0) {
-        for (const language of languages) {
-          if (path.getPublicDirFile(language.path)) continue
-          getLocalLanguageFiles(language.lang).forEach(langFile => this.addWatchFile(langFile))
-          const languageDataRaw = loadLanguage(language.lang)
-          const languageData = transform(languageDataRaw)
-          fs.writeJSONSync(posix.join(outDir, language.path), languageData)
         }
       }
 
