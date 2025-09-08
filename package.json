@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-fvtt",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "A Vite plugin for module and system development for Foundry VTT",
   "keywords": [
     "vite",
