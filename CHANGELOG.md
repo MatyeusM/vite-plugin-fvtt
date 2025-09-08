@@ -1,11 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.1] - 2025-09-09
 
 ### Fixed
 
 - Fixed language generation to not error out on mixed entries.
-
 
 ## [0.2.0] - 2025-09-08
 
@@ -70,7 +69,8 @@
 
 - Initial Release
 
-[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.1.2...v0.1.3
