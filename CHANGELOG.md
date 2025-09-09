@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+## Fixed
+
+- Improve windows path resolution.
+
 ## [0.2.1] - 2025-09-09
 
 ### Fixed

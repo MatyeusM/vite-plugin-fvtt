@@ -1,4 +1,4 @@
-import path from 'path/posix'
+import path from 'path'
 import fs from 'fs-extra'
 import { context } from 'src/context'
 import logger from './logger'
@@ -24,7 +24,7 @@ class PathUtils {
   public static getDecodedBase(): string {
     if (!PathUtils._decodedBase) {
       const config = PathUtils.getConfig()
-      PathUtils._decodedBase = PathUtils.normalize(decodeURI(config.base))
+      PathUtils._decodedBase = path.posix.normalize(decodeURI(config.base))
     }
     return PathUtils._decodedBase
   }
@@ -32,9 +32,7 @@ class PathUtils {
   public static getSourceDirectory(): string {
     if (!PathUtils._sourceDirectory) {
       const config = PathUtils.getConfig()
-      const normalizedEntry = PathUtils.normalize(
-        (config.build.lib as LibraryOptions).entry.toString(),
-      )
+      const normalizedEntry = path.normalize((config.build.lib as LibraryOptions).entry.toString())
       const segments = normalizedEntry
         .split(path.sep)
         .filter(Boolean)
@@ -48,7 +46,7 @@ class PathUtils {
   public static getPublicDir(): string {
     if (!PathUtils._publicDir) {
       const config = PathUtils.getConfig()
-      PathUtils._publicDir = PathUtils.normalize(path.resolve(config.publicDir))
+      PathUtils._publicDir = path.resolve(config.publicDir)
     }
     return PathUtils._publicDir
   }
@@ -56,7 +54,7 @@ class PathUtils {
   public static getOutDir(): string {
     if (!PathUtils._outDir) {
       const config = PathUtils.getConfig()
-      PathUtils._outDir = PathUtils.normalize(path.resolve(config.build.outDir))
+      PathUtils._outDir = path.resolve(config.build.outDir)
     }
     return PathUtils._outDir
   }
@@ -64,7 +62,7 @@ class PathUtils {
   public static getRoot(): string {
     if (!PathUtils._root) {
       const config = PathUtils.getConfig()
-      PathUtils._root = PathUtils.normalize(config.root)
+      PathUtils._root = path.resolve(config.root)
     }
     return PathUtils._root
   }
@@ -79,10 +77,6 @@ class PathUtils {
     return fs.existsSync(file) ? file : ''
   }
 
-  public static normalize(p: string): string {
-    return path.normalize(p)
-  }
-
   private static findLocalFilePath(p: string): string | null {
     const fileCandidates = [
       PathUtils.getPublicDir(),
@@ -94,13 +88,13 @@ class PathUtils {
 
   public static isFoundryVTTUrl(p: string): boolean {
     const decodedBase = PathUtils.getDecodedBase()
-    const pathToCheck = PathUtils.normalize(p)
+    const pathToCheck = path.posix.normalize(p)
     return pathToCheck.startsWith(decodedBase)
   }
 
   public static foundryVTTUrlToLocal(p: string): string | null {
     const decodedBase = PathUtils.getDecodedBase()
-    let pathToTransform = PathUtils.normalize('/' + p)
+    let pathToTransform = path.posix.normalize('/' + p)
     if (!pathToTransform.startsWith(decodedBase)) return null
     pathToTransform = path.relative(decodedBase, pathToTransform)
     return PathUtils.findLocalFilePath(pathToTransform)
@@ -108,7 +102,7 @@ class PathUtils {
 
   public static localToFoundryVTTUrl(p: string): string {
     const decodedBase = PathUtils.getDecodedBase()
-    let pathToTransform = PathUtils.normalize(p)
+    let pathToTransform = path.normalize(p)
     ;[PathUtils.getPublicDir(), PathUtils.getSourceDirectory(), PathUtils.getRoot()].forEach(
       pth => {
         if (pathToTransform.startsWith(pth)) {

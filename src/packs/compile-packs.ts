@@ -1,19 +1,19 @@
 import { compilePack } from '@foundryvtt/foundryvtt-cli'
 import fs from 'fs-extra'
-import posix from 'path/posix'
+import path from 'path'
 import { context } from 'src/context'
 import logger from 'src/utils/logger'
-import path from 'src/utils/path-utils'
+import pathUtils from 'src/utils/path-utils'
 
 export async function compileManifestPacks() {
   if (!context.manifest?.packs) return
 
   for (const pack of context.manifest.packs) {
     const srcCandidates = [
-      posix.resolve(path.getSourceDirectory(), pack.path),
-      posix.resolve(path.getRoot(), pack.path),
+      path.resolve(pathUtils.getSourceDirectory(), pack.path),
+      path.resolve(pathUtils.getRoot(), pack.path),
     ]
-    const dest = posix.resolve(path.getOutDir(), pack.path)
+    const dest = path.resolve(pathUtils.getOutDir(), pack.path)
 
     const chosenSrc = srcCandidates.find(
       candidate => fs.existsSync(candidate) && fs.statSync(candidate).isDirectory(),

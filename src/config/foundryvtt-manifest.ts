@@ -1,5 +1,5 @@
 import fs from 'fs-extra'
-import path from 'path/posix'
+import path from 'path'
 import { UserConfig } from 'vite'
 import { context, FoundryVTTManifest } from 'src/context'
 import logger from 'src/utils/logger'

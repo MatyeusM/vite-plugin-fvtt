@@ -1,6 +1,6 @@
 import { context, FoundryVTTManifest } from 'src/context'
 import { LibraryOptions, ResolvedConfig, ViteDevServer } from 'vite'
-import path from 'src/utils/path-utils'
+import pathUtils from 'src/utils/path-utils'
 import loadLanguage from 'src/language/loader'
 import { transform } from 'src/language/transformer'
 import logger from 'src/utils/logger'
@@ -11,16 +11,16 @@ export default function httpMiddlewareHook(server: ViteDevServer) {
 
     // This is a defensive check to make sure we don't handle requests
     // that don't belong to our module or system.
-    if (!path.isFoundryVTTUrl(req.url ?? '')) {
+    if (!pathUtils.isFoundryVTTUrl(req.url ?? '')) {
       next()
       return
     }
 
     // Get the filenames from the resolved config, as they are now finalized.
     const cssFileName = (config.build.lib as LibraryOptions).cssFileName
-    const cssEntry = cssFileName ? path.localToFoundryVTTUrl(`${cssFileName}.css`) : null
+    const cssEntry = cssFileName ? pathUtils.localToFoundryVTTUrl(`${cssFileName}.css`) : null
 
-    if (path.normalize(req.url ?? '') === cssEntry) {
+    if (pathUtils.normalize(req.url ?? '') === cssEntry) {
       logger.info(`Blocking CSS entry to ${req.url}`)
       res.setHeader('Content-Type', 'text/css')
       res.end('/* The cake is in another castle. */')
@@ -28,7 +28,7 @@ export default function httpMiddlewareHook(server: ViteDevServer) {
     }
 
     const languages = (context.manifest as FoundryVTTManifest).languages.filter(
-      lang => path.localToFoundryVTTUrl(lang.path) === path.normalize(req.url ?? ''),
+      lang => pathUtils.localToFoundryVTTUrl(lang.path) === pathUtils.normalize(req.url ?? ''),
     )
 
     if (languages.length === 1) {

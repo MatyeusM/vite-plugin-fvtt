@@ -4,7 +4,7 @@ import { io as ClientIO } from 'socket.io-client'
 import { handlebarsTracker } from 'src/server/trackers/handlebars-tracker'
 import { HttpServer, ViteDevServer } from 'vite'
 import { context, ENVOptions } from 'src/context'
-import path from 'src/utils/path-utils'
+import pathUtils from 'src/utils/path-utils'
 
 export default function socketProxy(server: ViteDevServer) {
   const env = context.env as ENVOptions
@@ -22,7 +22,7 @@ export default function socketProxy(server: ViteDevServer) {
       const maybeAck = typeof args[args.length - 1] === 'function' ? args.pop() : null
 
       if (event === 'template') {
-        const localPath = path.foundryVTTUrlToLocal(args[0])
+        const localPath = pathUtils.foundryVTTUrlToLocal(args[0])
         if (localPath) {
           if (maybeAck) maybeAck({ html: fs.readFileSync(localPath, 'utf8'), success: true })
           handlebarsTracker.addFile(args[0], localPath)

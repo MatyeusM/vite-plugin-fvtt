@@ -1,4 +1,3 @@
-// language-tracker.ts
 import { ResolvedConfig } from 'vite'
 import { AbstractFileTracker } from './abstract-file-tracker'
 

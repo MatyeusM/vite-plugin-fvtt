@@ -1,5 +1,4 @@
-// abstract-file-tracker.ts
-import path from 'path/posix'
+import path from 'path'
 import logger from 'src/utils/logger'
 import { FSWatcher, ResolvedConfig, ViteDevServer } from 'vite'
 
