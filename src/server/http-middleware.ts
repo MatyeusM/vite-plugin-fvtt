@@ -1,3 +1,4 @@
+import path from 'path'
 import { context, FoundryVTTManifest } from 'src/context'
 import { LibraryOptions, ResolvedConfig, ViteDevServer } from 'vite'
 import pathUtils from 'src/utils/path-utils'
@@ -20,7 +21,7 @@ export default function httpMiddlewareHook(server: ViteDevServer) {
     const cssFileName = (config.build.lib as LibraryOptions).cssFileName
     const cssEntry = cssFileName ? pathUtils.localToFoundryVTTUrl(`${cssFileName}.css`) : null
 
-    if (pathUtils.normalize(req.url ?? '') === cssEntry) {
+    if (path.posix.normalize(req.url ?? '') === cssEntry) {
       logger.info(`Blocking CSS entry to ${req.url}`)
       res.setHeader('Content-Type', 'text/css')
       res.end('/* The cake is in another castle. */')
@@ -28,7 +29,7 @@ export default function httpMiddlewareHook(server: ViteDevServer) {
     }
 
     const languages = (context.manifest as FoundryVTTManifest).languages.filter(
-      lang => pathUtils.localToFoundryVTTUrl(lang.path) === pathUtils.normalize(req.url ?? ''),
+      lang => pathUtils.localToFoundryVTTUrl(lang.path) === path.posix.normalize(req.url ?? ''),
     )
 
     if (languages.length === 1) {
