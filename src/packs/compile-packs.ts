@@ -2,7 +2,7 @@ import { compilePack } from '@foundryvtt/foundryvtt-cli'
 import fs from 'fs-extra'
 import path from 'path'
 import { context } from 'src/context'
-import logger from 'src/utils/logger'
+import Logger from 'src/utils/logger'
 import pathUtils from 'src/utils/path-utils'
 
 export async function compileManifestPacks() {
@@ -20,7 +20,7 @@ export async function compileManifestPacks() {
     )
 
     if (!chosenSrc) {
-      logger.warn(`Pack path not found for ${pack.path}, skipped.`)
+      Logger.warn(`Pack path not found for ${pack.path}, skipped.`)
       continue
     }
 
@@ -28,6 +28,6 @@ export async function compileManifestPacks() {
     const hasYaml = entries.some(entry => entry.endsWith('.yaml') || entry.endsWith('.yml'))
 
     await compilePack(chosenSrc, dest, { yaml: hasYaml, recursive: true })
-    logger.info(`Compiled pack ${pack.path} (${hasYaml ? 'YAML' : 'JSON'}) from ${chosenSrc}`)
+    Logger.info(`Compiled pack ${pack.path} (${hasYaml ? 'YAML' : 'JSON'}) from ${chosenSrc}`)
   }
 }

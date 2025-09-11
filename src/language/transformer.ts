@@ -1,4 +1,4 @@
-import logger from 'src/utils/logger'
+import Logger from 'src/utils/logger'
 
 export function flattenKeys(obj: object, prefix = ''): Record<string, string> {
   const result: Record<string, string> = {}
@@ -18,7 +18,7 @@ export function expandDotNotationKeys(
   source: object,
   depth = 0,
 ): unknown {
-  if (depth > 32) logger.fail('Max object expansion depth exceeded.')
+  if (depth > 32) Logger.fail('Max object expansion depth exceeded.')
   if (!source || typeof source !== 'object' || Array.isArray(source)) {
     return source
   }

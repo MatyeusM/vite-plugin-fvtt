@@ -2,7 +2,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import { UserConfig } from 'vite'
 import { context, FoundryVTTManifest } from 'src/context'
-import logger from 'src/utils/logger'
+import Logger from 'src/utils/logger'
 
 export default function loadManifest(config: UserConfig): FoundryVTTManifest | void {
   if (context?.manifest) return context.manifest
@@ -20,7 +20,7 @@ export default function loadManifest(config: UserConfig): FoundryVTTManifest | v
   )
 
   if (!foundPath) {
-    logger.fail(
+    Logger.fail(
       `Could not find a manifest file (system.json or module.json) in project root or ${publicDir}/.`,
     )
   }
@@ -29,13 +29,13 @@ export default function loadManifest(config: UserConfig): FoundryVTTManifest | v
     const data = fs.readJsonSync(foundPath!)
 
     if (!data.id || typeof data.id !== 'string') {
-      logger.fail(`Manifest at ${foundPath} is missing required "id" field.`)
+      Logger.fail(`Manifest at ${foundPath} is missing required "id" field.`)
     }
 
     const hasEsmodules = Array.isArray(data.esmodules) && data.esmodules.length > 0
     const hasScripts = Array.isArray(data.scripts) && data.scripts.length > 0
     if (hasEsmodules === hasScripts) {
-      logger.fail(`Manifest at ${foundPath} must define exactly one of "esmodules" or "scripts".`)
+      Logger.fail(`Manifest at ${foundPath} must define exactly one of "esmodules" or "scripts".`)
     }
 
     const result: FoundryVTTManifest = {
@@ -50,6 +50,6 @@ export default function loadManifest(config: UserConfig): FoundryVTTManifest | v
 
     return result
   } catch (err: any) {
-    logger.fail(`Failed to read manifest at ${foundPath}: ${err?.message || err}`)
+    Logger.fail(`Failed to read manifest at ${foundPath}: ${err?.message || err}`)
   }
 }

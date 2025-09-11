@@ -4,7 +4,7 @@ import { LibraryOptions, ResolvedConfig, ViteDevServer } from 'vite'
 import pathUtils from 'src/utils/path-utils'
 import loadLanguage from 'src/language/loader'
 import { transform } from 'src/language/transformer'
-import logger from 'src/utils/logger'
+import Logger from 'src/utils/logger'
 
 export default function httpMiddlewareHook(server: ViteDevServer) {
   server.middlewares.use((req, res, next) => {
@@ -22,7 +22,7 @@ export default function httpMiddlewareHook(server: ViteDevServer) {
     const cssEntry = cssFileName ? pathUtils.localToFoundryVTTUrl(`${cssFileName}.css`) : null
 
     if (path.posix.normalize(req.url ?? '') === cssEntry) {
-      logger.info(`Blocking CSS entry to ${req.url}`)
+      Logger.info(`Blocking CSS entry to ${req.url}`)
       res.setHeader('Content-Type', 'text/css')
       res.end('/* The cake is in another castle. */')
       return

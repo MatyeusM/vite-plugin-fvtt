@@ -104,7 +104,8 @@ Merging follows your manifest’s declared language paths, searching in root or 
 
 ### **6. Packs**
 
-Packs are tried to be auto-discovered in the source directory. If the paths match, they are automatically compiled.
+Packs are tried to be auto-discovered in the source directory. If the paths match, they are
+automatically compiled.
 
 **Note:** Packs are currently not watched for changes.
 

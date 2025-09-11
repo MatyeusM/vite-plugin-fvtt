@@ -1,6 +1,6 @@
 import { LibraryFormats, LibraryOptions, UserConfig } from 'vite'
 import { context } from 'src/context'
-import logger from 'src/utils/logger'
+import Logger from 'src/utils/logger'
 
 export default function createPartialViteConfig(config: UserConfig): UserConfig {
   const base = config.base ?? `/${context.manifest?.manifestType}s/${context.manifest?.id}/`
@@ -11,14 +11,14 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
     (useEsModules ? context.manifest?.esmodules[0] : context.manifest?.scripts?.[0]) ??
     'scripts/bundle.js'
   if (!(useEsModules || context.manifest?.scripts?.[0]))
-    logger.warn(
+    Logger.warn(
       'No output file specified in manifest, using default "bundle" in the "scripts/" folder',
     )
 
-  if (!context.manifest?.styles?.length) logger.warn('No CSS file found in manifest')
+  if (!context.manifest?.styles?.length) Logger.warn('No CSS file found in manifest')
   const cssFileName = context.manifest?.styles[0] ?? 'styles/bundle.css'
   if (!context.manifest?.styles[0])
-    logger.warn(
+    Logger.warn(
       'No output css file specified in manifest, using default "bundle" in the "styles/" folder',
     )
 
@@ -26,9 +26,9 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
   const foundryUrl = context.env?.foundryUrl ?? 'localhost'
 
   const entry = (config.build?.lib as LibraryOptions | undefined)?.entry
-  if (!entry) logger.fail('Entry must be specified in lib')
+  if (!entry) Logger.fail('Entry must be specified in lib')
   if (typeof entry !== 'string')
-    logger.fail('Only a singular string entry is supported for build.lib.entry')
+    Logger.fail('Only a singular string entry is supported for build.lib.entry')
 
   const isWatch = process.argv.includes('--watch') || !!config.build?.watch
 

@@ -1,7 +1,7 @@
 import path from 'path'
 import fs from 'fs-extra'
 import { context } from 'src/context'
-import logger from './logger'
+import Logger from './logger'
 import { LibraryOptions, ResolvedConfig } from 'vite'
 
 class PathUtils {
@@ -15,7 +15,7 @@ class PathUtils {
   private static getConfig(): ResolvedConfig {
     if (!PathUtils._config) {
       const config = context.config
-      if (!config) logger.fail('Path utils can only be called after vite has resolved the config')
+      if (!config) Logger.fail('Path utils can only be called after vite has resolved the config')
       PathUtils._config = config as ResolvedConfig
     }
     return PathUtils._config

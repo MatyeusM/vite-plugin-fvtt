@@ -1,45 +1,41 @@
 type LogLevel = 'info' | 'warn' | 'error'
 
-interface LoggerOptions {
-  namespace?: string
-}
-
 class Logger {
-  private namespace: string
+  private static namespace: string = 'vite-plugin-fvtt'
 
-  private colors: Record<LogLevel, string> = {
-    info: '\x1b[32m', // green
+  private static colors: Record<LogLevel, string> = {
+    info: '\x1b[36m', // cyan
     warn: '\x1b[33m', // yellow
     error: '\x1b[31m', // red
   }
+  private static reset = '\x1b[0m'
 
-  constructor({ namespace = 'vite-plugin-fvtt' }: LoggerOptions = {}) {
-    this.namespace = namespace
+  initialize(namespace = 'vite-plugin-fvtt') {
+    Logger.namespace = namespace
   }
 
-  private format(level: LogLevel, message: unknown): string {
-    const color = this.colors[level] ?? ''
-    const reset = '\x1b[0m'
-    return `${color}[${this.namespace}] [${level.toUpperCase()}]${reset} ${message}`
+  private static format(level: LogLevel, message: unknown): string {
+    const color = Logger.colors[level] ?? ''
+    return `${color}[${Logger.namespace}] [${level.toUpperCase()}]${Logger.reset} ${message}`
   }
 
-  info(message: unknown): void {
-    console.log(this.format('info', message))
+  static info(message: unknown): void {
+    console.log(Logger.format('info', message))
   }
 
-  warn(message: unknown): void {
-    console.warn(this.format('warn', message))
+  static warn(message: unknown): void {
+    console.warn(Logger.format('warn', message))
   }
 
-  error(message: unknown): void {
-    console.error(this.format('error', message))
+  static error(message: unknown): void {
+    console.error(Logger.format('error', message))
   }
 
-  fail(message: unknown): never {
-    this.error(message)
+  static fail(message: unknown): never {
+    Logger.error(message)
     throw new Error(typeof message === 'string' ? message : JSON.stringify(message, null, 2))
   }
 }
 
 // Default shared instance
-export default new Logger()
+export default Logger
