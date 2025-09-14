@@ -1,10 +1,10 @@
 import fs from 'fs-extra'
 import { globSync } from 'tinyglobby'
-import posix from 'path/posix'
+import path from 'path'
 import { context, FoundryVTTManifest } from 'src/context'
 import { languageTracker } from 'src/server/trackers/language-tracker'
 import Logger from 'src/utils/logger'
-import path from 'src/utils/path-utils'
+import PathUtils from 'src/utils/path-utils'
 
 export function getLocalLanguageFiles(lang: string, outDir: boolean = false): string[] {
   const manifest = context.manifest as FoundryVTTManifest
@@ -12,20 +12,20 @@ export function getLocalLanguageFiles(lang: string, outDir: boolean = false): st
   if (!language) Logger.fail(`Cannot find language "${lang}"`)
   const langPath = language?.path ?? ''
   if (outDir) {
-    const languageFile = path.getOutDirFile(langPath)
+    const languageFile = PathUtils.getOutDirFile(langPath)
     return [languageFile]
   }
-  const publicDirFile = path.getPublicDirFile(langPath)
+  const publicDirFile = PathUtils.getPublicDirFile(langPath)
   if (publicDirFile !== '') {
     return [publicDirFile]
   }
   // get language files by checking a folder in the source directory
-  const sourcePath = path.getLanguageSourcePath(langPath, lang)
+  const sourcePath = PathUtils.getLanguageSourcePath(langPath, lang)
   if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isDirectory()) {
     Logger.warn(`No language folder found at: ${sourcePath}`)
     return []
   }
-  return globSync(posix.join(sourcePath, '**/*.json'))
+  return globSync(path.join(sourcePath, '**/*.json'))
 }
 
 export default function loadLanguage(lang: string, outDir: boolean = false): Map<string, any> {

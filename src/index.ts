@@ -1,5 +1,5 @@
 import fs from 'fs-extra'
-import posix from 'path/posix'
+import path from 'path'
 import { LibraryOptions, Plugin, ResolvedConfig } from 'vite'
 import { context } from 'src/context'
 import loadEnv from 'src/config/env'
@@ -11,7 +11,7 @@ import validateI18nBuild from 'src/language/validator'
 import { compileManifestPacks } from 'src/packs/compile-packs'
 import setupDevServer from 'src/server'
 import jsToInject from 'src/server/hmr-client'
-import path from 'src/utils/path-utils'
+import PathUtils from 'src/utils/path-utils'
 
 export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin {
   context.env = loadEnv()
@@ -29,8 +29,8 @@ export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin
       const manifestCandidates = ['system.json', 'module.json']
 
       for (const file of manifestCandidates) {
-        const src = posix.resolve(file)
-        if (!path.getPublicDirFile(file) && fs.existsSync(src)) {
+        const src = path.resolve(file)
+        if (!PathUtils.getPublicDirFile(file) && fs.existsSync(src)) {
           this.addWatchFile(src)
           const manifest = fs.readJsonSync(src)
           this.emitFile({
@@ -44,13 +44,13 @@ export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin
       const languages = context.manifest?.languages ?? []
       if (languages.length > 0) {
         for (const language of languages) {
-          if (path.getPublicDirFile(language.path)) continue
+          if (PathUtils.getPublicDirFile(language.path)) continue
           getLocalLanguageFiles(language.lang).forEach(langFile => this.addWatchFile(langFile))
           const languageDataRaw = loadLanguage(language.lang)
           const languageData = transform(languageDataRaw)
           this.emitFile({
             type: 'asset',
-            fileName: posix.join(language.path),
+            fileName: path.join(language.path),
             source: JSON.stringify(languageData, null, 2),
           })
         }
@@ -70,7 +70,7 @@ export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin
       const config = context.config as ResolvedConfig
       const jsFileName = (config.build.rollupOptions?.output as any)!.entryFileNames
       if (id === jsFileName || id === `/${jsFileName}`) {
-        const entryPath = posix.resolve((config.build.lib as LibraryOptions).entry as string)
+        const entryPath = path.resolve((config.build.lib as LibraryOptions).entry as string)
         const viteId = `/@fs/${entryPath}`
         return `import '${viteId}';\n${jsToInject}`
       }

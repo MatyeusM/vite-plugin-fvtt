@@ -1,8 +1,8 @@
 import path from 'path'
 import fs from 'fs-extra'
+import { LibraryOptions, ResolvedConfig } from 'vite'
 import { context } from 'src/context'
 import Logger from './logger'
-import { LibraryOptions, ResolvedConfig } from 'vite'
 
 class PathUtils {
   private static _config: ResolvedConfig | null = null

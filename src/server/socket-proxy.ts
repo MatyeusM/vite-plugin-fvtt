@@ -1,9 +1,9 @@
 import fs from 'fs-extra'
 import { Server as SocketServer } from 'socket.io'
 import { io as ClientIO } from 'socket.io-client'
-import { handlebarsTracker } from 'src/server/trackers/handlebars-tracker'
 import { HttpServer, ViteDevServer } from 'vite'
 import { context, ENVOptions } from 'src/context'
+import { handlebarsTracker } from 'src/server/trackers/handlebars-tracker'
 import pathUtils from 'src/utils/path-utils'
 
 export default function socketProxy(server: ViteDevServer) {

@@ -32,10 +32,15 @@ class Logger {
   }
 
   static fail(message: unknown): never {
-    Logger.error(message)
-    throw new Error(typeof message === 'string' ? message : JSON.stringify(message, null, 2))
+    const formatted = Logger.format('error', Logger.stringify(message))
+    console.error(formatted)
+    throw new Error(formatted)
+  }
+
+  private static stringify(message: unknown): string {
+    if (message instanceof Error) return message.stack ?? message.message
+    return typeof message === 'string' ? message : JSON.stringify(message, null, 2)
   }
 }
 
-// Default shared instance
 export default Logger

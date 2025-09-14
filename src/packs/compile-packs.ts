@@ -3,17 +3,17 @@ import fs from 'fs-extra'
 import path from 'path'
 import { context } from 'src/context'
 import Logger from 'src/utils/logger'
-import pathUtils from 'src/utils/path-utils'
+import PathUtils from 'src/utils/path-utils'
 
 export async function compileManifestPacks() {
   if (!context.manifest?.packs) return
 
   for (const pack of context.manifest.packs) {
     const srcCandidates = [
-      path.resolve(pathUtils.getSourceDirectory(), pack.path),
-      path.resolve(pathUtils.getRoot(), pack.path),
+      path.resolve(PathUtils.getSourceDirectory(), pack.path),
+      path.resolve(PathUtils.getRoot(), pack.path),
     ]
-    const dest = path.resolve(pathUtils.getOutDir(), pack.path)
+    const dest = path.resolve(PathUtils.getOutDir(), pack.path)
 
     const chosenSrc = srcCandidates.find(
       candidate => fs.existsSync(candidate) && fs.statSync(candidate).isDirectory(),

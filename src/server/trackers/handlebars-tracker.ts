@@ -1,5 +1,5 @@
-import { context } from 'src/context'
 import { ResolvedConfig } from 'vite'
+import { context } from 'src/context'
 import { AbstractFileTracker } from './abstract-file-tracker'
 
 export class HandlebarsTracker extends AbstractFileTracker<string> {
