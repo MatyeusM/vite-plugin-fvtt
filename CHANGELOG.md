@@ -1,8 +1,21 @@
 # Changelog
 
-## [0.2.2]
+## [0.2.3] - 2025-09-20
 
-## Fixed
+### Fixed
+
+- Return absolute paths from globbing.
+- Refactor path-utils import and usage across codebase, for better Windows support.
+- Refactor logger to use static Logger class methods.
+- Bump dependencies.
+
+### Added
+
+- Add Vitest and fixture-based build test.
+
+## [0.2.2] - 2025-09-10
+
+### Fixed
 
 - Improve windows path resolution.
 
@@ -75,7 +88,8 @@
 
 - Initial Release
 
-[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.2...HEAD
+[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.1.4...v0.2.0
