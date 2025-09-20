@@ -25,7 +25,7 @@ export function getLocalLanguageFiles(lang: string, outDir: boolean = false): st
     Logger.warn(`No language folder found at: ${sourcePath}`)
     return []
   }
-  return globSync(path.join(sourcePath, '**/*.json'))
+  return globSync(path.join(sourcePath, '**/*.json'), { absolute: true })
 }
 
 export default function loadLanguage(lang: string, outDir: boolean = false): Map<string, any> {
