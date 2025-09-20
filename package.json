@@ -28,7 +28,8 @@
   ],
   "scripts": {
     "dev": "tsdown --watch",
-    "build": "tsdown"
+    "build": "tsdown",
+    "test": "vitest"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
@@ -39,7 +40,8 @@
     "tsdown": "^0.15.1",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.41.0",
-    "vite": "*"
+    "vite": "*",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@foundryvtt/foundryvtt-cli": "^3.0.0",
