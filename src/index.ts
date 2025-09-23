@@ -1,4 +1,3 @@
-import fs from 'fs-extra'
 import path from 'path'
 import { LibraryOptions, Plugin, ResolvedConfig } from 'vite'
 import { context } from 'src/context'
@@ -11,15 +10,16 @@ import validateI18nBuild from 'src/language/validator'
 import { compileManifestPacks } from 'src/packs/compile-packs'
 import setupDevServer from 'src/server'
 import jsToInject from 'src/server/hmr-client'
+import FsUtils from 'src/utils/fs-utils'
 import PathUtils from 'src/utils/path-utils'
 
-export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin {
-  context.env = loadEnv()
+export default async function foundryVTTPlugin(options = { buildPacks: true }): Promise<Plugin> {
+  context.env = await loadEnv()
 
   return {
     name: 'vite-plugin-fvtt',
-    config(config) {
-      context.manifest = loadManifest(config) ?? undefined
+    async config(config) {
+      context.manifest = (await loadManifest(config)) ?? undefined
       return createPartialViteConfig(config)
     },
     configResolved(config) {
@@ -30,9 +30,9 @@ export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin
 
       for (const file of manifestCandidates) {
         const src = path.resolve(file)
-        if (!PathUtils.getPublicDirFile(file) && fs.existsSync(src)) {
+        if (!PathUtils.getPublicDirFile(file) && (await FsUtils.fileExists(src))) {
           this.addWatchFile(src)
-          const manifest = fs.readJsonSync(src)
+          const manifest = await FsUtils.readJson(src)
           this.emitFile({
             type: 'asset',
             fileName: file,
@@ -44,9 +44,11 @@ export default function foundryVTTPlugin(options = { buildPacks: true }): Plugin
       const languages = context.manifest?.languages ?? []
       if (languages.length > 0) {
         for (const language of languages) {
-          if (PathUtils.getPublicDirFile(language.path)) continue
-          getLocalLanguageFiles(language.lang).forEach(langFile => this.addWatchFile(langFile))
-          const languageDataRaw = loadLanguage(language.lang)
+          if (await PathUtils.getPublicDirFile(language.path)) continue
+          getLocalLanguageFiles(language.lang).then(langFiles => {
+            langFiles.forEach(file => this.addWatchFile(file))
+          })
+          const languageDataRaw = await loadLanguage(language.lang)
           const languageData = transform(languageDataRaw)
           this.emitFile({
             type: 'asset',

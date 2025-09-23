@@ -1,10 +1,10 @@
-import fs from 'fs-extra'
 import path from 'path'
 import { UserConfig } from 'vite'
 import { context, FoundryVTTManifest } from 'src/context'
+import FsUtils from 'src/utils/fs-utils'
 import Logger from 'src/utils/logger'
 
-export default function loadManifest(config: UserConfig): FoundryVTTManifest | void {
+export default async function loadManifest(config: UserConfig): Promise<FoundryVTTManifest | void> {
   if (context?.manifest) return context.manifest
   const publicDir = config.publicDir || 'public'
 
@@ -15,9 +15,11 @@ export default function loadManifest(config: UserConfig): FoundryVTTManifest | v
     `${publicDir}/module.json`,
   ]
 
-  const foundPath = MANIFEST_LOCATIONS.map(relPath => path.resolve(process.cwd(), relPath)).find(
-    absPath => fs.pathExistsSync(absPath),
-  )
+  const paths = MANIFEST_LOCATIONS.map(f => path.resolve(process.cwd(), f))
+  const exists = await Promise.all(paths.map(p => FsUtils.fileExists(p)))
+
+  const idx = exists.findIndex(Boolean)
+  const foundPath = idx !== -1 ? paths[idx] : undefined
 
   if (!foundPath) {
     Logger.fail(
@@ -26,7 +28,7 @@ export default function loadManifest(config: UserConfig): FoundryVTTManifest | v
   }
 
   try {
-    const data = fs.readJsonSync(foundPath!)
+    const data = await FsUtils.readJson<any>(foundPath)
 
     if (!data.id || typeof data.id !== 'string') {
       Logger.fail(`Manifest at ${foundPath} is missing required "id" field.`)

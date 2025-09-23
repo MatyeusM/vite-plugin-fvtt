@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Removed dependencies of `fs-extra` and `dotenv` to shrink the dependencies.
+- Async file loading should improve the performance for a large number of language files significantly.
+
 ## [0.2.3] - 2025-09-20
 
 ### Fixed

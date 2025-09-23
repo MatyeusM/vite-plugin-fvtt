@@ -3,10 +3,10 @@ import Logger from 'src/utils/logger'
 import { flattenKeys } from './transformer'
 import loadLanguage from './loader'
 
-export default function validator(): void {
+export default async function validator(): Promise<void> {
   const manifest = context.manifest as FoundryVTTManifest
 
-  const baseLanguageData = loadLanguage('en', true)
+  const baseLanguageData = await loadLanguage('en', true)
   if (baseLanguageData.size === 0) {
     Logger.error('Base language "en" not found or could not be loaded.')
     return
@@ -16,7 +16,7 @@ export default function validator(): void {
   for (const lang of manifest.languages) {
     if (lang.lang === 'en') continue // Skip the base language itself
 
-    const currentLanguageData = loadLanguage(lang.lang, true)
+    const currentLanguageData = await loadLanguage(lang.lang, true)
     if (currentLanguageData.size === 0) {
       Logger.warn(`Summary for language [${lang.lang}]: Could not be loaded.`)
       continue

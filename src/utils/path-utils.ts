@@ -1,8 +1,8 @@
 import path from 'path'
-import fs from 'fs-extra'
 import { LibraryOptions, ResolvedConfig } from 'vite'
 import { context } from 'src/context'
 import Logger from './logger'
+import FsUtils from './fs-utils'
 
 class PathUtils {
   private static _config: ResolvedConfig | null = null
@@ -67,23 +67,26 @@ class PathUtils {
     return PathUtils._root
   }
 
-  public static getOutDirFile(p: string): string {
+  public static async getOutDirFile(p: string): Promise<string> {
     const file = path.join(PathUtils.getOutDir(), p)
-    return fs.existsSync(file) ? file : ''
+    return (await FsUtils.fileExists(file)) ? file : ''
   }
 
-  public static getPublicDirFile(p: string): string {
+  public static async getPublicDirFile(p: string): Promise<string> {
     const file = path.join(PathUtils.getPublicDir(), p)
-    return fs.existsSync(file) ? file : ''
+    return (await FsUtils.fileExists(file)) ? file : ''
   }
 
-  private static findLocalFilePath(p: string): string | null {
+  private static async findLocalFilePath(p: string): Promise<string | null> {
     const fileCandidates = [
       PathUtils.getPublicDir(),
       PathUtils.getSourceDirectory(),
       PathUtils.getRoot(),
     ].map(pth => path.join(pth, p))
-    return fileCandidates.find(pth => fs.existsSync(pth)) ?? null
+
+    const exists = await Promise.all(fileCandidates.map(FsUtils.fileExists))
+    const idx = exists.findIndex(Boolean)
+    return idx !== -1 ? fileCandidates[idx] : null
   }
 
   public static isFoundryVTTUrl(p: string): boolean {
@@ -92,7 +95,7 @@ class PathUtils {
     return pathToCheck.startsWith(decodedBase)
   }
 
-  public static foundryVTTUrlToLocal(p: string): string | null {
+  public static async foundryVTTUrlToLocal(p: string): Promise<string | null> {
     const decodedBase = PathUtils.getDecodedBase()
     let pathToTransform = path.posix.normalize('/' + p)
     if (!pathToTransform.startsWith(decodedBase)) return null
