@@ -7,7 +7,7 @@ import Logger from 'src/utils/logger'
 import PathUtils from 'src/utils/path-utils'
 
 export default function httpMiddlewareHook(server: ViteDevServer) {
-  server.middlewares.use((req, res, next) => {
+  server.middlewares.use(async (req, res, next) => {
     const config = context.config as ResolvedConfig
 
     // This is a defensive check to make sure we don't handle requests
@@ -34,7 +34,7 @@ export default function httpMiddlewareHook(server: ViteDevServer) {
 
     if (languages.length === 1) {
       const lang = languages[0].lang
-      const language = loadLanguage(lang)
+      const language = await loadLanguage(lang)
       const jsonData = transform(language)
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify(jsonData, null, 2))
