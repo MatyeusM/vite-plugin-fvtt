@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.5] - 2025-09-24
+
+### Fixed
+
+- `system.json` or `module.json` in root due to missing wait condition for the check not properly copying.
+
 ## [0.2.4] - 2025-09-23
 
 ### Changed

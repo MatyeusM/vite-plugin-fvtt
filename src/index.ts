@@ -30,7 +30,7 @@ export default async function foundryVTTPlugin(options = { buildPacks: true }): 
 
       for (const file of manifestCandidates) {
         const src = path.resolve(file)
-        if (!PathUtils.getPublicDirFile(file) && (await FsUtils.fileExists(src))) {
+        if (!(await PathUtils.getPublicDirFile(file)) && (await FsUtils.fileExists(src))) {
           this.addWatchFile(src)
           const manifest = await FsUtils.readJson(src)
           this.emitFile({
