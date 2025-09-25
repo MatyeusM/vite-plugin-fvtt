@@ -1,4 +1,4 @@
-import { LibraryFormats, LibraryOptions, UserConfig } from 'vite'
+import { LibraryFormats, UserConfig } from 'vite'
 import { context } from 'src/context'
 import Logger from 'src/utils/logger'
 
@@ -25,7 +25,10 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
   const foundryPort = context.env?.foundryPort ?? 30000
   const foundryUrl = context.env?.foundryUrl ?? 'localhost'
 
-  const entry = (config.build?.lib as LibraryOptions | undefined)?.entry
+  const lib = config.build?.lib
+  if (!lib || typeof lib !== 'object') Logger.fail('This plugin needs a configured build.lib')
+
+  const entry = lib.entry
   if (!entry) Logger.fail('Entry must be specified in lib')
   if (typeof entry !== 'string')
     Logger.fail('Only a singular string entry is supported for build.lib.entry')
@@ -36,12 +39,7 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
     base,
     build: {
       emptyOutDir: config.build?.emptyOutDir ?? !isWatch,
-      lib: {
-        entry: entry as string,
-        formats,
-        name: context.manifest?.id ?? 'bundle',
-        cssFileName: 'bundle',
-      },
+      lib: { entry: entry, formats, name: context.manifest?.id ?? 'bundle', cssFileName: 'bundle' },
       minify: 'esbuild',
       rollupOptions: {
         output: {

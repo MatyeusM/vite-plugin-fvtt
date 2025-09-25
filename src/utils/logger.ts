@@ -3,12 +3,12 @@ type LogLevel = 'info' | 'warn' | 'error'
 class Logger {
   private static namespace: string = 'vite-plugin-fvtt'
 
-  private static colors: Record<LogLevel, string> = {
+  private static readonly colors: Record<LogLevel, string> = {
     info: '\x1b[36m', // cyan
     warn: '\x1b[33m', // yellow
     error: '\x1b[31m', // red
   }
-  private static reset = '\x1b[0m'
+  private static readonly reset = '\x1b[0m'
 
   initialize(namespace = 'vite-plugin-fvtt') {
     Logger.namespace = namespace

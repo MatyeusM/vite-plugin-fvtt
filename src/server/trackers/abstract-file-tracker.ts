@@ -10,7 +10,7 @@ interface FileUpdateEvent {
 
 export abstract class AbstractFileTracker<T> {
   private initialized = false
-  private tracked = new Map<string, T>()
+  private readonly tracked = new Map<string, T>()
   private watcher: FSWatcher | null = null
   protected readonly config: ResolvedConfig
   protected abstract readonly updateEvent: string
