@@ -4,14 +4,16 @@
 
 ### Fixed
 
-- `system.json` or `module.json` in root due to missing wait condition for the check not properly copying.
+- `system.json` or `module.json` in root due to missing wait condition for the check not properly
+  copying.
 
 ## [0.2.4] - 2025-09-23
 
 ### Changed
 
 - Removed dependencies of `fs-extra` and `dotenv` to shrink the dependencies.
-- Async file loading should improve the performance for a large number of language files significantly.
+- Async file loading should improve the performance for a large number of language files
+  significantly.
 
 ## [0.2.3] - 2025-09-20
 
