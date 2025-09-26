@@ -3,7 +3,7 @@ import path from 'path'
 import { build } from 'vite'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { MANIFEST, JS, CSS, LANGUAGE, VITE_CONFIG } from './fixture-data'
-import FsUtils from '../src/utils/fs-utils'
+import * as FsUtils from '../src/utils/fs-utils'
 
 const TEST_DIR = path.resolve(__dirname, `.tmp-${Date.now().toString()}`)
 

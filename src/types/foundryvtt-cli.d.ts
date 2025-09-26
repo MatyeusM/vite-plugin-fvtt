@@ -4,6 +4,7 @@ declare module '@foundryvtt/foundryvtt-cli' {
     yaml?: boolean
     log?: boolean
     recursive?: boolean
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
     transformEntry?: (entry: Record<string, unknown>) => Promise<false | void>
   }
 

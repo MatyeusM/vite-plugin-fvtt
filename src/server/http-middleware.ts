@@ -4,7 +4,7 @@ import { LibraryOptions, ResolvedConfig, ViteDevServer } from 'vite'
 import loadLanguage from 'src/language/loader'
 import { transform } from 'src/language/transformer'
 import Logger from 'src/utils/logger'
-import PathUtils from 'src/utils/path-utils'
+import * as PathUtils from 'src/utils/path-utils'
 
 export default function httpMiddlewareHook(server: ViteDevServer) {
   server.middlewares.use(async (req, res, next) => {

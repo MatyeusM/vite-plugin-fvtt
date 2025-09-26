@@ -1,10 +1,12 @@
 import path from 'path'
 import { UserConfig } from 'vite'
 import { context, FoundryVTTManifest } from 'src/context'
-import FsUtils from 'src/utils/fs-utils'
+import * as FsUtils from 'src/utils/fs-utils'
 import Logger from 'src/utils/logger'
 
-export default async function loadManifest(config: UserConfig): Promise<FoundryVTTManifest | void> {
+export default async function loadManifest(
+  config: UserConfig,
+): Promise<FoundryVTTManifest | never> {
   if (context?.manifest) return context.manifest
   const publicDir = config.publicDir || 'public'
 
@@ -41,7 +43,7 @@ export default async function loadManifest(config: UserConfig): Promise<FoundryV
     }
 
     const result: FoundryVTTManifest = {
-      manifestType: foundPath!.includes('module.json') ? 'module' : 'system',
+      manifestType: foundPath.includes('module.json') ? 'module' : 'system',
       id: data.id,
       esmodules: Array.isArray(data.esmodules) ? data.esmodules : [],
       scripts: Array.isArray(data.scripts) ? data.scripts : [],

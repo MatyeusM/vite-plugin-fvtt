@@ -2,9 +2,9 @@ import { glob } from 'tinyglobby'
 import path from 'path'
 import { context, FoundryVTTManifest } from 'src/context'
 import { languageTracker } from 'src/server/trackers/language-tracker'
-import FsUtils from 'src/utils/fs-utils'
+import * as FsUtils from 'src/utils/fs-utils'
 import Logger from 'src/utils/logger'
-import PathUtils from 'src/utils/path-utils'
+import * as PathUtils from 'src/utils/path-utils'
 
 export async function getLocalLanguageFiles(
   lang: string,

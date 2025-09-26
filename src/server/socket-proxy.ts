@@ -3,8 +3,8 @@ import { io as ClientIO } from 'socket.io-client'
 import { HttpServer, ViteDevServer } from 'vite'
 import { context, ENVOptions } from 'src/context'
 import { handlebarsTracker } from 'src/server/trackers/handlebars-tracker'
-import pathUtils from 'src/utils/path-utils'
-import FsUtils from 'src/utils/fs-utils'
+import * as PathUtils from 'src/utils/path-utils'
+import * as FsUtils from 'src/utils/fs-utils'
 
 export default function socketProxy(server: ViteDevServer) {
   const env = context.env as ENVOptions
@@ -22,7 +22,7 @@ export default function socketProxy(server: ViteDevServer) {
       const maybeAck = typeof args[args.length - 1] === 'function' ? args.pop() : null
 
       if (event === 'template') {
-        const localPath = await pathUtils.foundryVTTUrlToLocal(args[0])
+        const localPath = await PathUtils.foundryVTTUrlToLocal(args[0])
         if (localPath) {
           const html = await FsUtils.readFile(localPath)
           if (maybeAck) maybeAck({ html, success: true })

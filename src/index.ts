@@ -10,8 +10,8 @@ import validateI18nBuild from 'src/language/validator'
 import { compileManifestPacks } from 'src/packs/compile-packs'
 import setupDevServer from 'src/server'
 import jsToInject from 'src/server/hmr-client'
-import FsUtils from 'src/utils/fs-utils'
-import PathUtils from 'src/utils/path-utils'
+import * as FsUtils from 'src/utils/fs-utils'
+import * as PathUtils from 'src/utils/path-utils'
 
 export default async function foundryVTTPlugin(options = { buildPacks: true }): Promise<Plugin> {
   context.env = await loadEnv()
@@ -70,7 +70,7 @@ export default async function foundryVTTPlugin(options = { buildPacks: true }): 
     // all server behaviour
     load(id) {
       const config = context.config as ResolvedConfig
-      const jsFileName = (config.build.rollupOptions?.output as any)!.entryFileNames
+      const jsFileName = (config.build.rollupOptions?.output as any).entryFileNames
       if (id === jsFileName || id === `/${jsFileName}`) {
         const entryPath = path.resolve((config.build.lib as LibraryOptions).entry as string)
         const viteId = `/@fs/${entryPath}`
