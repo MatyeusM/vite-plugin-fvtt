@@ -30,7 +30,7 @@
     "build": "tsdown",
     "dev": "tsdown --watch",
     "eslint": "eslint .",
-    "prettier": "prettier check .",
+    "prettier": "prettier --check .",
     "typecheck": "tsc",
     "test": "vitest"
   },
