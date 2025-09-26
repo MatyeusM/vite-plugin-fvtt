@@ -1,6 +1,6 @@
 import { LibraryFormats, UserConfig } from 'vite'
 import { context } from 'src/context'
-import Logger from 'src/utils/logger'
+import * as Logger from 'src/utils/logger'
 
 export default function createPartialViteConfig(config: UserConfig): UserConfig {
   const base = config.base ?? `/${context.manifest?.manifestType}s/${context.manifest?.id}/`
@@ -22,13 +22,14 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
       'No output css file specified in manifest, using default "bundle" in the "styles/" folder',
     )
 
-  const foundryPort = context.env?.foundryPort ?? 30000
+  const foundryPort = context.env?.foundryPort ?? 30_000
   const foundryUrl = context.env?.foundryUrl ?? 'localhost'
 
-  const lib = config.build?.lib
-  if (!lib || typeof lib !== 'object') Logger.fail('This plugin needs a configured build.lib')
+  const library = config.build?.lib
+  if (!library || typeof library !== 'object')
+    Logger.fail('This plugin needs a configured build.lib')
 
-  const entry = lib.entry
+  const entry = library.entry
   if (!entry) Logger.fail('Entry must be specified in lib')
   if (typeof entry !== 'string')
     Logger.fail('Only a singular string entry is supported for build.lib.entry')

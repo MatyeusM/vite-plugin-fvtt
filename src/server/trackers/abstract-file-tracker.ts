@@ -1,6 +1,6 @@
-import path from 'path'
+import path from 'node:path'
 import { FSWatcher, ResolvedConfig, ViteDevServer } from 'vite'
-import Logger from 'src/utils/logger'
+import * as Logger from 'src/utils/logger'
 
 interface FileUpdateEvent {
   type: 'custom'
@@ -11,7 +11,7 @@ interface FileUpdateEvent {
 export abstract class AbstractFileTracker<T> {
   private initialized = false
   private readonly tracked = new Map<string, T>()
-  private watcher: FSWatcher | null = null
+  private watcher: FSWatcher | undefined = undefined
   protected readonly config: ResolvedConfig
   protected abstract readonly updateEvent: string
 

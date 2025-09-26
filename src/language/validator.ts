@@ -1,5 +1,5 @@
 import { context, FoundryVTTManifest } from 'src/context'
-import Logger from 'src/utils/logger'
+import * as Logger from 'src/utils/logger'
 import { flattenKeys } from './transformer'
 import loadLanguage from './loader'
 
@@ -27,8 +27,8 @@ export default async function validator(): Promise<void> {
     const extra = Object.keys(current).filter(key => !(key in base))
 
     Logger.info(`Summary for language [${lang.lang}]:`)
-    if (missing.length) console.warn(`Missing keys: ${missing.length}`, missing.slice(0, 5))
-    if (extra.length) console.warn(`Extra keys: ${extra.length}`, extra.slice(0, 5))
-    if (!missing.length && !extra.length) console.log('\t✅ All keys match.')
+    if (missing.length > 0) console.warn(`Missing keys: ${missing.length}`, missing.slice(0, 5))
+    if (extra.length > 0) console.warn(`Extra keys: ${extra.length}`, extra.slice(0, 5))
+    if (missing.length === 0 && extra.length === 0) console.log('\t✅ All keys match.')
   }
 }

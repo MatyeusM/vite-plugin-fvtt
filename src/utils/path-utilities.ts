@@ -1,15 +1,15 @@
-import path from 'path'
+import path from 'node:path'
 import { LibraryOptions, ResolvedConfig } from 'vite'
 import { context } from 'src/context'
-import Logger from './logger'
-import * as FsUtils from './fs-utils'
+import * as Logger from './logger'
+import * as FsUtilities from './fs-utilities'
 
-let _config: ResolvedConfig | null = null
-let _sourceDirectory: string | null = null
-let _decodedBase: string | null = null
-let _publicDir: string | null = null
-let _outDir: string | null = null
-let _root: string | null = null
+let _config: ResolvedConfig | undefined
+let _sourceDirectory: string | undefined
+let _decodedBase: string | undefined
+let _publicDirectory: string | undefined
+let _outDirectory: string | undefined
+let _root: string | undefined
 
 function getConfig(): ResolvedConfig {
   if (!_config) {
@@ -42,20 +42,20 @@ export function getSourceDirectory(): string {
   return _sourceDirectory
 }
 
-export function getPublicDir(): string {
-  if (!_publicDir) {
+export function getPublicDirectory(): string {
+  if (!_publicDirectory) {
     const config = getConfig()
-    _publicDir = path.resolve(config.publicDir)
+    _publicDirectory = path.resolve(config.publicDir)
   }
-  return _publicDir
+  return _publicDirectory
 }
 
-export function getOutDir(): string {
-  if (!_outDir) {
+export function getOutDirectory(): string {
+  if (!_outDirectory) {
     const config = getConfig()
-    _outDir = path.resolve(config.build.outDir)
+    _outDirectory = path.resolve(config.build.outDir)
   }
-  return _outDir
+  return _outDirectory
 }
 
 export function getRoot(): string {
@@ -66,24 +66,24 @@ export function getRoot(): string {
   return _root
 }
 
-export async function getOutDirFile(p: string): Promise<string> {
-  const file = path.join(getOutDir(), p)
-  return (await FsUtils.fileExists(file)) ? file : ''
+export async function getOutDirectoryFile(p: string): Promise<string> {
+  const file = path.join(getOutDirectory(), p)
+  return (await FsUtilities.fileExists(file)) ? file : ''
 }
 
-export async function getPublicDirFile(p: string): Promise<string> {
-  const file = path.join(getPublicDir(), p)
-  return (await FsUtils.fileExists(file)) ? file : ''
+export async function getPublicDirectoryFile(p: string): Promise<string> {
+  const file = path.join(getPublicDirectory(), p)
+  return (await FsUtilities.fileExists(file)) ? file : ''
 }
 
-async function findLocalFilePath(p: string): Promise<string | null> {
-  const fileCandidates = [getPublicDir(), getSourceDirectory(), getRoot()].map(pth =>
+async function findLocalFilePath(p: string): Promise<string | undefined> {
+  const fileCandidates = [getPublicDirectory(), getSourceDirectory(), getRoot()].map(pth =>
     path.join(pth, p),
   )
 
-  const exists = await Promise.all(fileCandidates.map(FsUtils.fileExists))
-  const idx = exists.findIndex(Boolean)
-  return idx !== -1 ? fileCandidates[idx] : null
+  const exists = await Promise.all(fileCandidates.map(file => FsUtilities.fileExists(file)))
+  const index = exists.findIndex(Boolean)
+  return index === -1 ? undefined : fileCandidates[index]
 }
 
 export function isFoundryVTTUrl(p: string): boolean {
@@ -92,10 +92,10 @@ export function isFoundryVTTUrl(p: string): boolean {
   return pathToCheck.startsWith(decodedBase)
 }
 
-export async function foundryVTTUrlToLocal(p: string): Promise<string | null> {
+export async function foundryVTTUrlToLocal(p: string): Promise<string | undefined> {
   const decodedBase = getDecodedBase()
   let pathToTransform = path.posix.normalize('/' + p)
-  if (!pathToTransform.startsWith(decodedBase)) return null
+  if (!pathToTransform.startsWith(decodedBase)) return undefined
   pathToTransform = path.relative(decodedBase, pathToTransform)
   return findLocalFilePath(pathToTransform)
 }
@@ -103,17 +103,17 @@ export async function foundryVTTUrlToLocal(p: string): Promise<string | null> {
 export function localToFoundryVTTUrl(p: string): string {
   const decodedBase = getDecodedBase()
   let pathToTransform = path.normalize(p)
-  ;[getPublicDir(), getSourceDirectory(), getRoot()].forEach(pth => {
+  for (const pth of [getPublicDirectory(), getSourceDirectory(), getRoot()]) {
     if (pathToTransform.startsWith(pth)) {
       pathToTransform = pathToTransform.slice(pth.length)
     }
-  })
+  }
   return path.join(decodedBase, pathToTransform)
 }
 
 export function getLanguageSourcePath(p: string, lang: string): string {
-  const dir = path.parse(p).dir
-  const lastDirName = path.basename(dir)
-  const finalSegments = lastDirName === lang ? dir : path.join(dir, lang)
+  const directory = path.parse(p).dir
+  const lastDirectoryName = path.basename(directory)
+  const finalSegments = lastDirectoryName === lang ? directory : path.join(directory, lang)
   return path.join(getSourceDirectory(), finalSegments)
 }

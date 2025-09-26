@@ -9,8 +9,8 @@ declare module '@foundryvtt/foundryvtt-cli' {
   }
 
   export function compilePack(
-    src: string,
-    dest: string,
+    source: string,
+    destination: string,
     options?: CompilePackOptions,
   ): Promise<void>
 }

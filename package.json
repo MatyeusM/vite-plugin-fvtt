@@ -27,14 +27,19 @@
     "README.md"
   ],
   "scripts": {
-    "dev": "tsdown --watch",
     "build": "tsdown",
+    "dev": "tsdown --watch",
+    "eslint": "eslint .",
+    "prettier": "prettier check .",
+    "typecheck": "tsc",
     "test": "vitest"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
     "@types/node": "^24.3.0",
     "eslint": "^9.34.0",
+    "eslint-plugin-sonarjs": "^3.0.5",
+    "eslint-plugin-unicorn": "^61.0.2",
     "prettier": "^3.6.2",
     "tsdown": "^0.15.1",
     "typescript": "^5.9.2",

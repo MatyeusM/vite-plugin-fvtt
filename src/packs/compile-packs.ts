@@ -1,38 +1,38 @@
 import { compilePack } from '@foundryvtt/foundryvtt-cli'
 import { glob } from 'tinyglobby'
-import path from 'path'
+import path from 'node:path'
 import { context } from 'src/context'
-import * as FsUtils from 'src/utils/fs-utils'
-import Logger from 'src/utils/logger'
-import * as PathUtils from 'src/utils/path-utils'
+import * as FsUtils from 'src/utils/fs-utilities'
+import * as Logger from 'src/utils/logger'
+import * as PathUtils from 'src/utils/path-utilities'
 
 export async function compileManifestPacks() {
   if (!context.manifest?.packs) return
 
   for (const pack of context.manifest.packs) {
-    const srcCandidates = [
+    const sourceCandidates = [
       path.resolve(PathUtils.getSourceDirectory(), pack.path),
       path.resolve(PathUtils.getRoot(), pack.path),
     ]
-    const dest = path.resolve(PathUtils.getOutDir(), pack.path)
+    const destination = path.resolve(PathUtils.getOutDirectory(), pack.path)
 
-    let chosenSrc: string | undefined
-    for (const candidate of srcCandidates) {
-      if (await FsUtils.dirExists(candidate)) {
-        chosenSrc = candidate
+    let chosenSource: string | undefined
+    for (const candidate of sourceCandidates) {
+      if (await FsUtils.directoryExists(candidate)) {
+        chosenSource = candidate
         break
       }
     }
 
-    if (!chosenSrc) {
+    if (!chosenSource) {
       Logger.warn(`Pack path not found for ${pack.path}, skipped.`)
       continue
     }
 
-    const entries = await glob(['**/*.yaml', '**/*.yml'], { cwd: chosenSrc, absolute: true })
+    const entries = await glob(['**/*.yaml', '**/*.yml'], { cwd: chosenSource, absolute: true })
     const hasYaml = entries.length > 0
 
-    await compilePack(chosenSrc, dest, { yaml: hasYaml, recursive: true })
-    Logger.info(`Compiled pack ${pack.path} (${hasYaml ? 'YAML' : 'JSON'}) from ${chosenSrc}`)
+    await compilePack(chosenSource, destination, { yaml: hasYaml, recursive: true })
+    Logger.info(`Compiled pack ${pack.path} (${hasYaml ? 'YAML' : 'JSON'}) from ${chosenSource}`)
   }
 }

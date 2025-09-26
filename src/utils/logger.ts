@@ -1,46 +1,42 @@
 type LogLevel = 'info' | 'warn' | 'error'
 
-class Logger {
-  private static namespace: string = 'vite-plugin-fvtt'
+let loggerNamespace: string = 'vite-plugin-fvtt'
 
-  private static readonly colors: Record<LogLevel, string> = {
-    info: '\x1b[36m', // cyan
-    warn: '\x1b[33m', // yellow
-    error: '\x1b[31m', // red
-  }
-  private static readonly reset = '\x1b[0m'
+const colors: Record<LogLevel, string> = {
+  info: '\u001B[36m', // cyan
+  warn: '\u001B[33m', // yellow
+  error: '\u001B[31m', // red
+}
+const reset = '\u001B[0m'
 
-  initialize(namespace = 'vite-plugin-fvtt') {
-    Logger.namespace = namespace
-  }
-
-  private static format(level: LogLevel, message: unknown): string {
-    const color = Logger.colors[level] ?? ''
-    return `${color}[${Logger.namespace}] [${level.toUpperCase()}]${Logger.reset} ${message}`
-  }
-
-  static info(message: unknown): void {
-    console.log(Logger.format('info', message))
-  }
-
-  static warn(message: unknown): void {
-    console.warn(Logger.format('warn', message))
-  }
-
-  static error(message: unknown): void {
-    console.error(Logger.format('error', message))
-  }
-
-  static fail(message: unknown): never {
-    const formatted = Logger.format('error', Logger.stringify(message))
-    console.error(formatted)
-    throw new Error(formatted)
-  }
-
-  private static stringify(message: unknown): string {
-    if (message instanceof Error) return message.stack ?? message.message
-    return typeof message === 'string' ? message : JSON.stringify(message, null, 2)
-  }
+export function initialize(namespace = 'vite-plugin-fvtt') {
+  loggerNamespace = namespace
 }
 
-export default Logger
+function format(level: LogLevel, message: unknown): string {
+  const color = colors[level] ?? ''
+  return `${color}[${loggerNamespace}] [${level.toUpperCase()}]${reset} ${message}`
+}
+
+export function info(message: unknown): void {
+  console.log(format('info', message))
+}
+
+export function warn(message: unknown): void {
+  console.warn(format('warn', message))
+}
+
+export function error(message: unknown): void {
+  console.error(format('error', message))
+}
+
+export function fail(message: unknown): never {
+  const formatted = format('error', stringify(message))
+  console.error(formatted)
+  throw new Error(formatted)
+}
+
+function stringify(message: unknown): string {
+  if (message instanceof Error) return message.stack ?? message.message
+  return typeof message === 'string' ? message : JSON.stringify(message, undefined, 2)
+}

@@ -1,13 +1,13 @@
-import Logger from 'src/utils/logger'
+import * as Logger from 'src/utils/logger'
 
-export function flattenKeys(obj: object, prefix = ''): Record<string, string> {
+export function flattenKeys(object: object, prefix = ''): Record<string, string> {
   const result: Record<string, string> = {}
-  for (const [key, val] of Object.entries(obj)) {
+  for (const [key, value] of Object.entries(object)) {
     const fullKey = prefix ? `${prefix}.${key}` : key
-    if (val && typeof val === 'object' && !Array.isArray(val)) {
-      Object.assign(result, flattenKeys(val, fullKey))
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      Object.assign(result, flattenKeys(value, fullKey))
     } else {
-      result[fullKey] = val
+      result[fullKey] = value
     }
   }
   return result
