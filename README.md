@@ -45,7 +45,7 @@ export default defineConfig({
 
 ## **⚙️ Features**
 
-### **1. Configuration**
+### **1. Configuration (Optional)**
 
 The plugin needs to know where your Foundry VTT instance is running to proxy and serve assets
 correctly. If you want to change anything from the defaults `http://localhost:30000`, create a
