@@ -33,13 +33,16 @@ export async function getLocalLanguageFiles(
 export default async function loadLanguage(
   lang: string,
   inOutDirectory: boolean = false,
-): Promise<Map<string, unknown>> {
+): Promise<Map<string, object>> {
   const files = await getLocalLanguageFiles(lang, inOutDirectory)
-  const result = new Map<string, unknown>()
+  const result = new Map<string, object>()
 
   const reads = files.map(async file => {
     try {
       const json = await FsUtils.readJson(file)
+      if (typeof json !== 'object' || json === null)
+        throw new Error(`Language file ${file} is not a valid JSON object`)
+
       languageTracker.addFile(lang, file)
       return [file, json] as const
     } catch (error) {
