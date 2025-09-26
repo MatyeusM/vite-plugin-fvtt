@@ -8,15 +8,13 @@ import * as FsUtilities from '../src/utils/fs-utilities'
 const TEST_DIR = path.resolve(__dirname, `.tmp-${Date.now().toString()}`)
 
 beforeEach(async () => {
-  // Mock `process.cwd()` to point to our test directory
-  // const originalCwd = process.cwd()
   vi.spyOn(process, 'cwd').mockReturnValue(TEST_DIR)
 
   const files = { ...JS, ...CSS, ...LANGUAGE }
   for (const [file, content] of Object.entries(files)) {
     const fullPath = path.join(TEST_DIR, file)
-    const dir = path.dirname(fullPath)
-    await fs.mkdir(dir, { recursive: true })
+    const directory = path.dirname(fullPath)
+    await fs.mkdir(directory, { recursive: true })
     await fs.writeFile(fullPath, content, 'utf8')
   }
 })
@@ -44,13 +42,15 @@ describe('Vite Plugin Build Process', () => {
 
     // --- Language files ---
     const referenceLangPath = path.join(TEST_DIR, 'dist', 'i18n/en.json')
-    const referenceLang = await FsUtilities.readJson<any>(referenceLangPath)
+    const referenceLang = await FsUtilities.readJson<Record<string, unknown>>(referenceLangPath)
+    expect(!!referenceLang).toBe(true)
+    if (!referenceLang) return
 
     for (const language of MANIFEST.languages) {
       const langPath = path.join(TEST_DIR, 'dist', language.path)
       expect(await FsUtilities.fileExists(langPath)).toBe(true)
 
-      const langJson = await FsUtilities.readJson<any>(langPath)
+      const langJson = await FsUtilities.readJson<Record<string, unknown>>(langPath)
 
       // Ensure all keys from reference are present
       for (const key of Object.keys(referenceLang)) {
@@ -78,13 +78,15 @@ describe('Vite Plugin Build Process (Alternate Module Path)', () => {
 
     // --- Language files ---
     const referenceLangPath = path.join(TEST_DIR, 'dist', 'i18n/en.json')
-    const referenceLang = await FsUtilities.readJson<any>(referenceLangPath)
+    const referenceLang = await FsUtilities.readJson<Record<string, unknown>>(referenceLangPath)
+    expect(!!referenceLang).toBe(true)
+    if (!referenceLang) return
 
     for (const language of MANIFEST.languages) {
       const langPath = path.join(TEST_DIR, 'dist', language.path)
       expect(await FsUtilities.fileExists(langPath)).toBe(true)
 
-      const langJson = await FsUtilities.readJson<any>(langPath)
+      const langJson = await FsUtilities.readJson<Record<string, unknown>>(langPath)
 
       // Ensure all keys from reference are present
       for (const key of Object.keys(referenceLang)) {

@@ -13,7 +13,7 @@ import jsToInject from 'src/server/hmr-client'
 import * as FsUtilities from 'src/utils/fs-utilities'
 import * as PathUtilities from 'src/utils/path-utilities'
 
-export default async function foundryVTTPlugin({ buildPacks = true }): Promise<Plugin> {
+export default async function foundryVTTPlugin({ buildPacks = true } = {}): Promise<Plugin> {
   context.env = await loadEnvironment()
 
   return {
