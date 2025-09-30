@@ -4,8 +4,43 @@ import { build } from 'vite'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { MANIFEST, JS, CSS, LANGUAGE, VITE_CONFIG } from './fixture-data'
 import * as FsUtilities from '../src/utils/fs-utilities'
+import { FoundryVTTManifest } from '../src/context'
+import { flattenKeys } from '../src/language/transformer'
 
 const TEST_DIR = path.resolve(__dirname, `.tmp-${Date.now().toString()}`)
+
+async function outputFileExists(relativeFilePath: string): Promise<boolean> {
+  return await FsUtilities.fileExists(path.join(TEST_DIR, 'dist', relativeFilePath))
+}
+
+async function expectCoreFilesExist(manifest: FoundryVTTManifest, isSystem = true): Promise<void> {
+  expect(await outputFileExists(isSystem ? 'system.json' : 'module.json')).toBe(true)
+  expect(await outputFileExists(manifest.esmodules[0])).toBe(true)
+  expect(await outputFileExists(manifest.styles[0])).toBe(true)
+}
+
+async function expectLanguagesToBeWellFormed(manifest: FoundryVTTManifest): Promise<void> {
+  const referenceLangPath = path.join(TEST_DIR, 'dist', 'i18n/en.json')
+  let referenceLang = await FsUtilities.readJson<Record<string, unknown>>(referenceLangPath)
+  expect(!!referenceLang).toBe(true)
+  if (!referenceLang) return
+  referenceLang = flattenKeys(referenceLang)
+
+  for (const language of manifest.languages) {
+    const langPath = path.join(TEST_DIR, 'dist', language.path)
+    expect(await outputFileExists(language.path)).toBe(true)
+
+    let langJson = await FsUtilities.readJson<Record<string, unknown>>(langPath)
+    expect(!!langJson).toBe(true)
+    if (!langJson) return
+    langJson = flattenKeys(langJson)
+
+    // Ensure all keys from reference are present
+    for (const key of Object.keys(referenceLang)) {
+      expect(langJson).toHaveProperty(key)
+    }
+  }
+}
 
 beforeEach(async () => {
   vi.spyOn(process, 'cwd').mockReturnValue(TEST_DIR)
@@ -33,30 +68,8 @@ describe('Vite Plugin Build Process', () => {
     )
     await build(VITE_CONFIG)
 
-    // --- Core JS + CSS checks + Manifest Check ---
-    expect(await FsUtilities.fileExists(path.join(TEST_DIR, 'dist/system.json'))).toBe(true)
-    expect(await FsUtilities.fileExists(path.join(TEST_DIR, 'dist', MANIFEST.esmodules[0]))).toBe(
-      true,
-    )
-    expect(await FsUtilities.fileExists(path.join(TEST_DIR, 'dist', MANIFEST.styles[0]))).toBe(true)
-
-    // --- Language files ---
-    const referenceLangPath = path.join(TEST_DIR, 'dist', 'i18n/en.json')
-    const referenceLang = await FsUtilities.readJson<Record<string, unknown>>(referenceLangPath)
-    expect(!!referenceLang).toBe(true)
-    if (!referenceLang) return
-
-    for (const language of MANIFEST.languages) {
-      const langPath = path.join(TEST_DIR, 'dist', language.path)
-      expect(await FsUtilities.fileExists(langPath)).toBe(true)
-
-      const langJson = await FsUtilities.readJson<Record<string, unknown>>(langPath)
-
-      // Ensure all keys from reference are present
-      for (const key of Object.keys(referenceLang)) {
-        expect(langJson).toHaveProperty(key)
-      }
-    }
+    await expectCoreFilesExist(MANIFEST as FoundryVTTManifest)
+    await expectLanguagesToBeWellFormed(MANIFEST as FoundryVTTManifest)
   })
 })
 
@@ -69,29 +82,7 @@ describe('Vite Plugin Build Process (Alternate Module Path)', () => {
     )
     await build(VITE_CONFIG)
 
-    // --- Core JS + CSS checks + Manifest Check ---
-    expect(await FsUtilities.fileExists(path.join(TEST_DIR, 'dist/module.json'))).toBe(true)
-    expect(await FsUtilities.fileExists(path.join(TEST_DIR, 'dist', MANIFEST.esmodules[0]))).toBe(
-      true,
-    )
-    expect(await FsUtilities.fileExists(path.join(TEST_DIR, 'dist', MANIFEST.styles[0]))).toBe(true)
-
-    // --- Language files ---
-    const referenceLangPath = path.join(TEST_DIR, 'dist', 'i18n/en.json')
-    const referenceLang = await FsUtilities.readJson<Record<string, unknown>>(referenceLangPath)
-    expect(!!referenceLang).toBe(true)
-    if (!referenceLang) return
-
-    for (const language of MANIFEST.languages) {
-      const langPath = path.join(TEST_DIR, 'dist', language.path)
-      expect(await FsUtilities.fileExists(langPath)).toBe(true)
-
-      const langJson = await FsUtilities.readJson<Record<string, unknown>>(langPath)
-
-      // Ensure all keys from reference are present
-      for (const key of Object.keys(referenceLang)) {
-        expect(langJson).toHaveProperty(key)
-      }
-    }
+    await expectCoreFilesExist(MANIFEST as FoundryVTTManifest, false)
+    await expectLanguagesToBeWellFormed(MANIFEST as FoundryVTTManifest)
   })
 })
