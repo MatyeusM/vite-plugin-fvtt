@@ -9,7 +9,7 @@ import unicorn from 'eslint-plugin-unicorn'
 export default defineConfig(
   eslint.configs.recommended,
   tseslint.configs.strict,
-  sonarjs.configs.recommended,
   unicorn.configs.recommended,
+  sonarjs.configs.recommended,
   { ignores: ['dist/**'] },
 )
