@@ -1,4 +1,14 @@
-# **vite-plugin-fvtt**
+<h1 align="center">vite-plugin-fvtt</h1>
+
+<div align="center">
+
+![NPM Version](https://img.shields.io/npm/v/vite-plugin-fvtt?style=for-the-badge&labelColor=1a1c23&color=a9cbae)
+![GitHub License](https://img.shields.io/github/license/MatyeusM/vite-plugin-fvtt?style=for-the-badge&labelColor=1a1c23&color=97cdcc)
+![GitHub last commit](https://img.shields.io/github/last-commit/MatyeusM/vite-plugin-fvtt?style=for-the-badge&labelColor=1a1c23&color=a1c6e1)
+![GitHub repo size](https://img.shields.io/github/repo-size/MatyeusM/vite-plugin-fvtt?style=for-the-badge&labelColor=1a1c23&color=bdbde4)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/MatyeusM/vite-plugin-fvtt/ci.yml?style=for-the-badge&labelColor=1a1c23&color=d6b5d2)
+
+</div>
 
 A [Vite](https://vitejs.dev/) plugin to **streamline and automate** the development of Foundry VTT
 modules and systems.
