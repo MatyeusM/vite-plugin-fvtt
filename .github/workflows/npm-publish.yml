@@ -23,10 +23,10 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install deps
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build package
-        run: npm run build
+        run: pnpm run build
 
       - name: Publish to npm
         run: npm publish --provenance --access public

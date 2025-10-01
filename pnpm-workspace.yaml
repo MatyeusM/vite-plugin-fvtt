@@ -1,0 +1,5 @@
+ignoredBuiltDependencies:
+  - classic-level
+
+onlyBuiltDependencies:
+  - esbuild

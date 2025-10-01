@@ -6,7 +6,7 @@
 
 - CI now tests against Node.js Latest, 20 LTS, and 22 LTS, ensuring Foundry projects compile across
   supported environments.
-- Badges were added to the README for improved project visibility.
+- Badges were added to the README because they look neat.
 - Dependabot now tracks GitHub Actions, not just NPM dependencies.
 
 ### Changed
@@ -17,8 +17,7 @@
   regret.)_
 - ESLint configuration significantly tightened:
   - Added sonarjs and unicorn plugins for deeper static analysis.
-  - Upgraded TypeScript ESLint rules from recommended to strict, increasing development signal
-    accuracy.
+  - Upgraded TypeScript ESLint rules from recommended to strict.
 - Test suite refactored to reduce duplication and simplify onboarding for future test additions.
 
 ## [0.2.5] - 2025-09-24
