@@ -2,18 +2,12 @@ export default `
 if (import.meta.hot) {
   const FVTT_PLUGIN = __FVTT_PLUGIN__
 
-  function refreshApplications(path = null) {
+  function refreshApplications(renderData = {}) {
+    const options = { renderContext: 'hotReload', renderData }
     // AppV1 refresh
-    Object.values(foundry.ui.windows).forEach(app => app.render(true))
+    for (const appV1 of Object.values(foundry.ui.windows)) appV1.render(false, { ...options })
     // AppV2 refresh
-    if (path)
-      foundry.applications.instances.forEach(appV2 => {
-        Object.values(appV2.constructor.PARTS ?? {}).forEach(part => {
-          const templates = Array.isArray(part.templates) ? part.templates : []
-          if (part.template === path || templates.includes(path)) appV2.render(true)
-        })
-      })
-    else foundry.applications.instances.forEach(appV2 => appV2.render(true))
+    for (const appV2 of foundry.applications.instances.values()) appV2.render({ ...options })
   }
 
   import.meta.hot.on('foundryvtt-template-update', ({ path }) => {
@@ -26,9 +20,19 @@ if (import.meta.hot) {
         console.error(error)
         return
       }
-      Handlebars.registerPartial(path, template)
+      if (!Object.hasOwn(Handlebars, 'templateIds')) Handlebars.registerPartial(path, template)
+      else if (Handlebars.templateIds[path]?.size > 0) {
+        for (const id of Handlebars.templateIds[path])
+          if (id in Handlebars.partials) Handlebars.registerPartial(id, template)
+      } else foundry.applications.handlebars.getTemplate(path)
       console.log(\`Vite | Retrieved and compiled template \${path}\`)
-      refreshApplications(path)
+      refreshApplications({
+        packageId: FVTT_PLUGIN.id,
+        packageType: FVTT_PLUGIN.isSystem ? 'system' : 'module',
+        content: response.html,
+        path,
+        extension: 'html',
+      })
     })
   })
 
@@ -58,7 +62,7 @@ if (import.meta.hot) {
       foundry.utils.mergeObject(targetObject, json)
       console.log(\`Vite | HMR: Reloaded language '\${lang}'\`)
     } catch (error) {
-      console.error(\`Vite | HMR: Error reloading language '\${lang}' for \${FVTT_PLUGIN.id}\`, error);
+      console.error(\`Vite | HMR: Error reloading language '\${lang}' for \${FVTT_PLUGIN.id}\`, error)
     }
   }
 
@@ -70,7 +74,13 @@ if (import.meta.hot) {
     }
     promises.push(hmrLanguage(currentLang))
     await Promise.all(promises)
-    refreshApplications()
+    refreshApplications({
+      packageId: FVTT_PLUGIN.id,
+      packageType: FVTT_PLUGIN.isSystem ? 'system' : 'module',
+      content: '',
+      path: '',
+      extension: 'json',
+    })
   })
 } else console.error('Vite | HMR is disabled')
 //`
