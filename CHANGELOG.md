@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Use `pnpm` as the package manager.
+
 ## [0.2.6] - 2025-10-01
 
 ### Added
