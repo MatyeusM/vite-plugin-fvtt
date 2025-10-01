@@ -1,4 +1,6 @@
-export default {
+import { type Config } from 'prettier'
+
+const config: Config = {
   printWidth: 100,
   semi: false,
   singleQuote: true,
@@ -6,3 +8,5 @@ export default {
   arrowParens: 'avoid',
   proseWrap: 'always',
 }
+
+export default config
