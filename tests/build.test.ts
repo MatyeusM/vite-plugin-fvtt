@@ -19,25 +19,26 @@ async function expectCoreFilesExist(manifest: FoundryVTTManifest, isSystem = tru
   expect(await outputFileExists(manifest.styles[0])).toBe(true)
 }
 
+async function loadLanguage(languagePath: string): Promise<Record<string, unknown> | undefined> {
+  const language = await FsUtilities.readJson<Record<string, unknown>>(languagePath)
+  expect(!!language).toBe(true)
+  if (!language) return
+  return flattenKeys(language)
+}
+
 async function expectLanguagesToBeWellFormed(manifest: FoundryVTTManifest): Promise<void> {
-  const referenceLangPath = path.join(TEST_DIR, 'dist', 'i18n/en.json')
-  let referenceLang = await FsUtilities.readJson<Record<string, unknown>>(referenceLangPath)
-  expect(!!referenceLang).toBe(true)
-  if (!referenceLang) return
-  referenceLang = flattenKeys(referenceLang)
+  expect(await outputFileExists('i18n/en.json')).toBe(true)
+  const referenceLanguagePath = path.join(TEST_DIR, 'dist', 'i18n/en.json')
+  const referenceLanguageJSON = loadLanguage(referenceLanguagePath)
 
   for (const language of manifest.languages) {
-    const langPath = path.join(TEST_DIR, 'dist', language.path)
     expect(await outputFileExists(language.path)).toBe(true)
-
-    let langJson = await FsUtilities.readJson<Record<string, unknown>>(langPath)
-    expect(!!langJson).toBe(true)
-    if (!langJson) return
-    langJson = flattenKeys(langJson)
+    const languagePath = path.join(TEST_DIR, 'dist', language.path)
+    const languageJSON = loadLanguage(languagePath)
 
     // Ensure all keys from reference are present
-    for (const key of Object.keys(referenceLang)) {
-      expect(langJson).toHaveProperty(key)
+    for (const key of Object.keys(referenceLanguageJSON)) {
+      expect(languageJSON).toHaveProperty(key)
     }
   }
 }
