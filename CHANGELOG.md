@@ -1,5 +1,26 @@
 # Changelog
 
+[0.2.6] - 2025-10-01
+
+### Added
+
+- CI now tests against Node.js Latest, 20 LTS, and 22 LTS, ensuring Foundry projects compile across
+  supported environments.
+- Badges were added to the README for improved project visibility.
+- Dependabot now tracks GitHub Actions, not just NPM dependencies.
+
+### Changed
+
+- HMR logic updated to mirror Foundry V14's internal implementation, with a full fallback to V13
+  behavior for templates and JSON language files. _(If Foundry doesn't end up relying on the new
+  data shape in V14, this will have been an over-engineered no-op; but future-proofing beats
+  regret.)_
+- ESLint configuration significantly tightened:
+  - Added sonarjs and unicorn plugins for deeper static analysis.
+  - Upgraded TypeScript ESLint rules from recommended to strict, increasing development signal
+    accuracy.
+- Test suite refactored to reduce duplication and simplify onboarding for future test additions.
+
 ## [0.2.5] - 2025-09-24
 
 ### Fixed
@@ -103,7 +124,8 @@
 
 - Initial Release
 
-[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.5...HEAD
+[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.2...v0.2.3
