@@ -35,3 +35,15 @@ jobs:
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Pack for release
+        run: pnpm pack
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          files: |
+            ./vite-plugin-fvtt*.tgz
+          body: |
+            Please refer to **[CHANGELOG.md](https://github.com/MatyeusM/vite-plugin-fvtt/blob/${{ github.ref_name }}/CHANGELOG.md)** for full details.
