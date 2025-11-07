@@ -1,10 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.7] - 2025-11-07
 
 ### Changed
 
 - Use `pnpm` as the package manager.
+- Bump @foundryvtt/foundryvtt-cli to version 3.0.1
 
 ## [0.2.6] - 2025-10-01
 
@@ -129,7 +130,8 @@
 
 - Initial Release
 
-[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.6...HEAD
+[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.7...HEAD
+[0.2.7]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.3...v0.2.4
