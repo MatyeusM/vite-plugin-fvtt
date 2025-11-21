@@ -18,7 +18,7 @@ jobs:
         task: [prettier, eslint, typecheck]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -43,7 +43,7 @@ jobs:
         node-version: [20, 22, 24]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
