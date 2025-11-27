@@ -5,7 +5,8 @@
 ### Fixed
 
 - i18n validator should only, ever, run during build commands.
-- fixed `package.json` pointing to the wrong files. Thank you [Daedalus11069](https://github.com/Daedalus11069).
+- fixed `package.json` pointing to the wrong files. Thank you
+  [Daedalus11069](https://github.com/Daedalus11069).
 
 ## [0.2.8] - 2025-11-15
 
