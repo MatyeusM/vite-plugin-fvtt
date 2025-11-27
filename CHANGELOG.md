@@ -1,10 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.9]
 
 ### Fixed
 
 - i18n validator should only, ever, run during build commands.
+- fixed `package.json` pointing to the wrong files. Thank you [Daedalus11069](https://github.com/Daedalus11069).
 
 ## [0.2.8] - 2025-11-15
 
@@ -142,7 +143,8 @@
 
 - Initial Release
 
-[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.8...HEAD
+[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.9...HEAD
+[0.2.8]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.5...v0.2.6

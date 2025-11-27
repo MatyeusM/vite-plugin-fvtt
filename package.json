@@ -18,8 +18,8 @@
   "license": "MIT",
   "author": "MatyeusM (https://github.com/MatyeusM)",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
   "files": [
     "dist",
     "CHANGELOG.md",
