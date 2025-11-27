@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- i18n validator should only, ever, run during build commands.
+
 ## [0.2.8] - 2025-11-15
 
 ### Changed

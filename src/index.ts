@@ -66,7 +66,7 @@ export default async function foundryVTTPlugin({ buildPacks = true } = {}): Prom
     },
     closeBundle() {
       const languages = context.manifest?.languages ?? []
-      if (languages.length > 0) {
+      if (languages.length > 0 && context.config?.command === 'build') {
         validateI18nBuild()
       }
     },
