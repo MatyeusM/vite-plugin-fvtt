@@ -30,6 +30,8 @@ function getBaseUrl(isSystem: boolean): string {
   return `/${type}/${MANIFEST.id}`
 }
 
+// starting the dev server leads to improper caching, can only test
+// either using a system manifest or a module manifest
 describe('Vite Plugin Dev Server - System Manifest', () => {
   let server: ViteDevServer | undefined
 
