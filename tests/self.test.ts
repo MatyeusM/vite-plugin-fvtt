@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest'
 import tsdownConfig from '../tsdown.config'
 import packageJson from '../package.json' assert { type: 'json' }
 
-const TEST_OUT_DIR = path.resolve(__dirname, `.tmp-${Date.now()}`)
+const TEST_OUT_DIR = path.resolve(__dirname, `.tmp-self-${Date.now()}`)
 
 describe('Self-build test', () => {
   it('should build itself and produce expected entries', async () => {

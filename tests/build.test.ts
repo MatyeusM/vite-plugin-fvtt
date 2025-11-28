@@ -11,7 +11,7 @@ import {
   writeManifest,
 } from './test-utilities'
 
-const TEST_DIR = path.resolve(__dirname, `.tmp-${Date.now().toString()}`)
+const TEST_DIR = path.resolve(__dirname, `.tmp-build-${Date.now().toString()}`)
 
 beforeEach(async () => {
   vi.spyOn(process, 'cwd').mockReturnValue(TEST_DIR)
