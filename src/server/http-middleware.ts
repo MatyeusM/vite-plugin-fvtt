@@ -18,10 +18,16 @@ export default function httpMiddlewareHook(server: ViteDevServer) {
     }
 
     // Get the filenames from the resolved config, as they are now finalized.
-    const cssFileName = (config.build.lib as LibraryOptions).cssFileName
-    const cssEntry = cssFileName ? PathUtils.localToFoundryVTTUrl(`${cssFileName}.css`) : undefined
+    const cssEntryName = (config.build.lib as LibraryOptions).cssFileName
+    const cssEntry = cssEntryName
+      ? PathUtils.localToFoundryVTTUrl(`${cssEntryName}.css`)
+      : undefined
+    const cssFileName = context.manifest?.styles[0] ?? 'styles/bundle.css'
+    const cssFile = cssFileName ? PathUtils.localToFoundryVTTUrl(`${cssFileName}`) : undefined
 
-    if (path.posix.normalize(request.url ?? '') === cssEntry) {
+    const normalizedPath = path.posix.normalize(request.url ?? '')
+
+    if (normalizedPath === cssEntry || normalizedPath == cssFile) {
       Logger.info(`Blocking CSS entry to ${request.url}`)
       response.setHeader('Content-Type', 'text/css')
       response.end('/* The cake is in another castle. */')

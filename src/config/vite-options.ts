@@ -40,6 +40,7 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
     base,
     build: {
       emptyOutDir: config.build?.emptyOutDir ?? !isWatch,
+      // cssFileName should not be a path, so we use 'bundle' as default here, but we overwrite it in assets.
       lib: { entry: entry, formats, name: context.manifest?.id ?? 'bundle', cssFileName: 'bundle' },
       minify: 'esbuild',
       rollupOptions: {

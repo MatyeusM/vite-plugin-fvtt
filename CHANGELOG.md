@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Middleware now returns an empty CSS asset instead of a 404 when no CSS is emitted.
+- Added inline documentation to clarify Vite option interactions affecting CSS generation.
+
 ## [0.2.9] - 2025-11-27
 
 ### Fixed
