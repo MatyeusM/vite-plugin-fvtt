@@ -1,5 +1,4 @@
 import fs from 'node:fs/promises'
-import path from 'node:path'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { ViteDevServer } from 'vite'
 import { MANIFEST, JS, CSS, LANGUAGE, VITE_CONFIG } from './fixture-data'
@@ -10,18 +9,24 @@ import {
   fetchFromDevelopmentServer,
   writeManifest,
   isOnlyCssComments,
+  generateTemporaryDirectory,
 } from './test-utilities'
 
-const TEST_DIR = path.resolve(__dirname, `.tmp-serve-${Date.now().toString()}`)
+const TEMPORARY_TEST_DIRECTORY = generateTemporaryDirectory()
+
+let server: ViteDevServer | undefined
 
 beforeEach(async () => {
-  vi.spyOn(process, 'cwd').mockReturnValue(TEST_DIR)
+  vi.spyOn(process, 'cwd').mockReturnValue(TEMPORARY_TEST_DIRECTORY)
   const files = { ...JS, ...CSS, ...LANGUAGE }
-  await createTestFiles(TEST_DIR, files)
+  await createTestFiles(TEMPORARY_TEST_DIRECTORY, files)
+  await writeManifest(MANIFEST, TEMPORARY_TEST_DIRECTORY, true)
+  server = await createTestServer(VITE_CONFIG)
 })
 
 afterEach(async () => {
-  await fs.rm(TEST_DIR, { recursive: true })
+  if (server) await stopTestServer(server)
+  await fs.rm(TEMPORARY_TEST_DIRECTORY, { recursive: true })
   vi.restoreAllMocks()
 })
 
@@ -30,64 +35,59 @@ function getBaseUrl(isSystem: boolean): string {
   return `/${type}/${MANIFEST.id}`
 }
 
-// starting the dev server leads to improper caching, can only test
-// either using a system manifest or a module manifest
 describe('Vite Plugin Dev Server - System Manifest', () => {
-  let server: ViteDevServer | undefined
+  const baseUrl = getBaseUrl(true)
 
-  it('Should serve all data from vite', async () => {
-    await writeManifest(MANIFEST, TEST_DIR)
-    server = await createTestServer(VITE_CONFIG)
-    const baseUrl = getBaseUrl(true)
-
-    // Deal with js
+  it('Should serve the ES module with HMR injections', async () => {
     const jsUrl = `${baseUrl}/${MANIFEST.esmodules[0]}`
-
     const response = await fetchFromDevelopmentServer(jsUrl)
 
     expect(response.status).toBe(200)
     expect(response.headers.get('content-type')).toContain('javascript')
-
-    // Verify HMR client code is injected
     expect(response.text).toContain('import.meta.hot')
     expect(response.text).toContain('foundryvtt-template-update')
     expect(response.text).toContain('foundryvtt-language-update')
+  })
 
-    // Deal with CSS
+  it('Should serve the CSS stylesheet as expected (only comments/empty)', async () => {
     const cssUrl = `${baseUrl}/${MANIFEST.styles[0]}`
-    console.log(cssUrl)
-    const cssResponse = await fetchFromDevelopmentServer(cssUrl)
-    expect(cssResponse.status).toBe(200)
-    expect(cssResponse.headers.get('content-type')).toContain('text/css')
-    expect(isOnlyCssComments(cssResponse.text)).toBe(true)
+    const response = await fetchFromDevelopmentServer(cssUrl)
 
-    // Deal with languages
-    const enUrl = `${baseUrl}/i18n/en.json`
-    const enResponse = await fetchFromDevelopmentServer(enUrl)
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('text/css')
+    expect(isOnlyCssComments(response.text)).toBe(true)
+  })
 
-    expect(enResponse.status).toBe(200)
-    expect(enResponse.headers.get('content-type')).toContain('json')
+  describe('Language File Serving and Merging', () => {
+    it('Should serve the reference language (en) correctly', async () => {
+      const enUrl = `${baseUrl}/i18n/en.json`
+      const response = await fetchFromDevelopmentServer(enUrl)
 
-    const enData = JSON.parse(enResponse.text)
-    expect(enData).toHaveProperty('hello', 'Hello')
-    expect(enData).toHaveProperty('world', 'World!')
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toContain('json')
 
-    // Test German language file
-    const deUrl = `${baseUrl}/i18n/de.json`
-    const deResponse = await fetchFromDevelopmentServer(deUrl)
+      const enData = JSON.parse(response.text)
+      expect(enData).toEqual({ hello: 'Hello', world: 'World!' })
+    })
 
-    expect(deResponse.status).toBe(200)
-    expect(deResponse.headers.get('content-type')).toContain('json')
+    it('Should serve and merge a secondary language (de) and contain all reference keys', async () => {
+      const deUrl = `${baseUrl}/i18n/de.json`
+      const response = await fetchFromDevelopmentServer(deUrl)
 
-    const deData = JSON.parse(deResponse.text)
-    expect(deData).toHaveProperty('hello', 'Hallo')
-    expect(deData).toHaveProperty('world', 'Welt!')
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toContain('json')
 
-    // Ensure German has all English keys
-    for (const key of Object.keys(enData)) {
-      expect(deData).toHaveProperty(key)
-    }
+      const deData = JSON.parse(response.text)
+      const expectedDeData = { hello: 'Hallo', world: 'Welt!' } // From fixture-data
 
-    await stopTestServer(server)
+      expect(deData).toEqual(expectedDeData)
+      const enUrl = `${baseUrl}/i18n/en.json`
+      const enResponse = await fetchFromDevelopmentServer(enUrl)
+      const enData = JSON.parse(enResponse.text)
+
+      for (const key of Object.keys(enData)) {
+        expect(deData).toHaveProperty(key)
+      }
+    })
   })
 })

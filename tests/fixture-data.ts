@@ -11,6 +11,13 @@ export const MANIFEST = {
   ],
 }
 
+export type Manifest = {
+  id: string
+  esmodules: string[]
+  styles?: string[]
+  languages?: { path: string; lang: string }[]
+}
+
 export const LANGUAGE = {
   'public/i18n/en.json': JSON.stringify({ hello: 'Hello', world: 'World!' }),
   'src/i18n/de/hallo.json': JSON.stringify({ hello: 'Hallo' }),
