@@ -29,9 +29,9 @@ describe('Vite Plugin Build Process', () => {
       await writeManifest(MANIFEST, TEMPORARY_TEST_DIRECTORY, isSystem)
 
       const result = await build(VITE_CONFIG)
-      expect(result).toBeDefined()
-      expect(TEMPORARY_TEST_DIRECTORY).toHaveCoreFiles(MANIFEST, isSystem)
-      expect(TEMPORARY_TEST_DIRECTORY).toHaveWellFormedLanguages(MANIFEST)
+      await expect(result).toBeDefined()
+      await expect(TEMPORARY_TEST_DIRECTORY).toHaveCoreFiles(MANIFEST, isSystem)
+      await expect(TEMPORARY_TEST_DIRECTORY).toHaveWellFormedLanguages(MANIFEST)
     },
   )
 })
