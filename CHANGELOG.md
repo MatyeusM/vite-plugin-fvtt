@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-01-01
+
+### Changed
+
+- Bump socket.io to 4.8.3
+
 ### Fixed
 
 - Middleware now returns an empty CSS asset instead of a 404, when Vite handles style injection.
@@ -151,7 +157,8 @@
 
 - Initial Release
 
-[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.9...HEAD
+[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.10...HEAD
+[0.2.10]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.6...v0.2.7
