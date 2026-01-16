@@ -1,6 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.11]
+
+### Changed
+
+- Bump @foundryvtt/foundryvtt-cli to version 3.0.3
+- Updated `package.json` for dependencies, for the correct semver ranges.
 
 ## [0.2.10] - 2026-01-01
 
@@ -157,7 +162,8 @@
 
 - Initial Release
 
-[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.10...HEAD
+[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.11...HEAD
+[0.2.11]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.7...v0.2.8
