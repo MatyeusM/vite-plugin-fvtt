@@ -1,4 +1,4 @@
-import * as Logger from 'src/utils/logger'
+import * as Logger from '@/utils/logger'
 
 export function flattenKeys(object: object, prefix = ''): Record<string, string> {
   const result: Record<string, string> = {}

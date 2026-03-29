@@ -1,5 +1,5 @@
-import { context, FoundryVTTManifest } from 'src/context'
-import * as Logger from 'src/utils/logger'
+import { context, FoundryVTTManifest } from '@/context'
+import * as Logger from '@/utils/logger'
 import { flattenKeys } from './transformer'
 import loadLanguage from './loader'
 

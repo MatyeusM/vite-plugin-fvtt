@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { FSWatcher, ResolvedConfig, ViteDevServer } from 'vite'
-import * as Logger from 'src/utils/logger'
+import * as Logger from '@/utils/logger'
 
 interface FileUpdateEvent {
   type: 'custom'

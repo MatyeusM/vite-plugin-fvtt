@@ -1,10 +1,10 @@
 import { Server as SocketServer } from 'socket.io'
 import { io as ClientIO } from 'socket.io-client'
 import { HttpServer, ViteDevServer } from 'vite'
-import { context, ENVOptions } from 'src/context'
-import { handlebarsTracker } from 'src/server/trackers/handlebars-tracker'
-import * as PathUtilities from 'src/utils/path-utilities'
-import * as FsUtilities from 'src/utils/fs-utilities'
+import { context, ENVOptions } from '@/context'
+import { handlebarsTracker } from '@/server/trackers/handlebars-tracker'
+import * as PathUtilities from '@/utils/path-utilities'
+import * as FsUtilities from '@/utils/fs-utilities'
 
 export default function socketProxy(server: ViteDevServer) {
   const environment = context.env as ENVOptions

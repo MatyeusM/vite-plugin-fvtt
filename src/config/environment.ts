@@ -1,6 +1,6 @@
 import { glob } from 'tinyglobby'
-import { ENVOptions } from 'src/context'
-import * as FsUtils from 'src/utils/fs-utilities'
+import { ENVOptions } from '@/context'
+import * as FsUtils from '@/utils/fs-utilities'
 
 function parseEnvironment(content: string): Record<string, string> {
   const result: Record<string, string> = {}

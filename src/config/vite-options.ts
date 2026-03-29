@@ -1,6 +1,6 @@
 import { LibraryFormats, UserConfig } from 'vite'
-import { context } from 'src/context'
-import * as Logger from 'src/utils/logger'
+import { context } from '@/context'
+import * as Logger from '@/utils/logger'
 
 export default function createPartialViteConfig(config: UserConfig): UserConfig {
   const base = config.base ?? `/${context.manifest?.manifestType}s/${context.manifest?.id}/`

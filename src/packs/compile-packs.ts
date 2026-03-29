@@ -1,10 +1,10 @@
 import { compilePack } from '@foundryvtt/foundryvtt-cli'
 import { glob } from 'tinyglobby'
 import path from 'node:path'
-import { context } from 'src/context'
-import * as FsUtils from 'src/utils/fs-utilities'
-import * as Logger from 'src/utils/logger'
-import * as PathUtils from 'src/utils/path-utilities'
+import { context } from '@/context'
+import * as FsUtils from '@/utils/fs-utilities'
+import * as Logger from '@/utils/logger'
+import * as PathUtils from '@/utils/path-utilities'
 
 export async function compileManifestPacks() {
   if (!context.manifest?.packs) return

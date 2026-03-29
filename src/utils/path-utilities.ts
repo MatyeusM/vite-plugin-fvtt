@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { LibraryOptions, ResolvedConfig } from 'vite'
-import { context } from 'src/context'
+import { context } from '@/context'
 import * as Logger from './logger'
 import * as FsUtilities from './fs-utilities'
 

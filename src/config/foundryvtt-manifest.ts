@@ -1,8 +1,8 @@
 import path from 'node:path'
 import { UserConfig } from 'vite'
-import { context, FoundryVTTManifest } from 'src/context'
-import * as FsUtils from 'src/utils/fs-utilities'
-import * as Logger from 'src/utils/logger'
+import { context, FoundryVTTManifest } from '@/context'
+import * as FsUtils from '@/utils/fs-utilities'
+import * as Logger from '@/utils/logger'
 
 async function resolveManifestPath(publicDirectory: string): Promise<string | undefined> {
   const MANIFEST_LOCATIONS = [

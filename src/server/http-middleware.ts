@@ -1,10 +1,10 @@
 import path from 'node:path'
-import { context, FoundryVTTManifest } from 'src/context'
+import { context, FoundryVTTManifest } from '@/context'
 import { LibraryOptions, ResolvedConfig, ViteDevServer } from 'vite'
-import loadLanguage from 'src/language/loader'
-import { transform } from 'src/language/transformer'
-import * as Logger from 'src/utils/logger'
-import * as PathUtils from 'src/utils/path-utilities'
+import loadLanguage from '@/language/loader'
+import { transform } from '@/language/transformer'
+import * as Logger from '@/utils/logger'
+import * as PathUtils from '@/utils/path-utilities'
 
 export default function httpMiddlewareHook(server: ViteDevServer) {
   server.middlewares.use(async (request, response, next) => {
