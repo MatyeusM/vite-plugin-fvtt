@@ -39,7 +39,7 @@
     "@types/node": "^25.5.0",
     "eslint": "^10.1.0",
     "eslint-plugin-sonarjs": "^4.0.2",
-    "eslint-plugin-unicorn": "^64.0.0",
+    "eslint-plugin-unicorn": "^65.0.1",
     "prettier": "^3.8.1",
     "tsdown": "^0.22.0",
     "typescript": "^6.0.2",
