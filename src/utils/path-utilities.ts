@@ -119,7 +119,9 @@ export function getLanguageSourcePath(p: string, lang: string): string {
   const finalSegments = lastDirectoryName === lang ? directory : path.join(directory, lang)
   return path.join(getSourceDirectory(), finalSegments)
 }
-export async function findFirstExistingDirectory(directories: string[]): Promise<string | undefined> {
+export async function findFirstExistingDirectory(
+  directories: string[],
+): Promise<string | undefined> {
   for (const directory of directories) {
     if (await FsUtilities.directoryExists(directory)) {
       return directory

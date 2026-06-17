@@ -1,8 +1,6 @@
 type LogLevel = 'info' | 'warn' | 'error'
 
-const config = {
-  loggerNamespace: 'vite-plugin-fvtt',
-}
+const config = { loggerNamespace: 'vite-plugin-fvtt' }
 
 const colors: Record<LogLevel, string> = {
   info: '\u{1B}[36m', // cyan

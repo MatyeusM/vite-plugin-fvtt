@@ -14,9 +14,7 @@ import {
 
 const TEMPORARY_TEST_DIRECTORY = generateTemporaryDirectory()
 
-const testContext = {
-  server: undefined as ViteDevServer | undefined,
-}
+const testContext = { server: undefined as ViteDevServer | undefined }
 
 beforeEach(async () => {
   vi.spyOn(process, 'cwd').mockReturnValue(TEMPORARY_TEST_DIRECTORY)
