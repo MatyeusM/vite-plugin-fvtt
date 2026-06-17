@@ -36,22 +36,22 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^25.5.0",
-    "eslint": "^10.1.0",
-    "eslint-plugin-sonarjs": "^4.0.2",
-    "eslint-plugin-unicorn": "^64.0.0",
-    "prettier": "^3.8.1",
-    "tsdown": "^0.22.0",
-    "typescript": "^6.0.2",
-    "typescript-eslint": "^8.57.2",
-    "vite": "^8.0.3",
-    "vitest": "^4.1.2"
+    "@types/node": "^25.9.3",
+    "eslint": "^10.5.0",
+    "eslint-plugin-sonarjs": "^4.0.3",
+    "eslint-plugin-unicorn": "^67.0.0",
+    "prettier": "^3.8.4",
+    "tsdown": "^0.22.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.1",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
   },
   "dependencies": {
     "@foundryvtt/foundryvtt-cli": "^3.0.3",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-    "tinyglobby": "^0.2.15"
+    "tinyglobby": "^0.2.17"
   },
   "peerDependencies": {
     "vite": "^7.0.0"

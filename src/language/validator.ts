@@ -38,8 +38,8 @@ export default async function validator(): Promise<void> {
     if (!current) continue
     const currentFlattened = flattenKeys(current)
 
-    const missing = Object.keys(baseFlattened).filter(key => !(key in currentFlattened))
-    const extra = Object.keys(currentFlattened).filter(key => !(key in baseFlattened))
+    const missing = Object.keys(baseFlattened).filter(key => !Object.hasOwn(currentFlattened, key))
+    const extra = Object.keys(currentFlattened).filter(key => !Object.hasOwn(baseFlattened, key))
 
     Logger.info(`Summary for language [${lang.lang}]:`)
     if (missing.length > 0) console.warn(`Missing keys: ${missing.length}`, missing.slice(0, 5))

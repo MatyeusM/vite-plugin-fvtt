@@ -4,13 +4,13 @@ import * as Logger from '@/utils/logger'
 
 export default function createPartialViteConfig(config: UserConfig): UserConfig {
   const base = config.base ?? `/${context.manifest?.manifestType}s/${context.manifest?.id}/`
-  const useEsModules = context.manifest?.esmodules.length === 1
-  const formats: LibraryFormats[] = useEsModules ? ['es'] : ['umd']
+  const isUseEsModules = context.manifest?.esmodules.length === 1
+  const formats: LibraryFormats[] = isUseEsModules ? ['es'] : ['umd']
 
   const fileName =
-    (useEsModules ? context.manifest?.esmodules[0] : context.manifest?.scripts?.[0]) ??
+    (isUseEsModules ? context.manifest?.esmodules[0] : context.manifest?.scripts?.[0]) ??
     'scripts/bundle.js'
-  if (!(useEsModules || context.manifest?.scripts?.[0]))
+  if (!(isUseEsModules || context.manifest?.scripts?.[0]))
     Logger.warn(
       'No output file specified in manifest, using default "bundle" in the "scripts/" folder',
     )

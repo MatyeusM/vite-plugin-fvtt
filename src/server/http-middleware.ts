@@ -8,8 +8,6 @@ import * as PathUtils from '@/utils/path-utilities'
 
 export default function httpMiddlewareHook(server: ViteDevServer) {
   server.middlewares.use(async (request, response, next) => {
-    const config = context.config as ResolvedConfig
-
     // This is a defensive check to make sure we don't handle requests
     // that don't belong to our module or system.
     if (!PathUtils.isFoundryVTTUrl(request.url ?? '')) {
@@ -17,13 +15,15 @@ export default function httpMiddlewareHook(server: ViteDevServer) {
       return
     }
 
+    const config = context.config as ResolvedConfig
+
     // Get the filenames from the resolved config, as they are now finalized.
     const cssEntryName = (config.build.lib as LibraryOptions).cssFileName
     const cssEntry = cssEntryName
       ? PathUtils.localToFoundryVTTUrl(`${cssEntryName}.css`)
       : undefined
     const cssFileName = context.manifest?.styles[0] ?? 'styles/bundle.css'
-    const cssFile = cssFileName ? PathUtils.localToFoundryVTTUrl(`${cssFileName}`) : undefined
+    const cssFile = cssFileName ? PathUtils.localToFoundryVTTUrl(cssFileName) : undefined
 
     const normalizedPath = path.posix.normalize(request.url ?? '')
 

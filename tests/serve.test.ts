@@ -14,18 +14,20 @@ import {
 
 const TEMPORARY_TEST_DIRECTORY = generateTemporaryDirectory()
 
-let server: ViteDevServer | undefined
+const testContext = {
+  server: undefined as ViteDevServer | undefined,
+}
 
 beforeEach(async () => {
   vi.spyOn(process, 'cwd').mockReturnValue(TEMPORARY_TEST_DIRECTORY)
   const files = { ...JS, ...CSS, ...LANGUAGE }
   await createTestFiles(TEMPORARY_TEST_DIRECTORY, files)
   await writeManifest(MANIFEST, TEMPORARY_TEST_DIRECTORY, true)
-  server = await createTestServer(VITE_CONFIG)
+  testContext.server = await createTestServer(VITE_CONFIG)
 })
 
 afterEach(async () => {
-  if (server) await stopTestServer(server)
+  if (testContext.server) await stopTestServer(testContext.server)
   await fs.rm(TEMPORARY_TEST_DIRECTORY, { recursive: true })
   vi.restoreAllMocks()
 })

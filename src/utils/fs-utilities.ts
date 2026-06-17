@@ -1,10 +1,10 @@
 import fs from 'node:fs/promises'
 import { Stats } from 'node:fs'
 
-async function checkType(p: string, check: (stats: Stats) => boolean): Promise<boolean> {
+async function checkType(p: string, isMatching: (stats: Stats) => boolean): Promise<boolean> {
   try {
     const stats = await fs.stat(p)
-    return check(stats)
+    return isMatching(stats)
   } catch {
     return false
   }

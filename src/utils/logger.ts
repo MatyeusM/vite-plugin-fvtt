@@ -1,21 +1,23 @@
 type LogLevel = 'info' | 'warn' | 'error'
 
-let loggerNamespace: string = 'vite-plugin-fvtt'
+const config = {
+  loggerNamespace: 'vite-plugin-fvtt',
+}
 
 const colors: Record<LogLevel, string> = {
-  info: '\u001B[36m', // cyan
-  warn: '\u001B[33m', // yellow
-  error: '\u001B[31m', // red
+  info: '\u{1B}[36m', // cyan
+  warn: '\u{1B}[33m', // yellow
+  error: '\u{1B}[31m', // red
 }
-const reset = '\u001B[0m'
+const reset = '\u{1B}[0m'
 
 export function initialize(namespace = 'vite-plugin-fvtt') {
-  loggerNamespace = namespace
+  config.loggerNamespace = namespace
 }
 
 function format(level: LogLevel, message: unknown): string {
   const color = colors[level] ?? ''
-  return `${color}[${loggerNamespace}] [${level.toUpperCase()}]${reset} ${message}`
+  return `${color}[${config.loggerNamespace}] [${level.toUpperCase()}]${reset} ${message}`
 }
 
 export function info(message: unknown): void {

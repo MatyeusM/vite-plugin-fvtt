@@ -4,32 +4,34 @@ import { context } from '@/context'
 import * as Logger from './logger'
 import * as FsUtilities from './fs-utilities'
 
-let _config: ResolvedConfig | undefined
-let _sourceDirectory: string | undefined
-let _decodedBase: string | undefined
-let _publicDirectory: string | undefined
-let _outDirectory: string | undefined
-let _root: string | undefined
+const cache: {
+  config?: ResolvedConfig
+  sourceDirectory?: string
+  decodedBase?: string
+  publicDirectory?: string
+  outDirectory?: string
+  root?: string
+} = {}
 
 function getConfig(): ResolvedConfig {
-  if (!_config) {
+  if (!cache.config) {
     const config = context.config
     if (!config) Logger.fail('Path utils can only be called after vite has resolved the config')
-    _config = config as ResolvedConfig
+    cache.config = config as ResolvedConfig
   }
-  return _config
+  return cache.config
 }
 
 export function getDecodedBase(): string {
-  if (!_decodedBase) {
+  if (!cache.decodedBase) {
     const config = getConfig()
-    _decodedBase = path.posix.normalize(decodeURI(config.base))
+    cache.decodedBase = path.posix.normalize(decodeURI(config.base))
   }
-  return _decodedBase
+  return cache.decodedBase
 }
 
 export function getSourceDirectory(): string {
-  if (!_sourceDirectory) {
+  if (!cache.sourceDirectory) {
     const config = getConfig()
     const normalizedEntry = path.normalize((config.build.lib as LibraryOptions).entry.toString())
     const segments = normalizedEntry
@@ -37,33 +39,33 @@ export function getSourceDirectory(): string {
       .filter(Boolean)
       .filter(s => s !== '.')
     const firstFolder = segments.length > 0 ? segments[0] : '.'
-    _sourceDirectory = path.join(config.root, firstFolder)
+    cache.sourceDirectory = path.join(config.root, firstFolder)
   }
-  return _sourceDirectory
+  return cache.sourceDirectory
 }
 
 export function getPublicDirectory(): string {
-  if (!_publicDirectory) {
+  if (!cache.publicDirectory) {
     const config = getConfig()
-    _publicDirectory = path.resolve(config.publicDir)
+    cache.publicDirectory = path.resolve(config.publicDir)
   }
-  return _publicDirectory
+  return cache.publicDirectory
 }
 
 export function getOutDirectory(): string {
-  if (!_outDirectory) {
+  if (!cache.outDirectory) {
     const config = getConfig()
-    _outDirectory = path.resolve(config.build.outDir)
+    cache.outDirectory = path.resolve(config.build.outDir)
   }
-  return _outDirectory
+  return cache.outDirectory
 }
 
 export function getRoot(): string {
-  if (!_root) {
+  if (!cache.root) {
     const config = getConfig()
-    _root = path.resolve(config.root)
+    cache.root = path.resolve(config.root)
   }
-  return _root
+  return cache.root
 }
 
 export async function getOutDirectoryFile(p: string): Promise<string> {
@@ -116,4 +118,11 @@ export function getLanguageSourcePath(p: string, lang: string): string {
   const lastDirectoryName = path.basename(directory)
   const finalSegments = lastDirectoryName === lang ? directory : path.join(directory, lang)
   return path.join(getSourceDirectory(), finalSegments)
+}
+export async function findFirstExistingDirectory(directories: string[]): Promise<string | undefined> {
+  for (const directory of directories) {
+    if (await FsUtilities.directoryExists(directory)) {
+      return directory
+    }
+  }
 }

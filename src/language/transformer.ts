@@ -29,13 +29,13 @@ export function expandDotNotationKeys(
     const lastKey = parts.pop() as string
 
     for (const part of parts) {
-      if (!(part in current)) {
+      if (!Object.hasOwn(current, part)) {
         current[part] = {}
       }
       current = current[part] as Record<string, unknown>
     }
 
-    if (lastKey in current) {
+    if (Object.hasOwn(current, lastKey)) {
       console.warn(`Warning: Overwriting key "${lastKey}" during transformation.`)
     }
 

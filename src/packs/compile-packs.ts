@@ -2,7 +2,6 @@ import { compilePack } from '@foundryvtt/foundryvtt-cli'
 import { glob } from 'tinyglobby'
 import path from 'node:path'
 import { context } from '@/context'
-import * as FsUtils from '@/utils/fs-utilities'
 import * as Logger from '@/utils/logger'
 import * as PathUtils from '@/utils/path-utilities'
 
@@ -16,13 +15,7 @@ export async function compileManifestPacks() {
     ]
     const destination = path.resolve(PathUtils.getOutDirectory(), pack.path)
 
-    let chosenSource: string | undefined
-    for (const candidate of sourceCandidates) {
-      if (await FsUtils.directoryExists(candidate)) {
-        chosenSource = candidate
-        break
-      }
-    }
+    const chosenSource = await PathUtils.findFirstExistingDirectory(sourceCandidates)
 
     if (!chosenSource) {
       Logger.warn(`Pack path not found for ${pack.path}, skipped.`)

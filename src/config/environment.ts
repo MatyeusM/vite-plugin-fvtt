@@ -22,5 +22,5 @@ export default async function loadEnvironment(): Promise<ENVOptions> {
     merged = { ...merged, ...parseEnvironment(content) }
   }
 
-  return { foundryUrl: merged.FOUNDRY_URL, foundryPort: Number.parseInt(merged.FOUNDRY_PORT, 10) }
+  return { foundryUrl: merged.FOUNDRY_URL, foundryPort: Number(merged.FOUNDRY_PORT) }
 }

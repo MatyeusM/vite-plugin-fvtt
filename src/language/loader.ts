@@ -8,13 +8,13 @@ import * as PathUtils from '@/utils/path-utilities'
 
 export async function getLocalLanguageFiles(
   lang: string,
-  inOutDirectory: boolean = false,
+  isInOutDirectory: boolean = false,
 ): Promise<string[]> {
   const manifest = context.manifest as FoundryVTTManifest
   const language = manifest.languages.find(l => l.lang === lang)
   if (!language) Logger.fail(`Cannot find language "${lang}"`)
   const langPath = language?.path ?? ''
-  if (inOutDirectory) {
+  if (isInOutDirectory) {
     const languageFile = await PathUtils.getOutDirectoryFile(langPath)
     return [languageFile]
   }
@@ -32,9 +32,9 @@ export async function getLocalLanguageFiles(
 
 export default async function loadLanguage(
   lang: string,
-  inOutDirectory: boolean = false,
+  isInOutDirectory: boolean = false,
 ): Promise<Map<string, object>> {
-  const files = await getLocalLanguageFiles(lang, inOutDirectory)
+  const files = await getLocalLanguageFiles(lang, isInOutDirectory)
   const result = new Map<string, object>()
 
   const reads = files.map(async file => {
