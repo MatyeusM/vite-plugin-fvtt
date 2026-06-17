@@ -6,7 +6,7 @@ import { ViteDevServer, InlineConfig, createServer } from 'vite'
 import { expect } from 'vitest'
 import * as FsUtilities from '../src/utils/fs-utilities'
 import { flattenKeys } from '../src/language/transformer'
-import packageJson from '../package.json' assert { type: 'json' }
+import packageJson from '../package.json' with { type: 'json' }
 import { Manifest } from './fixture-data'
 
 // --- File System Utilities ---
