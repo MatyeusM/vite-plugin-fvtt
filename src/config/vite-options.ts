@@ -1,11 +1,38 @@
-import { LibraryFormats, UserConfig } from 'vite'
+import { LibraryFormats, UserConfig, version, mergeConfig } from 'vite'
+import { type PreRenderedAsset } from 'rolldown'
 import { context } from '@/context'
 import * as Logger from '@/utils/logger'
+
+function getViteMajorVersion() {
+  try {
+    return Number(version.split('.', 1)[0])
+  } catch {
+    return 8 // fallback to newest
+  }
+}
+
+const oxcMinifyOptions: Partial<UserConfig> = {
+  build: {
+    minify: 'oxc',
+    rollupOptions: { output: { minify: { compress: true, mangle: false } } },
+  },
+}
+
+const esbuildMinifyOptions = (config: UserConfig): Partial<UserConfig> => ({
+  build: { minify: 'esbuild' },
+  esbuild: config.esbuild ?? {
+    minifyIdentifiers: false,
+    minifySyntax: true,
+    minifyWhitespace: true,
+    keepNames: true,
+  },
+})
 
 export default function createPartialViteConfig(config: UserConfig): UserConfig {
   const base = config.base ?? `/${context.manifest?.manifestType}s/${context.manifest?.id}/`
   const isUseEsModules = context.manifest?.esmodules.length === 1
   const formats: LibraryFormats[] = isUseEsModules ? ['es'] : ['umd']
+  const isVite8OrAbove = getViteMajorVersion() >= 8
 
   const fileName =
     (isUseEsModules ? context.manifest?.esmodules[0] : context.manifest?.scripts?.[0]) ??
@@ -36,41 +63,42 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
 
   const isWatch = process.argv.includes('--watch') || !!config.build?.watch
 
-  return {
-    base,
-    build: {
-      emptyOutDir: config.build?.emptyOutDir ?? !isWatch,
-      // cssFileName should not be a path, so we use 'bundle' as default here, but we overwrite it in assets.
-      lib: { entry: entry, formats, name: context.manifest?.id ?? 'bundle', cssFileName: 'bundle' },
-      minify: 'esbuild',
-      rollupOptions: {
-        output: {
-          entryFileNames: fileName,
-          assetFileNames: assetInfo => {
-            const names = assetInfo.names ?? []
-            if (names.some(n => n.endsWith('.css'))) {
-              return cssFileName
-            }
-            return '[name][extname]'
+  return mergeConfig(
+    {
+      base,
+      build: {
+        emptyOutDir: config.build?.emptyOutDir ?? !isWatch,
+        // cssFileName should not be a path, so we use 'bundle' as default here, but we overwrite it in assets.
+        lib: {
+          entry: entry,
+          formats,
+          name: context.manifest?.id ?? 'bundle',
+          cssFileName: 'bundle',
+        },
+        rollupOptions: {
+          output: {
+            entryFileNames: fileName,
+            assetFileNames: (assetInfo: PreRenderedAsset) => {
+              const names: string[] = assetInfo.names ?? []
+              if (names.some(n => n.endsWith('.css'))) {
+                return cssFileName
+              }
+              return '[name][extname]'
+            },
           },
         },
       },
-    },
-    define: {
-      __FVTT_PLUGIN__: {
-        id: context.manifest?.id,
-        isSystem: context.manifest?.manifestType === 'system',
+      define: {
+        __FVTT_PLUGIN__: {
+          id: context.manifest?.id,
+          isSystem: context.manifest?.manifestType === 'system',
+        },
+      },
+      server: {
+        port: foundryPort + 1,
+        proxy: { [`^(?!${base})`]: `http://${foundryUrl}:${foundryPort}` },
       },
     },
-    esbuild: config.esbuild ?? {
-      minifyIdentifiers: false,
-      minifySyntax: true,
-      minifyWhitespace: true,
-      keepNames: true,
-    },
-    server: {
-      port: foundryPort + 1,
-      proxy: { [`^(?!${base})`]: `http://${foundryUrl}:${foundryPort}` },
-    },
-  }
+    isVite8OrAbove ? oxcMinifyOptions : esbuildMinifyOptions(config),
+  )
 }

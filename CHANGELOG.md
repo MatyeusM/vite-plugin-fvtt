@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Switch to oxc for minification when using Vite 8+, falling back to esbuild for older versions.
+
 ## [0.2.11]
 
 ### Changed
