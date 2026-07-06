@@ -2,9 +2,12 @@
 
 ## [Unreleased]
 
+## [0.2.12]
+
 ### Changed
 
 - Switch to oxc for minification when using Vite 8+, falling back to esbuild for older versions.
+- Bump @foundryvtt/foundryvtt-cli to version 3.0.4
 
 ## [0.2.11]
 
@@ -169,6 +172,7 @@
 - Initial Release
 
 [unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.11...HEAD
+[0.2.12]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.8...v0.2.9
