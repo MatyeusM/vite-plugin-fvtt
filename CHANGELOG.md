@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Cleanup upstream connection on socket disconnect: Prevents resource leak by closing the upstream connection when the socket disconnects.
+
 ## [0.2.12]
 
 ### Changed
@@ -171,7 +175,7 @@
 
 - Initial Release
 
-[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.11...HEAD
+[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.12...HEAD
 [0.2.12]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.9...v0.2.10
