@@ -32,7 +32,9 @@
     "eslint": "eslint .",
     "prettier": "prettier --check .",
     "typecheck": "tsc",
-    "test": "vitest"
+    "test": "vitest",
+    "preinstall": "npx only-allow pnpm",
+    "postinstall": "simple-git-hooks"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -40,8 +42,10 @@
     "eslint": "^10.6.0",
     "eslint-plugin-sonarjs": "^4.1.0",
     "eslint-plugin-unicorn": "^70.0.0",
+    "lint-staged": "^17.0.8",
     "prettier": "^3.9.4",
     "rolldown": "^1.1.4",
+    "simple-git-hooks": "^2.13.1",
     "tsdown": "^0.22.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.1",
@@ -57,5 +61,17 @@
   "peerDependencies": {
     "vite": "^7.0.0"
   },
-  "packageManager": "pnpm@10.22.0"
+  "packageManager": "pnpm@10.22.0",
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged && pnpm typecheck"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*": [
+      "prettier --write"
+    ]
+  }
 }
