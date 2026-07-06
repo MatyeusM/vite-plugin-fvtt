@@ -44,5 +44,10 @@ export default function socketProxy(server: ViteDevServer) {
         if (maybeAck) maybeAck(response)
       })
     })
+
+    // Clean up the upstream connection to avoid potential leak
+    socket.on('disconnect', () => {
+      upstream.close()
+    })
   })
 }
