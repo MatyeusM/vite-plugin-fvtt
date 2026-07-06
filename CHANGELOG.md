@@ -4,7 +4,8 @@
 
 ### Fixed
 
-- Cleanup upstream connection on socket disconnect: Prevents resource leak by closing the upstream connection when the socket disconnects.
+- Cleanup upstream connection on socket disconnect: Prevents resource leak by closing the upstream
+  connection when the socket disconnects.
 
 ## [0.2.12]
 
