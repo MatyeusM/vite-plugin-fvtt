@@ -1,8 +1,11 @@
 import path from 'node:path'
+
 import { LibraryOptions, ResolvedConfig } from 'vite'
+
 import { context } from '@/context'
-import * as Logger from './logger'
+
 import * as FsUtilities from './fs-utilities'
+import * as Logger from './logger'
 
 const cache: {
   config?: ResolvedConfig
@@ -33,7 +36,9 @@ export function getDecodedBase(): string {
 export function getSourceDirectory(): string {
   if (!cache.sourceDirectory) {
     const config = getConfig()
-    const normalizedEntry = path.normalize((config.build.lib as LibraryOptions).entry.toString())
+    const lib = config.build?.lib as LibraryOptions | undefined
+    const entry = lib?.entry?.toString() ?? ''
+    const normalizedEntry = path.normalize(entry)
     const segments = normalizedEntry
       .split(path.sep)
       .filter(Boolean)
@@ -99,7 +104,7 @@ export async function foundryVTTUrlToLocal(p: string): Promise<string | undefine
   let pathToTransform = path.posix.normalize('/' + p)
   if (!pathToTransform.startsWith(decodedBase)) return undefined
   pathToTransform = path.relative(decodedBase, pathToTransform)
-  return findLocalFilePath(pathToTransform)
+  return await findLocalFilePath(pathToTransform)
 }
 
 export function localToFoundryVTTUrl(p: string): string {
@@ -122,9 +127,9 @@ export function getLanguageSourcePath(p: string, lang: string): string {
 export async function findFirstExistingDirectory(
   directories: string[],
 ): Promise<string | undefined> {
-  for (const directory of directories) {
-    if (await FsUtilities.directoryExists(directory)) {
-      return directory
-    }
-  }
+  const exists = await Promise.all(
+    directories.map(directory => FsUtilities.directoryExists(directory)),
+  )
+  const index = exists.findIndex(Boolean)
+  return index === -1 ? undefined : directories[index]
 }

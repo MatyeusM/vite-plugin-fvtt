@@ -1,5 +1,6 @@
-import { LibraryFormats, UserConfig, version, mergeConfig } from 'vite'
 import { type PreRenderedAsset } from 'rolldown'
+import { LibraryFormats, UserConfig, version, mergeConfig } from 'vite'
+
 import { context } from '@/context'
 import * as Logger from '@/utils/logger'
 
@@ -7,7 +8,8 @@ function getViteMajorVersion() {
   try {
     return Number(version.split('.', 1)[0])
   } catch {
-    return 8 // fallback to newest
+    // fallback to newest
+    return 8
   }
 }
 
@@ -18,22 +20,19 @@ const oxcMinifyOptions: Partial<UserConfig> = {
   },
 }
 
+const defaultEsbuildOptions = {
+  minifyIdentifiers: false,
+  minifySyntax: true,
+  minifyWhitespace: true,
+  keepNames: true,
+}
+
 const esbuildMinifyOptions = (config: UserConfig): Partial<UserConfig> => ({
   build: { minify: 'esbuild' },
-  esbuild: config.esbuild ?? {
-    minifyIdentifiers: false,
-    minifySyntax: true,
-    minifyWhitespace: true,
-    keepNames: true,
-  },
+  esbuild: (config.esbuild ?? defaultEsbuildOptions) as UserConfig['esbuild'],
 })
 
-export default function createPartialViteConfig(config: UserConfig): UserConfig {
-  const base = config.base ?? `/${context.manifest?.manifestType}s/${context.manifest?.id}/`
-  const isUseEsModules = context.manifest?.esmodules.length === 1
-  const formats: LibraryFormats[] = isUseEsModules ? ['es'] : ['umd']
-  const isVite8OrAbove = getViteMajorVersion() >= 8
-
+function resolveOutputFiles(isUseEsModules: boolean) {
   const fileName =
     (isUseEsModules ? context.manifest?.esmodules[0] : context.manifest?.scripts?.[0]) ??
     'scripts/bundle.js'
@@ -49,9 +48,10 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
       'No output css file specified in manifest, using default "bundle" in the "styles/" folder',
     )
 
-  const foundryPort = context.env?.foundryPort ?? 30_000
-  const foundryUrl = context.env?.foundryUrl ?? 'localhost'
+  return { fileName, cssFileName }
+}
 
+function getLibraryEntry(config: UserConfig): string {
   const library = config.build?.lib
   if (!library || typeof library !== 'object')
     Logger.fail('This plugin needs a configured build.lib')
@@ -61,7 +61,29 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
   if (typeof entry !== 'string')
     Logger.fail('Only a singular string entry is supported for build.lib.entry')
 
-  const isWatch = process.argv.includes('--watch') || !!config.build?.watch
+  return entry
+}
+
+function resolveAssetFileName(assetInfo: PreRenderedAsset, cssFileName: string): string {
+  const names: string[] = assetInfo.names ?? []
+  if (names.some(n => n.endsWith('.css'))) {
+    return cssFileName
+  }
+  return '[name][extname]'
+}
+
+export default function createPartialViteConfig(config: UserConfig): UserConfig {
+  const base = config.base ?? `/${context.manifest?.manifestType}s/${context.manifest?.id}/`
+  const isUseEsModules = context.manifest?.esmodules.length === 1
+  const formats: LibraryFormats[] = isUseEsModules ? ['es'] : ['umd']
+  const isVite8OrAbove = getViteMajorVersion() >= 8
+
+  const { fileName, cssFileName } = resolveOutputFiles(isUseEsModules)
+  const entry = getLibraryEntry(config)
+
+  const foundryPort = context.env?.foundryPort ?? 30_000
+  const foundryUrl = context.env?.foundryUrl ?? 'localhost'
+  const isWatch = process.argv.includes('--watch') || Boolean(config.build?.watch)
 
   return mergeConfig(
     {
@@ -69,22 +91,12 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
       build: {
         emptyOutDir: config.build?.emptyOutDir ?? !isWatch,
         // cssFileName should not be a path, so we use 'bundle' as default here, but we overwrite it in assets.
-        lib: {
-          entry: entry,
-          formats,
-          name: context.manifest?.id ?? 'bundle',
-          cssFileName: 'bundle',
-        },
+        lib: { entry, formats, name: context.manifest?.id ?? 'bundle', cssFileName: 'bundle' },
         rollupOptions: {
           output: {
             entryFileNames: fileName,
-            assetFileNames: (assetInfo: PreRenderedAsset) => {
-              const names: string[] = assetInfo.names ?? []
-              if (names.some(n => n.endsWith('.css'))) {
-                return cssFileName
-              }
-              return '[name][extname]'
-            },
+            assetFileNames: (assetInfo: PreRenderedAsset) =>
+              resolveAssetFileName(assetInfo, cssFileName),
           },
         },
       },

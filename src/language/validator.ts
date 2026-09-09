@@ -1,7 +1,8 @@
 import { context, FoundryVTTManifest } from '@/context'
 import * as Logger from '@/utils/logger'
-import { flattenKeys } from './transformer'
+
 import loadLanguage from './loader'
+import { flattenKeys } from './transformer'
 
 function getFirstMapValueOrWarn<T extends object>(
   map: Map<string, T>,
@@ -30,18 +31,25 @@ export default async function validator(): Promise<void> {
   }
   const baseFlattened = flattenKeys(base)
 
-  for (const lang of manifest.languages) {
-    if (lang.lang === 'en') continue // Skip the base language itself
+  const otherLanguages = manifest.languages.filter(lang => lang.lang !== 'en')
+  const loadedLanguages = await Promise.all(
+    otherLanguages.map(async lang => {
+      const currentLanguageData = await loadLanguage(lang.lang, true)
+      return {
+        lang: lang.lang,
+        current: getFirstMapValueOrWarn(currentLanguageData, `Language "${lang.lang}"`),
+      }
+    }),
+  )
 
-    const currentLanguageData = await loadLanguage(lang.lang, true)
-    const current = getFirstMapValueOrWarn(currentLanguageData, `Language "${lang.lang}"`)
+  for (const { lang, current } of loadedLanguages) {
     if (!current) continue
     const currentFlattened = flattenKeys(current)
 
     const missing = Object.keys(baseFlattened).filter(key => !Object.hasOwn(currentFlattened, key))
     const extra = Object.keys(currentFlattened).filter(key => !Object.hasOwn(baseFlattened, key))
 
-    Logger.info(`Summary for language [${lang.lang}]:`)
+    Logger.info(`Summary for language [${lang}]:`)
     if (missing.length > 0) console.warn(`Missing keys: ${missing.length}`, missing.slice(0, 5))
     if (extra.length > 0) console.warn(`Extra keys: ${extra.length}`, extra.slice(0, 5))
     if (missing.length === 0 && extra.length === 0) console.log('\t✅ All keys match.')

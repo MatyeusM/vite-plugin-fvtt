@@ -1,8 +1,9 @@
 import { ViteDevServer } from 'vite'
-import { handlebarsTracker } from './trackers/handlebars-tracker'
-import { languageTracker } from './trackers/language-tracker'
+
 import httpMiddleware from './http-middleware'
 import socketProxy from './socket-proxy'
+import { handlebarsTracker } from './trackers/handlebars-tracker'
+import { languageTracker } from './trackers/language-tracker'
 
 export default function setupDevelopmentServer(server: ViteDevServer) {
   // initialize the tracking of templates && language files

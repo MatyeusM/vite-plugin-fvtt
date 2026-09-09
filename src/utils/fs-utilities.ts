@@ -1,5 +1,5 @@
-import fs from 'node:fs/promises'
 import { Stats } from 'node:fs'
+import fs from 'node:fs/promises'
 
 async function checkType(p: string, isMatching: (stats: Stats) => boolean): Promise<boolean> {
   try {
@@ -10,18 +10,15 @@ async function checkType(p: string, isMatching: (stats: Stats) => boolean): Prom
   }
 }
 
-export async function fileExists(p: string): Promise<boolean> {
+export function fileExists(p: string): Promise<boolean> {
   return checkType(p, s => s.isFile())
 }
 
-export async function directoryExists(p: string): Promise<boolean> {
+export function directoryExists(p: string): Promise<boolean> {
   return checkType(p, s => s.isDirectory())
 }
 
-export async function readFile(
-  filePath: string,
-  encoding: BufferEncoding = 'utf8',
-): Promise<string> {
+export function readFile(filePath: string, encoding: BufferEncoding = 'utf8'): Promise<string> {
   return fs.readFile(filePath, { encoding })
 }
 
@@ -30,6 +27,6 @@ export async function readJson<T = unknown>(filePath: string): Promise<T | undef
     const content = await readFile(filePath)
     return JSON.parse(content) as T
   } catch {
-    return
+    return undefined
   }
 }

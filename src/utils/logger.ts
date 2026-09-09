@@ -3,9 +3,12 @@ type LogLevel = 'info' | 'warn' | 'error'
 const config = { loggerNamespace: 'vite-plugin-fvtt' }
 
 const colors: Record<LogLevel, string> = {
-  info: '\u{1B}[36m', // cyan
-  warn: '\u{1B}[33m', // yellow
-  error: '\u{1B}[31m', // red
+  // cyan
+  info: '\u{1B}[36m',
+  // yellow
+  warn: '\u{1B}[33m',
+  // red
+  error: '\u{1B}[31m',
 }
 const reset = '\u{1B}[0m'
 

@@ -3,54 +3,40 @@
   "version": "0.2.12",
   "description": "A Vite plugin for module and system development for Foundry VTT",
   "keywords": [
+    "foundryvtt",
     "vite",
-    "vite-plugin",
-    "foundryvtt"
+    "vite-plugin"
   ],
   "homepage": "https://github.com/MatyeusM/vite-plugin-fvtt#readme",
   "bugs": {
     "url": "https://github.com/MatyeusM/vite-plugin-fvtt/issues"
   },
+  "license": "MIT",
+  "author": "MatyeusM (https://github.com/MatyeusM)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MatyeusM/vite-plugin-fvtt.git"
   },
-  "license": "MIT",
-  "author": "MatyeusM (https://github.com/MatyeusM)",
-  "type": "module",
-  "main": "dist/index.mjs",
-  "types": "dist/index.d.mts",
   "files": [
     "dist",
     "CHANGELOG.md",
     "LICENSE",
     "README.md"
   ],
+  "type": "module",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
-    "eslint": "eslint .",
-    "prettier": "prettier --check .",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "typecheck": "tsc",
     "test": "vitest",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "simple-git-hooks"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^26.1.1",
-    "eslint": "^10.7.0",
-    "eslint-plugin-sonarjs": "^4.2.0",
-    "eslint-plugin-unicorn": "^72.0.0",
-    "lint-staged": "^17.2.0",
-    "prettier": "^3.9.6",
-    "rolldown": "^1.2.0",
-    "simple-git-hooks": "^2.13.1",
-    "tsdown": "^0.22.14",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.65.0",
-    "vite": "^8.1.5",
-    "vitest": "^4.1.10"
   },
   "dependencies": {
     "@foundryvtt/foundryvtt-cli": "^3.0.4",
@@ -58,23 +44,37 @@
     "socket.io-client": "^4.8.3",
     "tinyglobby": "^0.2.17"
   },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.5.0",
+    "lint-staged": "^17.5.0",
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0",
+    "prettier": "^3.9.6",
+    "rolldown": "^1.2.8",
+    "simple-git-hooks": "^2.14.0",
+    "tsdown": "^0.22.14",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  },
   "peerDependencies": {
     "vite": "^7.0.0"
   },
-  "packageManager": "pnpm@10.22.0",
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged && pnpm typecheck"
   },
   "lint-staged": {
     "*.ts": [
-      "eslint --fix",
-      "prettier --write"
+      "pnpm run lint"
     ],
     "*": [
-      "prettier --write"
+      "oxfmt --no-error-on-unmatched-pattern"
     ]
   },
   "engines": {
     "node": ">=22.0.0"
-  }
+  },
+  "packageManager": "pnpm@11.26.0"
 }

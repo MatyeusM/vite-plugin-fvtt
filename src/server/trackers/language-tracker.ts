@@ -1,4 +1,5 @@
 import { ResolvedConfig } from 'vite'
+
 import { AbstractFileTracker } from './abstract-file-tracker'
 
 export class LanguageTracker extends AbstractFileTracker<string> {

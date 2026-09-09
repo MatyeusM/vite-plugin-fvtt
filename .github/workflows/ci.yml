@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        task: [prettier, eslint, typecheck]
+        task: [fmt:check, lint, typecheck]
     steps:
       - name: Checkout code
         uses: actions/checkout@v7

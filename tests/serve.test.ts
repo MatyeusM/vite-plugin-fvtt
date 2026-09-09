@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+
 import { ViteDevServer } from 'vite'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+
 import { MANIFEST, JS, CSS, LANGUAGE, VITE_CONFIG } from './fixture-data'
 import {
   createTestFiles,
@@ -35,6 +37,42 @@ function getBaseUrl(isSystem: boolean): string {
   return `/${type}/${MANIFEST.id}`
 }
 
+function registerLanguageServingTests(baseUrl: string) {
+  describe('Language File Serving and Merging', () => {
+    it('Should serve the reference language (en) correctly', async () => {
+      const enUrl = `${baseUrl}/i18n/en.json`
+      const response = await fetchFromDevelopmentServer(enUrl)
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toContain('json')
+
+      const enData = JSON.parse(response.text)
+      expect(enData).toEqual({ hello: 'Hello', world: 'World!' })
+    })
+
+    it('Should serve and merge a secondary language (de) and contain all reference keys', async () => {
+      const deUrl = `${baseUrl}/i18n/de.json`
+      const response = await fetchFromDevelopmentServer(deUrl)
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toContain('json')
+
+      const deData = JSON.parse(response.text)
+      // From fixture-data
+      const expectedDeData = { hello: 'Hallo', world: 'Welt!' }
+
+      expect(deData).toEqual(expectedDeData)
+      const enUrl = `${baseUrl}/i18n/en.json`
+      const enResponse = await fetchFromDevelopmentServer(enUrl)
+      const enData = JSON.parse(enResponse.text)
+
+      for (const key of Object.keys(enData)) {
+        expect(deData).toHaveProperty(key)
+      }
+    })
+  })
+}
+
 describe('Vite Plugin Dev Server - System Manifest', () => {
   const baseUrl = getBaseUrl(true)
 
@@ -58,36 +96,5 @@ describe('Vite Plugin Dev Server - System Manifest', () => {
     expect(isOnlyCssComments(response.text)).toBe(true)
   })
 
-  describe('Language File Serving and Merging', () => {
-    it('Should serve the reference language (en) correctly', async () => {
-      const enUrl = `${baseUrl}/i18n/en.json`
-      const response = await fetchFromDevelopmentServer(enUrl)
-
-      expect(response.status).toBe(200)
-      expect(response.headers.get('content-type')).toContain('json')
-
-      const enData = JSON.parse(response.text)
-      expect(enData).toEqual({ hello: 'Hello', world: 'World!' })
-    })
-
-    it('Should serve and merge a secondary language (de) and contain all reference keys', async () => {
-      const deUrl = `${baseUrl}/i18n/de.json`
-      const response = await fetchFromDevelopmentServer(deUrl)
-
-      expect(response.status).toBe(200)
-      expect(response.headers.get('content-type')).toContain('json')
-
-      const deData = JSON.parse(response.text)
-      const expectedDeData = { hello: 'Hallo', world: 'Welt!' } // From fixture-data
-
-      expect(deData).toEqual(expectedDeData)
-      const enUrl = `${baseUrl}/i18n/en.json`
-      const enResponse = await fetchFromDevelopmentServer(enUrl)
-      const enData = JSON.parse(enResponse.text)
-
-      for (const key of Object.keys(enData)) {
-        expect(deData).toHaveProperty(key)
-      }
-    })
-  })
+  registerLanguageServingTests(baseUrl)
 })

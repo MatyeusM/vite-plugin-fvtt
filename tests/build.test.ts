@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises'
+
 import { build } from 'vite'
 import { vi, describe, expect, it, beforeEach, afterEach } from 'vitest'
+
 import { MANIFEST, JS, CSS, LANGUAGE, VITE_CONFIG } from './fixture-data'
 import { createTestFiles, generateTemporaryDirectory, writeManifest } from './test-utilities'
 

@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Migrated linter and formatter from ESLint and Prettier to `oxlint` and `oxfmt`. TypeScript 7.1 is
+  not due until the end of November, meaning TypeScript cannot update without hacks to make ESLint
+  work.
+
 ### Fixed
 
 - Cleanup upstream connection on socket disconnect: Prevents resource leak by closing the upstream

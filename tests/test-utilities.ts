@@ -2,11 +2,13 @@
 import { randomUUID } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+
 import { ViteDevServer, InlineConfig, createServer } from 'vite'
 import { expect } from 'vitest'
-import * as FsUtilities from '../src/utils/fs-utilities'
-import { flattenKeys } from '../src/language/transformer'
+
 import packageJson from '../package.json' with { type: 'json' }
+import { flattenKeys } from '../src/language/transformer'
+import * as FsUtilities from '../src/utils/fs-utilities'
 import { Manifest } from './fixture-data'
 
 // --- File System Utilities ---
@@ -40,11 +42,13 @@ export async function createTestFiles(
   testDirectory: string,
   files: Record<string, string>,
 ): Promise<void> {
-  for (const [file, content] of Object.entries(files)) {
-    const fullPath = path.join(testDirectory, file)
-    await fs.mkdir(path.dirname(fullPath), { recursive: true })
-    await fs.writeFile(fullPath, content, 'utf8')
-  }
+  await Promise.all(
+    Object.entries(files).map(async ([file, content]) => {
+      const fullPath = path.join(testDirectory, file)
+      await fs.mkdir(path.dirname(fullPath), { recursive: true })
+      await fs.writeFile(fullPath, content, 'utf8')
+    }),
+  )
 }
 
 export async function writeManifest(
@@ -58,7 +62,7 @@ export async function writeManifest(
 }
 
 export function isOnlyCssComments(text: string): boolean {
-  const stripped = text.replaceAll(/\/\*[\s\S]*?\*\//g, '').trim()
+  const stripped = text.replaceAll(/\/\*[\s\S]*?\*\//gu, '').trim()
   return stripped.length === 0
 }
 
@@ -100,150 +104,158 @@ declare module 'vitest' {
   }
 }
 
-export function registerCustomMatchers() {
-  expect.extend({
-    async toHaveOutputFile(received: string, relativeFilePath: string) {
-      const testDirectory = received
-      const pass = await outputFileExists(testDirectory, relativeFilePath)
-      const outputPath = getOutputPath(testDirectory, relativeFilePath)
+async function toHaveOutputFile(received: string, relativeFilePath: string) {
+  const testDirectory = received
+  const pass = await outputFileExists(testDirectory, relativeFilePath)
+  const outputPath = getOutputPath(testDirectory, relativeFilePath)
 
-      return pass
-        ? {
-            message: () =>
-              `expected output directory "${testDirectory}" not to contain file "${outputPath}"`,
-            pass: true,
-          }
-        : {
-            message: () =>
-              `expected output directory "${testDirectory}" to contain file "${outputPath}"`,
-            pass: false,
-          }
-    },
-
-    async toHaveCoreFiles(received: string, manifest: Manifest, isSystem: boolean = true) {
-      const testDirectory = received
-      const manifestName = isSystem ? 'system.json' : 'module.json'
-
-      const manifestExists = await outputFileExists(testDirectory, manifestName)
-      const esmoduleExists = await outputFileExists(testDirectory, manifest.esmodules[0])
-      const stylesExists = manifest.styles
-        ? await outputFileExists(testDirectory, manifest.styles[0])
-        : true // If styles not in manifest, consider it as passing
-
-      const pass = manifestExists && esmoduleExists && stylesExists
-
-      const failureDetails = [
-        `- ${manifestName}: ${manifestExists ? 'PASS' : 'FAIL'}`,
-        `- ${manifest.esmodules[0]}: ${esmoduleExists ? 'PASS' : 'FAIL'}`,
-      ]
-      if (manifest.styles) {
-        failureDetails.push(`- ${manifest.styles[0]}: ${stylesExists ? 'PASS' : 'FAIL'}`)
-      }
-
-      return pass
-        ? { message: () => `expected core files to not exist in "${testDirectory}"`, pass: true }
-        : {
-            message: () => `expected core files to exist in "${testDirectory}":
-        ${failureDetails.join('\n      ')}
-      `,
-            pass: false,
-          }
-    },
-
-    async toHaveWellFormedLanguages(received: string, manifest: Manifest) {
-      const testDirectory = received
-
-      // If languages not in manifest, consider it as passing
-      if (!manifest.languages) {
-        return {
-          message: () => `expected language files to not be well-formed in "${testDirectory}"`,
-          pass: true,
-        }
-      }
-
-      const referenceFilePath = 'i18n/en.json' // Assuming 'en' is the reference language
-
-      // 1. Check if the reference file exists
-      if (!(await outputFileExists(testDirectory, referenceFilePath))) {
-        return {
-          message: () =>
-            `Reference language file "${getOutputPath(testDirectory, referenceFilePath)}" is missing.`,
-          pass: false,
-        }
-      }
-
-      const referenceLanguagePath = getOutputPath(testDirectory, referenceFilePath)
-      const referenceLanguageJSON = await loadLanguage(referenceLanguagePath)
-
-      if (!referenceLanguageJSON) {
-        return { message: () => `Could not load reference language JSON.`, pass: false }
-      }
-
-      // 2. Check all other language files
-      for (const language of manifest.languages) {
-        const languageFilePath = language.path
-        const languagePath = getOutputPath(testDirectory, languageFilePath)
-
-        if (!(await outputFileExists(testDirectory, languageFilePath))) {
-          return { message: () => `Language file "${languagePath}" is missing.`, pass: false }
-        }
-
-        const languageJSON = await loadLanguage(languagePath)
-        if (!languageJSON) {
-          return {
-            message: () => `Could not load language JSON for "${language.lang}".`,
-            pass: false,
-          }
-        }
-
-        for (const key of Object.keys(referenceLanguageJSON)) {
-          if (!Object.hasOwn(languageJSON, key)) {
-            return {
-              message: () =>
-                `Language "${language.lang}" (${languageFilePath}) is missing key: "${key}"`,
-              pass: false,
-            }
-          }
-        }
-      }
-
-      return {
-        message: () => `expected language files to not be well-formed in "${testDirectory}"`,
+  return pass
+    ? {
+        message: () =>
+          `expected output directory "${testDirectory}" not to contain file "${outputPath}"`,
         pass: true,
       }
-    },
-
-    async toHaveDistributionEntries(received: string) {
-      const testDirectory = received
-      const mainPath = path.join(testDirectory, packageJson.main)
-      const typesPath = path.join(testDirectory, packageJson.types)
-
-      let isMainPass = true
-      let isTypesPass = true
-
-      try {
-        await fs.access(mainPath)
-      } catch {
-        isMainPass = false
+    : {
+        message: () =>
+          `expected output directory "${testDirectory}" to contain file "${outputPath}"`,
+        pass: false,
       }
+}
 
-      try {
-        await fs.access(typesPath)
-      } catch {
-        isTypesPass = false
+async function toHaveCoreFiles(received: string, manifest: Manifest, isSystem: boolean = true) {
+  const testDirectory = received
+  const manifestName = isSystem ? 'system.json' : 'module.json'
+
+  const manifestExists = await outputFileExists(testDirectory, manifestName)
+  const esmoduleExists = await outputFileExists(testDirectory, manifest.esmodules[0])
+  // If styles not in manifest, consider it as passing
+  const stylesExists = manifest.styles
+    ? await outputFileExists(testDirectory, manifest.styles[0])
+    : true
+
+  const pass = manifestExists && esmoduleExists && stylesExists
+
+  const failureDetails = [
+    `- ${manifestName}: ${manifestExists ? 'PASS' : 'FAIL'}`,
+    `- ${manifest.esmodules[0]}: ${esmoduleExists ? 'PASS' : 'FAIL'}`,
+  ]
+  if (manifest.styles) {
+    failureDetails.push(`- ${manifest.styles[0]}: ${stylesExists ? 'PASS' : 'FAIL'}`)
+  }
+
+  return pass
+    ? { message: () => `expected core files to not exist in "${testDirectory}"`, pass: true }
+    : {
+        message: () => `expected core files to exist in "${testDirectory}":
+        ${failureDetails.join('\n      ')}
+      `,
+        pass: false,
       }
+}
 
-      const pass = isMainPass && isTypesPass
+async function validateLanguageFile(
+  testDirectory: string,
+  language: Manifest['languages'][number],
+  referenceJSON: Record<string, unknown>,
+): Promise<string | undefined> {
+  const languageFilePath = language.path
+  const languagePath = getOutputPath(testDirectory, languageFilePath)
 
-      return pass
-        ? {
-            message: () => `expected distribution entries to exist in "${testDirectory}"`,
-            pass: true,
-          }
-        : {
-            message: () => `expected distribution entries to exist in "${testDirectory}"`,
-            pass: false,
-          }
-    },
+  if (!(await outputFileExists(testDirectory, languageFilePath))) {
+    return `Language file "${languagePath}" is missing.`
+  }
+
+  const languageJSON = await loadLanguage(languagePath)
+  if (!languageJSON) {
+    return `Could not load language JSON for "${language.lang}".`
+  }
+
+  for (const key of Object.keys(referenceJSON)) {
+    if (!Object.hasOwn(languageJSON, key)) {
+      return `Language "${language.lang}" (${languageFilePath}) is missing key: "${key}"`
+    }
+  }
+
+  return undefined
+}
+
+async function toHaveWellFormedLanguages(received: string, manifest: Manifest) {
+  const testDirectory = received
+
+  if (!manifest.languages) {
+    return {
+      message: () => `expected language files to not be well-formed in "${testDirectory}"`,
+      pass: true,
+    }
+  }
+
+  // Assuming 'en' is the reference language
+  const referenceFilePath = 'i18n/en.json'
+
+  if (!(await outputFileExists(testDirectory, referenceFilePath))) {
+    return {
+      message: () =>
+        `Reference language file "${getOutputPath(testDirectory, referenceFilePath)}" is missing.`,
+      pass: false,
+    }
+  }
+
+  const referenceLanguagePath = getOutputPath(testDirectory, referenceFilePath)
+  const referenceLanguageJSON = await loadLanguage(referenceLanguagePath)
+
+  if (!referenceLanguageJSON) {
+    return { message: () => `Could not load reference language JSON.`, pass: false }
+  }
+
+  const errors = await Promise.all(
+    manifest.languages.map(language =>
+      validateLanguageFile(testDirectory, language, referenceLanguageJSON),
+    ),
+  )
+
+  const firstError = errors.find(Boolean)
+  if (firstError) {
+    return { message: () => firstError, pass: false }
+  }
+
+  return {
+    message: () => `expected language files to not be well-formed in "${testDirectory}"`,
+    pass: true,
+  }
+}
+
+async function toHaveDistributionEntries(received: string) {
+  const testDirectory = received
+  const mainPath = path.join(testDirectory, packageJson.main)
+  const typesPath = path.join(testDirectory, packageJson.types)
+
+  let isMainPass = true
+  let isTypesPass = true
+
+  try {
+    await fs.access(mainPath)
+  } catch {
+    isMainPass = false
+  }
+
+  try {
+    await fs.access(typesPath)
+  } catch {
+    isTypesPass = false
+  }
+
+  const pass = isMainPass && isTypesPass
+
+  return pass
+    ? { message: () => `expected distribution entries to exist in "${testDirectory}"`, pass: true }
+    : { message: () => `expected distribution entries to exist in "${testDirectory}"`, pass: false }
+}
+
+export function registerCustomMatchers() {
+  expect.extend({
+    toHaveOutputFile,
+    toHaveCoreFiles,
+    toHaveWellFormedLanguages,
+    toHaveDistributionEntries,
   })
 }

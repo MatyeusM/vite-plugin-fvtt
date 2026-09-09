@@ -1,6 +1,8 @@
+import path from 'node:path'
+
 import { compilePack } from '@foundryvtt/foundryvtt-cli'
 import { glob } from 'tinyglobby'
-import path from 'node:path'
+
 import { context } from '@/context'
 import * as Logger from '@/utils/logger'
 import * as PathUtils from '@/utils/path-utilities'
@@ -8,24 +10,26 @@ import * as PathUtils from '@/utils/path-utilities'
 export async function compileManifestPacks() {
   if (!context.manifest?.packs) return
 
-  for (const pack of context.manifest.packs) {
-    const sourceCandidates = [
-      path.resolve(PathUtils.getSourceDirectory(), pack.path),
-      path.resolve(PathUtils.getRoot(), pack.path),
-    ]
-    const destination = path.resolve(PathUtils.getOutDirectory(), pack.path)
+  await Promise.all(
+    context.manifest.packs.map(async pack => {
+      const sourceCandidates = [
+        path.resolve(PathUtils.getSourceDirectory(), pack.path),
+        path.resolve(PathUtils.getRoot(), pack.path),
+      ]
+      const destination = path.resolve(PathUtils.getOutDirectory(), pack.path)
 
-    const chosenSource = await PathUtils.findFirstExistingDirectory(sourceCandidates)
+      const chosenSource = await PathUtils.findFirstExistingDirectory(sourceCandidates)
 
-    if (!chosenSource) {
-      Logger.warn(`Pack path not found for ${pack.path}, skipped.`)
-      continue
-    }
+      if (!chosenSource) {
+        Logger.warn(`Pack path not found for ${pack.path}, skipped.`)
+        return
+      }
 
-    const entries = await glob(['**/*.yaml', '**/*.yml'], { cwd: chosenSource, absolute: true })
-    const hasYaml = entries.length > 0
+      const entries = await glob(['**/*.yaml', '**/*.yml'], { cwd: chosenSource, absolute: true })
+      const hasYaml = entries.length > 0
 
-    await compilePack(chosenSource, destination, { yaml: hasYaml, recursive: true })
-    Logger.info(`Compiled pack ${pack.path} (${hasYaml ? 'YAML' : 'JSON'}) from ${chosenSource}`)
-  }
+      await compilePack(chosenSource, destination, { yaml: hasYaml, recursive: true })
+      Logger.info(`Compiled pack ${pack.path} (${hasYaml ? 'YAML' : 'JSON'}) from ${chosenSource}`)
+    }),
+  )
 }

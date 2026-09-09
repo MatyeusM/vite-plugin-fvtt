@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+
 import foundryVTT from '../src/index'
 
 export const MANIFEST = {

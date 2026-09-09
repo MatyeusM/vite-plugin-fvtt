@@ -1,5 +1,7 @@
 import path from 'node:path'
+
 import { UserConfig } from 'vite'
+
 import { context, FoundryVTTManifest } from '@/context'
 import * as FsUtils from '@/utils/fs-utilities'
 import * as Logger from '@/utils/logger'

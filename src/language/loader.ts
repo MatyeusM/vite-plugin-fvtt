@@ -1,5 +1,7 @@
-import { glob } from 'tinyglobby'
 import path from 'node:path'
+
+import { glob } from 'tinyglobby'
+
 import { context, FoundryVTTManifest } from '@/context'
 import { languageTracker } from '@/server/trackers/language-tracker'
 import * as FsUtils from '@/utils/fs-utilities'
@@ -47,7 +49,6 @@ export default async function loadLanguage(
       return [file, json] as const
     } catch (error) {
       Logger.warn(error)
-      return
     }
   })
 
