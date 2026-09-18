@@ -32,7 +32,7 @@ directory.
 
 ### **Step 2. Add the Plugin to your Vite Config**
 
-Install the plugin with `npm i -D vite-plugin-fvtt`.
+Install the plugin with `pnpm add -D vite-plugin-fvtt` (or `npm i -D vite-plugin-fvtt`).
 
 Add the plugin to your vite.config.js. The **build.lib.entry** field is required; most of the other
 settings are inferred by the plugin from your Foundry VTT manifest.
@@ -53,21 +53,28 @@ export default defineConfig({
 })
 ```
 
+### Requirements
+
+- Node.js `>=22.0.0`
+- Vite `^7.0.0 || ^8.0.0`
+- A manifest file (`module.json` or `system.json`) in the project **root** or `public/` directory,
+  declaring exactly one of `esmodules` or `scripts` (plus optional `styles`, `languages`, `packs`).
+
 ## **⚙️ Features**
 
 ### **1. Configuration (Optional)**
 
 The plugin needs to know where your Foundry VTT instance is running to proxy and serve assets
 correctly. If you want to change anything from the defaults `http://localhost:30000`, create a
-`.env.foundryvtt.local` file in your project.
+`.env.foundryvtt.local` file in your project (any `.env.foundryvtt*` file is loaded and merged).
 
 ```ini
 FOUNDRY_URL=localhost
 FOUNDRY_PORT=30000
 ```
 
-The Vite dev server will run on `FOUNDRY_PORT + 1`, where you will need to open your browser
-manually to.
+The Vite dev server runs on `FOUNDRY_PORT + 1` and proxies everything outside your module/system
+base path to Foundry, so open your browser at the dev-server port manually.
 
 ### **2. Manifest & Asset Resolution**
 
@@ -94,34 +101,41 @@ outputted as the correct file.
 
 ### **4. Template Handling**
 
-Templates work in HMR properly on the development server; they are autodiscovered as discussed in
+Templates get working HMR on the development server; they are resolved as described in
 [2. Manifest & Asset Resolution](#2-manifest--asset-resolution). The development server intercepts
-the websocket traffic and sends the local templates instead of Foundry VTT's, if present. e.g., a
-template request to `/systems/mysystem/tpl/character-header.hbs` might be rerouted to
-`public/tpl/character-header.hbs`. Folder structure inside your project is mirrored, apart from the
-`system`/`module` specific prefix.
+websocket traffic and serves local templates instead of Foundry VTT's, when present. Folder
+structure inside your project is mirrored, apart from the `system`/`module` specific prefix.
 
 ### **5. Language File Merging**
 
-Supports both complete and partial translation workflows:
+Supports both complete and partial translation workflows, following the `path` of each entry in your
+manifest's `languages` array:
 
-- **Complete files:** Place a complete JSON file (e.g., `public/lang/en.json`) and the plugin will
-  copy it as-is.
-- **Partial files:** Place multiple JSONs inside `src/lang/en/` and the plugin merges them into one
-  `lang/en.json` at build.
-
-Merging follows your manifest’s declared language paths, searching in root or source directories.
+- **Complete files:** place a complete JSON file at the manifest-declared path inside your public
+  directory and the plugin copies it as-is.
+- **Partial files:** otherwise, place multiple JSONs inside `<source>/<dir>/<lang>/` (e.g. for a
+  manifest path of `lang/en.json` with a `src` source directory: `src/lang/en/*.json`) and the
+  plugin merges them into one file at build. Dot-notation keys are expanded into nested objects.
 
 ### **6. Packs**
 
-Packs are tried to be auto-discovered in the source directory. If the paths match, they are
-automatically compiled.
+Packs declared in your manifest are compiled with `@foundryvtt/foundryvtt-cli` during build and
+`--watch` (YAML sources detected automatically). Sources are looked up in your source directory
+first, then the project root, and compiled into the output directory. A manifest pack entry with no
+matching source directory is skipped with a warning. Disable with
+`foundryVTT({ buildPacks: false })`.
 
 **Note:** Packs are currently not watched for changes.
+
+### Minification
+
+On Vite 8+ the plugin minifies with `oxc`; on older Vite versions it falls back to `esbuild`
+(identifiers and names preserved).
 
 ### **Example Project Structure**
 
 ```
+// With a manifest declaring "languages": [{ "lang": "en", "path": "lang/en.json" }]:
 my-module/
 ├─ src/
 │  ├─ main.js         # The primary module entry file (required by Vite).
@@ -135,6 +149,18 @@ my-module/
 │  └─ templates/      # HTML template files for your module.
 ├─ vite.config.js     # Your Vite configuration file.
 ```
+
+---
+
+## 🛠️ Development
+
+| Script               | Purpose                     |
+| -------------------- | --------------------------- |
+| `pnpm run build`     | Build the plugin (`tsdown`) |
+| `pnpm run test`      | Run the Vitest suite        |
+| `pnpm run lint`      | Lint (`oxlint`)             |
+| `pnpm run fmt`       | Format (`oxfmt`)            |
+| `pnpm run typecheck` | Typecheck (`tsc`)           |
 
 ---
 
