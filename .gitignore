@@ -1,2 +1,4 @@
 node_modules
 dist
+# Local Foundry VTT installs (licensed binaries) + version-specific data dirs. Do not commit.
+local/

@@ -138,6 +138,21 @@ my-module/
 
 ---
 
+## 🛠️ Local Foundry Test Instances (maintainers)
+
+Gitignored `local/` holds version-specific Foundry installs with separate data dirs:
+
+```
+local/foundry-v12/ + local/data-v12/ (port 30012, node 20)
+local/foundry-v13/ + local/data-v13/ (port 30013, node 22)
+local/foundry-v14/ + local/data-v14/ (port 30014, node 24)
+```
+
+Start one via `mise run -C local start-v12|start-v13|start-v14`.
+
+> ⚠️ Single Foundry license key: run only **one** instance at a time. Never run v12/v13/v14
+> concurrently.
+
 ## 📄 License
 
 [MIT](LICENSE)
