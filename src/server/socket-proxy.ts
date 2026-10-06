@@ -16,6 +16,7 @@ export default function socketProxy(server: ViteDevServer) {
       transports: ['websocket'],
       upgrade: false,
       query: socket.handshake.query,
+			extraHeaders: socket.handshake.headers,
     })
 
     // Browser >>> Foundry [intercept templating calls]
