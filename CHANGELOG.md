@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-06
+
+### Fixed
+
+- The published manifest no longer carries this repository's own `preinstall`/`postinstall` hooks.
+  npm runs those inside the consumer's project, and reads them from the registry metadata rather
+  than from the tarball's manifest. `0.3.0` therefore fetched `only-allow` from the registry
+  mid-install and then failed outright, because `postinstall` invokes `simple-git-hooks`, a dev
+  dependency that is not shipped. `0.3.1` corrected only the tarball and is still broken; the
+  manifest now stays reduced for the whole publish, so tarball and metadata are both clean. Upgrade
+  from `0.3.0` or `0.3.1`. The full script set still applies when working on the plugin itself.
+
 ## [0.3.1] - 2026-10-06
 
 ### Fixed
@@ -11,7 +23,7 @@
   the registry during install, and `postinstall` invoked `simple-git-hooks`, which is not shipped,
   so `npm install vite-plugin-fvtt` failed with exit code 127. Anyone who installed `0.3.0` should
   upgrade. The full script set is still used when working on the plugin itself; only what gets
-  packed is reduced.
+  packed is reduced. Superseded by `0.3.2`, which also corrects the registry metadata.
 
 ## [0.3.0] - 2026-10-06
 
@@ -219,7 +231,8 @@
 
 - Initial Release
 
-[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.3.1...HEAD
+[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.12...v0.3.0
 [0.2.12]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.11...v0.2.12

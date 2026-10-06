@@ -29,8 +29,6 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
-    "prepack": "node strip-publish.ts strip",
-    "postpack": "node strip-publish.ts restore",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",

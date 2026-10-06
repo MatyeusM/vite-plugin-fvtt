@@ -1,4 +1,2 @@
 node_modules
 dist
-# Written transiently by scripts/strip-publish-scripts.mjs between prepack and postpack.
-.publish-scripts.json

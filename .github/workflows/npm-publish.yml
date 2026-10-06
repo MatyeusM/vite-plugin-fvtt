@@ -32,11 +32,22 @@ jobs:
       - name: Build package
         run: pnpm run build
 
+      # npm runs a published package's install hooks in the *consumer's* project, and it reads them
+      # from the registry metadata rather than the tarball's manifest. So package.json must stay
+      # reduced for the whole publish, not just while the tarball is built - hence the explicit
+      # strip/restore here rather than prepack/postpack.
       - name: Publish to npm
-        run: npm publish --provenance
+        run: |
+          cp package.json package.json.bak
+          jq '.scripts = { build: .scripts.build, dev: .scripts.dev }' package.json.bak > package.json
+          npm publish --provenance || { cp package.json.bak package.json; exit 1; }
+          cp package.json.bak package.json
 
       - name: Pack for release
-        run: pnpm pack
+        run: |
+          jq '.scripts = { build: .scripts.build, dev: .scripts.dev }' package.json.bak > package.json
+          pnpm pack
+          cp package.json.bak package.json
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
