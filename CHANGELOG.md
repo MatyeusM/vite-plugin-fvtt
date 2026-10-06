@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-06
+
+### Fixed
+
+- The published manifest no longer carries this repository's own `preinstall`/`postinstall` hooks.
+  In `0.3.0` those ran inside the consumer's project: `npx only-allow pnpm` fetched a package from
+  the registry during install, and `postinstall` invoked `simple-git-hooks`, which is not shipped,
+  so `npm install vite-plugin-fvtt` failed with exit code 127. Anyone who installed `0.3.0` should
+  upgrade. The full script set is still used when working on the plugin itself; only what gets
+  packed is reduced.
+
 ## [0.3.0] - 2026-10-06
 
 ### Added
@@ -208,7 +219,8 @@
 
 - Initial Release
 
-[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.12...v0.3.0
 [0.2.12]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.10...v0.2.11
