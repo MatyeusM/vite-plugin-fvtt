@@ -31,8 +31,8 @@
     "dev": "tsdown --watch",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "fmt": "oxfmt --ignore-path=.gitignore --ignore-path=.eslintignore",
-    "fmt:check": "oxfmt --check --ignore-path=.gitignore --ignore-path=.eslintignore",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "typecheck": "tsc",
     "test": "vitest",
     "preinstall": "npx only-allow pnpm",
@@ -65,10 +65,10 @@
   },
   "lint-staged": {
     "*.ts": [
-      "oxlint --ignore-pattern 'local/**'"
+      "pnpm run lint"
     ],
     "*": [
-      "oxfmt --no-error-on-unmatched-pattern --ignore-path=.gitignore --ignore-path=.eslintignore"
+      "oxfmt --no-error-on-unmatched-pattern"
     ]
   },
   "engines": {

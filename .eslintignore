@@ -1,2 +1,5 @@
-# Frozen Foundry test fixtures: upstream system sources plus build output. Not ours to lint.
+# Frozen Foundry test fixtures: upstream system sources plus build output.
+# Needed because oxlint's directory walk ignores config `ignorePatterns` (it only applies those to
+# explicitly passed paths, which is what lint-staged does). oxlint.config.ts carries the same
+# pattern for that case; oxfmt honours the config pattern on its own.
 local/
