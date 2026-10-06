@@ -1,0 +1,351 @@
+@use 'config/variables';
+
+.sr5v2 {
+    // list-item classes should be renamed to list-item when complete
+    .list-item-container {
+        display: flex;
+        flex-flow: column nowrap;
+
+        &.expanded {
+            // show 1px box shadow at the top and bottom to emulate a border
+            box-shadow: inset 0 1px 0 0 var(--sr5v2-border),
+            inset 0 -1px 0 0 var(--sr5v2-border);
+
+            .list-item-desc {
+                visibility: visible;
+                display: unset;
+            }
+        }
+
+        &.list-item-subcategory {
+            padding-left: 0.5rem;
+            border-left: 1px solid var(--sr5v2-border);
+        }
+
+        .list-item {
+            flex: 1;
+        }
+
+        .list-item-desc {
+            visibility: hidden;
+            display: none;
+            flex: 1;
+            border-top: 1px solid var(--sr5v2-border);
+            background: var(--sr5v2-bg-elevated);
+            padding: 0.5rem;
+            color: var(--sr5v2-text-primary);
+
+            .list-item-properties {
+                display: flex;
+                flex-flow: row wrap;
+                justify-content: start;
+                align-items: center;
+                align-content: center;
+                width: 100%;
+
+                .sr5-select {
+                    padding: 0;
+                    height: 1rem;
+                }
+
+                > * {
+                    font-size: 0.8rem;
+                    padding: 0 0.25rem;
+                    &:not(:last-child) {
+                        border-right: variables.$groove;
+                    }
+                }
+            }
+
+            .description-buttons {
+                display: flex;
+                flex-flow: row;
+            }
+        }
+
+        .list-item-description {
+            display: none;
+            flex: 1;
+        }
+
+        &:not(.nobg):nth-of-type(even), &.forcebg {
+            background: var(--sr5v2-bg-subtle);
+        }
+    }
+
+    // allow list-item to exist outside of the container
+    .list-item {
+        display: flex;
+        flex-flow: row;
+        justify-content: space-between;
+        align-items: center;
+        align-content: center;
+        width: 100%;
+        padding: 2px;
+
+        &.list-item-selected {
+            background: var(--sr5v2-list-selected-bg) !important;
+        }
+
+        .list-item-image-container {
+            min-width: 1.5rem;
+            width: 1.5rem;
+            max-width: 1.5rem;
+            min-height: 1.5rem;
+            height: 1.5rem;
+            max-height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            &.favorite {
+                min-width: 1.75rem;
+                width: 1.75rem;
+                max-width: 1.75rem;
+                min-height: 1.75rem;
+                height: 1.75rem;
+                max-height: 1.75rem;
+            }
+
+            &:not(:hover).favorite {
+                border-color: var(--sr5v2-border);
+            }
+
+            &:hover {
+                .list-item-image-roll {
+                    content: url('assets/dice-solid.svg');
+                    filter: var(--sr5v2-icon-filter);
+                }
+                .list-item-image-info {
+                    content: url('icons/files.svg');
+                }
+                .list-item-image-edit {
+                    content: url('icons/redist/wrench.svg');
+                }
+                .list-item-image-remove {
+                    content: url('icons/cancel.svg');
+                }
+                .list-item-image-target {
+                    content: url('icons/redist/target.svg');
+                }
+                .list-item-image-connect {
+                    content: url('icons/redist/network.svg');
+                }
+            }
+        }
+
+        &.list-item-header {
+            border-bottom: 1px solid var(--sr5v2-border-strong);
+            background: var(--sr5v2-bg-elevated-strong);
+        }
+
+        &.list-item-favorites {
+            background: linear-gradient(to top, var(--sr5v2-bg-elevated-strong), transparent);
+            margin-top: 2px;
+        }
+
+        &:not(.nobg):nth-of-type(even), &.forcebg {
+            &:not(.list-item-header) {
+                background: var(--sr5v2-bg-subtle);
+            }
+        }
+
+        .list-item-start {
+            display: flex;
+            flex-flow: row nowrap;
+            align-items: center;
+            justify-content: start;
+            flex: 3;
+            gap: 0.25rem;
+
+            &.skinny {
+                flex: 1;
+            }
+
+            .selection-inventory {
+                display: flex;
+                flex-flow: row;
+                justify-content: start;
+                align-items: center;
+            }
+
+            .item-name-link {
+                display: flex;
+                flex: 1 1 auto;
+                align-self: stretch;
+                align-items: center;
+                justify-content: flex-start;
+                min-width: 0;
+                width: 100%;
+                cursor: pointer;
+            }
+        }
+
+        .list-item-col {
+            display: flex;
+            flex-flow: row;
+            flex: 2;
+            justify-content: center;
+            align-content: center;
+            align-items: center;
+            gap: 0.1rem;
+
+            &.select-col {
+                justify-content: start;
+                flex: 2;
+            }
+
+            &.karma-mod-col {
+                flex: 3;
+                text-wrap: nowrap;
+            }
+
+            &.nuyen-col {
+                flex: 2;
+                text-wrap: nowrap;
+            }
+
+            &.reputation-col {
+                flex: 5;
+                text-wrap: nowrap;
+            }
+
+            &.vehicle-mod-col {
+                flex: 6;
+                text-wrap: nowrap;
+            }
+
+            &.skinny-col {
+                flex: 0 0 3rem;
+            }
+
+            &.asdf-col {
+                flex: 0 0 5rem;
+                justify-content: space-between;
+                font-family: monospace;
+            }
+
+            .list-item-warning {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.3rem;
+                margin-left: 0.5rem;
+                color: variables.$yellow;
+                font-size: 0.9rem;
+                text-wrap: nowrap;
+            }
+
+            // attempt to left align the essence so that it centers on the decimal
+            &.essence-calc-col {
+                justify-content: flex-end;
+                > label {
+                    width: 2.5rem;
+                    text-align: left;
+                }
+            }
+
+            &.midd-col,
+            &.rtg-col,
+            &.armor-col,
+            &.ammo-col,
+            &.cost-col,
+            &.essence-col,
+            &.mod-category-col,
+            &.matrix-icon-col {
+                flex: 0 0 4rem;
+            }
+
+            &.slots-col {
+                flex: 0 0 5rem;
+            }
+
+            &.matrix-network-col {
+                flex: 0 0 4rem;
+                > label {
+                    width: 4rem;
+                    text-align: center;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+            }
+
+            &.mark-input-col,
+            &.qty-input-col {
+                flex: 0 0 4rem;
+                gap: 0.25rem;
+
+                .mark-label {
+                    font-size: 1.1rem;
+                }
+            }
+
+            &.thicc-col {
+                flex: 0 0 6rem;
+            }
+
+            &.mod-armor-col {
+                justify-content: flex-start;
+                gap: 0.4rem;
+
+                .mod-armor-hardened {
+                    flex: 0 0 auto;
+                }
+
+                .mod-armor-value {
+                    flex: 1 1 auto;
+                    min-width: 0;
+
+                    input,
+                    select {
+                        width: 100%;
+                    }
+                }
+            }
+
+        }
+
+        .armor-resistance-row {
+            display: flex;
+            width: 100%;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .armor-resistance-field {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.2rem;
+            flex: 1 0 auto;
+            max-width: 100%;
+            text-align: center;
+            text-wrap: nowrap;
+        }
+
+        .list-item-icons {
+            display: flex;
+            flex-flow: row nowrap;
+            flex: none;
+            min-width: 4rem;
+            justify-content: end;
+            align-items: center;
+            gap: 0.25rem;
+            margin-right: 2px;
+
+            &.midd-icons {
+                width: 2.5rem;
+                min-width: 2.5rem;
+                max-width: 2.5rem;
+            }
+
+            &.skinny-icons {
+                width: 1.5rem;
+                min-width: 1.5rem;
+                max-width: 1.5rem;
+            }
+        }
+    }
+}

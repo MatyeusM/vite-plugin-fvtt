@@ -1,0 +1,9 @@
+<div class="dice-tooltip">
+    <ol class="dice-rolls">
+        {{#each roll.results}}
+        <li class="roll {{dieResultCssClasses this}}">
+            {{this.result}}
+        </li>
+        {{/each}}
+    </ol>
+</div>

@@ -1,0 +1,2510 @@
+import { DeepPartial } from 'fvtt-types/utils';
+
+import { SR5 } from '../../config';
+import { Helpers } from '../../helpers';
+import { SR5Actor } from '../SR5Actor';
+import { SR5Item } from '../../item/SR5Item';
+import { SR5ActiveEffect } from '../../effect/SR5ActiveEffect';
+
+import { SituationModifiersApplication } from '../../apps/SituationModifiersApplication';
+import { MoveInventoryDialog } from '../../apps/dialogs/MoveInventoryDialog';
+import { InventoryRenameApp } from '@/module/apps/actor/InventoryRenameApp';
+
+import { SituationModifier } from '../../rules/modifiers/SituationModifier';
+import { prepareSortedEffects, prepareSortedItemEffects } from '../../effects';
+
+import { LinksHelpers } from '../../utils/links';
+
+import { InventoryType } from 'src/module/types/actor/Common';
+
+import { SR5ApplicationMixin, SR5ApplicationMixinTypes } from '@/module/handlebars/SR5ApplicationMixin';
+import { SR5Tab } from '@/module/handlebars/Appv2Helpers';
+import { SheetFlow } from '@/module/flows/SheetFlow';
+import { SkillFieldPrep } from '@/module/actor/prep/functions/SkillFieldPrep';
+import { SkillSetFlow } from '@/module/actor/flows/SkillSetFlow';
+import { SkillNamingFlow } from '@/module/flows/SkillNamingFlow';
+import { SkillSetSourceFlow } from '@/module/flows/SkillSetSourceFlow';
+import { SkillItemFlow } from '@/module/item/flows/SkillItemFlow';
+import { PackItemFlow } from '@/module/item/flows/PackItemFlow';
+import type { InitiativeModeOptions } from '@/module/combat/SR5Combatant';
+import { parseDropData } from '@/module/utils/sheets';
+import { getFuzzyMatches, matchesFuzzyQuery } from '@/module/utils/fuzzySearch';
+import MatrixAttribute = Shadowrun.MatrixAttribute;
+import ActorSheetV2 = foundry.applications.sheets.ActorSheetV2;
+import HandlebarsApplicationMixin = foundry.applications.api.HandlebarsApplicationMixin;
+import { EffectCreationFlow } from '@/module/flows/EffectCreationFlow';
+import { SkillFieldType } from '@/module/types/template/Skills';
+import { CreateItemFlow } from '@/module/item/flows/CreateItemFlow';
+import { ActorSkillFlow } from '../flows/ActorSkillFlow';
+import { ModifiableValueType } from '@/module/types/template/Base';
+import { isElementInstance } from '@/module/utils/dom';
+
+const { TextEditor } = foundry.applications.ux;
+const { fromUuid, fromUuidSync } = foundry.utils;
+
+export interface InventorySheetDataByType {
+    type: string;
+    label: string;
+    isOpen: boolean;
+    items: SR5Item[];
+}
+
+// Meant for sheet display only. Doesn't use the SR5Item.getChatData approach to avoid changing system data.
+type sheetAction = {
+    name: string,
+    description: string,
+    action: SR5Item
+}
+
+export interface InventorySheetData {
+    name: string,
+    label: string,
+    types: Record<string, InventorySheetDataByType>
+}
+
+export type InventoriesSheetData = Record<string, InventorySheetData>;
+
+export interface SR5SheetFilters {
+    skills: string
+    showUntrainedSkills: boolean
+}
+
+/**
+ * A sheet variant of the SR5Actor#skills data structure
+ * All keys are localized strings.
+ */
+interface SheetSkills {
+    active: Record<string, SkillFieldType>;
+    language: Record<string, SkillFieldType>;
+    knowledge: {
+        street: Record<string, SkillFieldType>;
+        academic: Record<string, SkillFieldType>;
+        professional: Record<string, SkillFieldType>;
+        interests: Record<string, SkillFieldType>;
+    }
+}
+
+interface SheetSkillGroup {
+    item: SR5Item<'skill'>;
+    label: string;
+    displayRating: number;
+}
+
+export interface SR5ActorSheetData extends ActorSheetV2.RenderContext, SR5ApplicationMixinTypes.RenderContext {
+    actor: SR5Actor;
+    config: typeof SR5CONFIG;
+    system: SR5Actor['system'];
+    skills: SheetSkills;
+    skillGroups: SheetSkillGroup[];
+    skillset: {
+        name: string;
+        img: string;
+        uuid: string;
+    } | null;
+
+    // Sheet filters
+    filters: SR5SheetFilters;
+
+    // Actor type flags
+    isCharacter: boolean;
+    isSpirit: boolean;
+    isCritter: boolean;
+    isVehicle: boolean;
+    awakened: boolean;
+    emerged: boolean;
+    canAlterSpecial: boolean;
+    hasSkills: boolean;
+    hasFullDefense: boolean;
+    woundTolerance: number;
+    optionalPowerCount: number;
+    optionalPowerSelected: number;
+    optionalPowerTotal: number;
+
+    // Effects
+    effects: SR5ActiveEffect[];
+    itemEffects: SR5ActiveEffect[];
+
+    // Items & Inventory
+    handledItemTypes: string[];
+    itemType: Record<string, SR5Item[]>;
+    inventories: InventoriesSheetData;
+    inventory: InventorySheetData;
+    hasInventory: boolean;
+    selectedInventory: string;
+    spells: Record<string, SR5Item[]>;
+    program_count: string;
+
+    // UI
+    tab: SR5Tab;
+    contentVisibility: Record<string, boolean>;
+    bindings: Record<string, string>;
+    expandedSkills: Record<string, { html: string }>;
+    canRollInitiative: boolean;
+    biographyHTML?: string;
+
+    // Actions & Favorites
+    actions?: sheetAction[];
+    favorites?: SR5Item[];
+
+    // Initiative
+    initiativePerception: {
+        value: string;
+        options: { label: string; value: string }[];
+    };
+    initiativeFormulaModes: { id: Shadowrun.SpaceTypes; label: string; }[];
+
+    // Situation Modifiers
+    situationModifiers: {
+        category: string;
+        label: string;
+        value: number;
+        hidden: boolean;
+    }[];
+}
+
+
+/**
+ * Sort a list of items by name in ascending alphabetical order.
+ *
+ * @param a Any type of item data
+ * @param b Any type of item data
+ * @returns
+ */
+const sortByName = (a: { name: string }, b: { name: string }) => {
+    return a.name.localeCompare(b.name, game.i18n.lang);
+};
+
+const sortByLocalizedLabel = <T extends { label: string }>(a: T, b: T) => {
+    return a.label.localeCompare(b.label, game.i18n.lang);
+};
+
+/**
+ * Sort a list of items by equipped and name in ascending alphabetical order.
+ *
+ * @param a Any type of item data
+ * @param b Any type of item data
+ * @returns
+ */
+const sortByEquipped = (a: SR5Item, b: SR5Item) => {
+    const leftEquipped = a.system?.technology?.equipped;
+    const rightEquipped = b.system?.technology?.equipped;
+
+    if (leftEquipped && !rightEquipped) return -1;
+    if (rightEquipped && !leftEquipped) return 1;
+    return sortByName(a, b);
+};
+
+/**
+ * Sort a list of items by quality type and name in ascending alphabetical order.
+ *
+ * @param a A quality item data
+ * @param b A quality item data
+ * @returns
+ */
+const sortByQuality = (a: SR5Item<'quality'>, b: SR5Item<'quality'>) => {
+    if (a.system.type === 'positive' && b.system.type === 'negative') return -1;
+    if (a.system.type === 'negative' && b.system.type === 'positive') return 1;
+    return sortByName(a, b);
+}
+
+export interface SR5BaseSheetDelays {
+    skills: ReturnType<typeof setTimeout> | null;
+}
+
+/**
+ * This class should not be used directly but be extended for each actor type.
+ *
+ */
+export class SR5BaseActorSheet<T extends SR5ActorSheetData = SR5ActorSheetData> extends SR5ApplicationMixin(ActorSheetV2)<T> {
+    // If something needs filtering, store those filters here.
+    _filters: SR5SheetFilters = {
+        skills: '', // filter based on user input and skill name/label.
+        showUntrainedSkills: true, // filter based on pool size.
+    };
+    // Indicate if specific sections on sheet should be opened or closed.
+    _inventoryOpenClose: Record<string, boolean> = {};
+
+    // Store the currently selected inventory.
+    selectedInventory: string;
+
+    private readonly expandedSkills = new Set<string>();
+
+    constructor(...args: ConstructorParameters<typeof ActorSheetV2>) {
+        super(...args);
+
+        // Preselect default inventory.
+        this.selectedInventory = this.actor.defaultInventory.name;
+        this._setInventoryVisibility(true);
+
+        // List to when a combatant is created for this actor to enable the roll initiative button
+        Hooks.on("createCombatant", this._updateInitiativeButton.bind(this));
+
+        // Listen to when a combatant is deleted for this actor to disable the roll initiative button
+        Hooks.on("deleteCombatant", this._updateInitiativeButton.bind(this));
+    }
+
+    private _updateInitiativeButton() {
+        const inCombat = this.actor.inCombat;
+        const selector = this.element?.querySelector<HTMLElement>('button#roll-init-button');
+        if (selector) {
+            if (inCombat) {
+                selector.removeAttribute('disabled');
+                selector.dataset.tooltip = game.i18n.localize("SR5.Tooltips.Actor.RollInitiative");
+            } else {
+                selector.setAttribute('disabled', '');
+                selector.dataset.tooltip = game.i18n.localize("SR5.Tooltips.Actor.NoCombatant");
+            }
+        }
+    }
+
+    /**
+     * All actors will handle these item types specifically.
+     *
+     * All others will be collected somewhere.
+     *
+     * @return A string of item types from the template.json Item section.
+     */
+    getHandledItemTypes(): Item.ConfiguredSubType[] {
+        return [
+            // actions are always handled on their own sheet tab, outside inventory.
+            'action', 
+            // skills are always handled through their derived skillfields, outside inventory.
+            'skill'
+        ];
+    }
+
+    /**
+     * All actors will always show these in their 'inventory'.
+     * The inventory might be named differently for each actor.
+     *
+     * All other item types will only be shown when they've been added to that actor.
+     * This allows all players/GMs to add item types to each actor that the system may not find useful
+     * but the players/GMs might.
+     *
+     * @return An array of item types from the template.json Item section.
+     */
+    getInventoryItemTypes(): Item.ConfiguredSubType[] {
+        return [];
+    }
+
+    /**
+     * These item types aren't allowed to be created on this actor sheet.
+     *
+     * This includes dropping them onto this actor.
+     */
+    getForbiddenItemTypes(): Item.ConfiguredSubType[] {
+        return [];
+    }
+
+    /**
+     * Extend and override the default options used by the 5e Actor Sheet
+     * @returns {Object}
+     */
+    static override DEFAULT_OPTIONS: DeepPartial<SR5ApplicationMixinTypes.Configuration> = {
+        classes: ['actor', 'named-sheet'],
+        position: {
+            width: 770,
+            height: 600,
+        },
+        actions: {
+            rollAttribute: SR5BaseActorSheet.#rollAttribute,
+            rollItem: SR5BaseActorSheet.#rollItem,
+            rollSkill: SR5BaseActorSheet.#rollSkill,
+            editSkill: SR5BaseActorSheet.#editSkill,
+            removeSkillSet: SR5BaseActorSheet.#removeSkillSet,
+            rollSkillSpecialization: SR5BaseActorSheet.#rollSkillSpec,
+            openSkillDescription: SR5BaseActorSheet.#toggleSkillDescription,
+            filterTrainedSkills: SR5BaseActorSheet.#filterUntrainedSkills,
+            toggleSpiritForceAttribute: SR5BaseActorSheet.#toggleSpiritForceAttribute,
+            toggleSpriteLevelAttribute: SR5BaseActorSheet.#toggleSpriteLevelAttribute,
+
+            resetActorRunData: SR5BaseActorSheet.#resetActorRunData,
+
+            addEffect: SR5BaseActorSheet.#createEffect,
+            editEffect: SR5BaseActorSheet.#editEffect,
+            deleteEffect: SR5BaseActorSheet.#deleteEffect,
+            toggleEffect: SR5BaseActorSheet.#toggleEffect,
+
+            addItem: SR5BaseActorSheet.#createItem,
+            editItem: SR5BaseActorSheet.#editItem,
+            moveItem: SR5BaseActorSheet.#moveItem,
+            deleteItem: SR5BaseActorSheet.#deleteItem,
+            favoriteItem: SR5BaseActorSheet.#favoriteItem,
+
+            renameInventory: SR5BaseActorSheet.#renameInventory,
+            removeInventory: SR5BaseActorSheet.#removeInventory,
+            createInventory: SR5BaseActorSheet.#createInventory,
+
+            addItemQty: SR5BaseActorSheet.#addItemQty,
+            removeItemQty: SR5BaseActorSheet.#removeItemQty,
+            equipItem: SR5BaseActorSheet.#onToggleEquippedItem,
+            toggleItemWireless: SR5BaseActorSheet.#toggleWirelessState,
+            toggleExpanded: SR5BaseActorSheet.#toggleInventoryVisibility,
+            toggleItemVisible: SR5BaseActorSheet.#toggleItemVisible,
+
+            weaponFullReload: SR5BaseActorSheet.#reloadAmmo,
+            weaponPartialReload: SR5BaseActorSheet.#partialReloadAmmo,
+
+            toggleInitiativeBlitz: SR5BaseActorSheet.#toggleInitiativeBlitz,
+            rollInitiative: SR5BaseActorSheet.#rollInitiative,
+
+            modifyConditionMonitor: SR5BaseActorSheet.#modifyConditionMonitor,
+            clearConditionMonitor: SR5BaseActorSheet.#clearConditionMonitor,
+            rollConditionMonitor: SR5BaseActorSheet.#rollConditionMonitor,
+
+            clearFreshImports: SR5BaseActorSheet.#clearFreshImports,
+            openSituationalModifiers: SR5BaseActorSheet.#openSituationalModifiers
+        },
+        filters: [{ inputSelector: '#filter-active-skills', contentSelector: '', callback: SR5BaseActorSheet.#handleFilterActiveSkills }],
+    }
+
+    static override TABS = {
+        primary: {
+            initial: 'actions',
+            tabs: [
+                { id: 'actions', label: 'SR5.Tabs.Actor.Actions', cssClass: '' },
+                { id: 'effects', label: 'SR5.Tabs.Actor.Effects', cssClass: '' },
+                { id: 'description', label: '', icon: 'far fa-info', tooltip: 'SR5.Tooltips.Actor.Description', cssClass: 'skinny' },
+                { id: 'misc', label: '', icon: 'fas fa-gear', tooltip: 'SR5.Tooltips.Actor.MiscConfig', cssClass: 'skinny' },
+            ]
+        },
+    }
+
+    static override PARTS: Record<string, HandlebarsApplicationMixin.HandlebarsTemplatePart> = {
+        header: {
+            template: SheetFlow.templateBase('actor/header'),
+            templates: SheetFlow.templateActorSystemParts('movement', 'initiative'),
+        },
+        rollBar: {
+            template: SheetFlow.templateBase('actor/parts/common-rolls'),
+            templates: SheetFlow.templateActorSystemParts('movement'),
+        },
+        tabs: {
+            template: SheetFlow.templateBase('common/primary-tab-group'),
+        },
+        actions: {
+            template: SheetFlow.templateBase('actor/tabs/actions'),
+            scrollable: ['.scrollable']
+        },
+        effects: {
+            template: SheetFlow.templateBase('actor/tabs/effects'),
+            templates: SheetFlow.templateListItem('effect'),
+            scrollable: ['.scrollable']
+        },
+        misc: {
+            template: SheetFlow.templateBase('actor/tabs/misc'),
+            scrollable: ['scrollable']
+        },
+        description: {
+            template: SheetFlow.templateBase('actor/tabs/description'),
+            scrollable: ['.scrollable']
+        },
+        footer: {
+            template: SheetFlow.templateBase('actor/footer'),
+        },
+    }
+
+    /** SheetData used by _all_ actor types! */
+    override async _prepareContext(options: DeepPartial<SR5ApplicationMixinTypes.RenderOptions> & { isFirstRender: boolean }) {
+        // Remap Foundry default v8/v10 mappings to better match systems legacy foundry versions mapping accross it's templates.
+        // NOTE: If this is changed, you'll have to match changes on all actor sheets.
+        const data = await super._prepareContext(options) as T;
+        data.actor = this.actor;
+
+        // Sheet related general purpose fields. These aren't persistent.
+        data.filters = this._filters;
+
+        this._prepareActorModifiers(data);
+
+        // Valid data fields for all actor types.
+        this._prepareActorTypeFields(data);
+        this._prepareSpecialFields(data);
+
+        this._prepareSkills(data);
+        data.skillGroups = this._prepareSkillGroups();
+        data.skillset = await this._prepareSkillset();
+
+        data.itemType = this._prepareItemTypes();
+        this._prepareSpiritOptionalPowerCounts(data);
+        data.effects = prepareSortedEffects(this.actor.effects.contents);
+        data.itemEffects = prepareSortedItemEffects(this.actor, { applyTo: this.itemEffectApplyTos });
+
+        data.inventories = await this._prepareItemsInventory();
+        data.inventory = this._prepareSelectedInventory(data.inventories);
+        data.spells = this._prepareSortedCategorizedSpells(data.itemType["spell"]);
+        data.hasInventory = this._prepareHasInventory(data.inventories);
+        data.selectedInventory = this.selectedInventory;
+        data.program_count = this._prepareProgramCount(data.itemType);
+
+        data.situationModifiers = this._prepareSituationModifiers();
+
+        data.contentVisibility = this._prepareContentVisibility(data);
+
+        data.bindings = this._prepareKeybindings();
+
+        data.initiativePerception = this._prepareInitiativePresence();
+        data.initiativeFormulaModes = this._prepareInitiativeFormulaModes();
+
+        data.primaryTabs = this._prepareTabs('primary');
+
+        data.canRollInitiative = this.actor.inCombat;
+
+        data.expandedSkills = {};
+        for (const id of this.expandedSkills) {
+            const skill = this.actor.items.get(id) as SR5Item<'skill'> | undefined;
+            if (skill) {
+                const html = await TextEditor.enrichHTML(skill.system.description.value, { secrets: this.actor.isOwner, });
+                data.expandedSkills[id] = { html, }
+            }
+        }
+
+        return data;
+    }
+
+    /**
+     * Prepare used skill set for this actor.
+     * @returns Necessary skill set sheet data or null, if skill set doesn't exist in pack anymore.
+     */
+    protected async _prepareSkillset() {
+        return SkillSetSourceFlow.prepareSkillSetReference(this.actor.system.skillset);
+    }
+
+    override async _preparePartContext(
+        partId: string,
+        context: SR5ActorSheetData,
+        options: DeepPartial<SR5ApplicationMixinTypes.RenderOptions>,
+    ): Promise<SR5ActorSheetData> {
+        const partContext = await super._preparePartContext(partId, context, options) as T;
+        if (partId === 'actions') {
+            partContext.actions = await this._prepareActions();
+        }
+        if (partId === 'rollBar') {
+            partContext.favorites = await this._prepareFavorites();
+        }
+        if (partId === 'description') {
+            if ('description' in this.actor.system) {
+                partContext.biographyHTML = await TextEditor.enrichHTML(this.actor.system.description.value, {
+                    relativeTo: this.actor,
+                    secrets: this.actor.isOwner,
+                });
+            }
+        }
+
+        return partContext;
+    }
+
+    async _prepareFavorites() {
+        const favorites: SR5Item[] = [];
+        for (const idOrUuid of this.actor.system.favorites) {
+            if (idOrUuid.includes('.')) {
+                const doc = await fromUuid(idOrUuid);
+                if (doc && doc instanceof SR5Item) favorites.push(doc);
+            } else {
+                const item = this.actor.items.get(idOrUuid);
+                if (item) favorites.push(item);
+            }
+        }
+        return favorites;
+    }
+
+    protected override _prepareTabs(group: string) {
+        const parts = super._prepareTabs(group) as Record<string, SR5Tab>;
+        if (group === 'primary' && !game.user?.isGM && this.actor.limited) {
+            const description = parts.description;
+            description.active = true;
+            return { description };
+        }
+        if (group === 'primary') {
+            // if we should hide empty tabs
+            if (this.isPlayMode && this.hideEmptyCategories()) {
+                // look for actor items that go in the inventory tab and delete the tab/part if none exist
+                if (!this.actor.hasItemOfType(...this.getInventoryItemTypes()) && parts.inventory) {
+                    parts.inventory.hidden = true;
+                }
+            }
+        }
+        return parts;
+    }
+
+    protected override _configureRenderParts(options: SR5ApplicationMixinTypes.RenderOptions) {
+        const retVal = super._configureRenderParts(options);
+        if (!game.user?.isGM && this.actor.limited) {
+            return {
+                header: retVal.header,
+                tabs: retVal.tabs,
+                description: retVal.description,
+                footer: retVal.footer,
+            }
+        }
+        return retVal;
+    }
+
+    protected _hasCritterPowers() {
+        return this.actor.hasItemOfType('critter_power');
+    }
+
+    protected _hasMagicItems() {
+        return this.actor.hasItemOfType('spell', 'adept_power', 'ritual', 'call_in_action');
+    }
+
+    override async _onRender(
+        context: DeepPartial<T>,
+        options: DeepPartial<SR5ApplicationMixinTypes.RenderOptions>
+    ) {
+        await super._onRender(context, options);
+        this.activateListeners_LEGACY($(this.element));
+        await this.prepareModifierTooltips();
+        this.#filterActiveSkillsElements();
+
+        // drag and drop handling to change the positions of favorited items
+        const dragDropFavorites = new foundry.applications.ux.DragDrop({
+            dragSelector: '.favorite',
+            dropSelector: '.favorite',
+            permissions: {
+                dragstart: this._canDragStartFavorite.bind(this),
+                drop: this._canDragDropFavorite.bind(this),
+            },
+            callbacks: {
+                dragstart: this._onDragStartFavorite.bind(this),
+                drop: this._onDragDropFavorite.bind(this),
+            }
+        });
+        dragDropFavorites.bind(this.element);
+    }
+
+    _canDragStartFavorite() {
+        return this.isEditable;
+    }
+
+    _canDragDropFavorite() {
+        return this.isEditable;
+    }
+
+    // handle start dragging a favorite to reorder
+    _onDragStartFavorite(event: DragEvent) {
+        const target = event.currentTarget;
+
+        const uuid = SheetFlow.closestUuid(target);
+        const itemId = SheetFlow.closestItemId(target);
+
+        const dragData = {
+            uuid,
+            itemId,
+        }
+
+        // Set data transfer data
+        event.dataTransfer?.setData("text/plain", JSON.stringify(dragData));
+    }
+
+    _onDragDropFavorite(event: DragEvent) {
+        const target = event.target;
+        const favorites = this.actor.system.favorites.slice();
+        const data = TextEditor.getDragEventData(event) as any;
+        const srcUuid = data.uuid;
+        let sourceIndex = favorites.indexOf(srcUuid);
+        if (sourceIndex < 0) {
+            const srcItemId = data.id;
+            sourceIndex = favorites.indexOf(srcItemId);
+        }
+
+        const targetUuid = SheetFlow.closestUuid(target);
+        let targetIndex = favorites.indexOf(targetUuid);
+        if (targetIndex < 0) {
+            const targetItemId = SheetFlow.closestItemId(target);
+            targetIndex = favorites.indexOf(targetItemId);
+        }
+
+        if (sourceIndex >= 0 && targetIndex >= 0) {
+            const fs = favorites[sourceIndex];
+            const ft = favorites[targetIndex];
+            favorites[targetIndex] = fs;
+            favorites[sourceIndex] = ft;
+            void this.actor.update({ system: { favorites } });
+        }
+    }
+
+    /** Listeners used by _all_ actor types! */
+    activateListeners_LEGACY(html: JQuery<HTMLElement>) {
+        Helpers.setupCustomCheckbox(this, html);
+
+        html.find('input[name="system.description.source"]').on('drop', (event) => void this._onSourceDrop(event.originalEvent));
+
+        // Actor inventory handling....
+        html.find('#select-inventory').on('change', this._onSelectInventory.bind(this));
+
+        html.find('.matrix-att-selector').on('change', this._onMatrixAttributeSelected.bind(this));
+
+        html.find('select[name="initiative-select"]').on('change', this._onInitiativePerceptionChange.bind(this));
+
+        html.find('select.weapon-ammo-select').on('change', this._onWeaponAmmoSelect.bind(this));
+
+        html.find('input[data-system-action="changeSkillRating"]').on('change', this._onChangeSkillRating.bind(this));
+        html.find('input[data-system-action="changeItemQty"]').on('change', this._onListItemChangeQuantity.bind(this));
+        html.find('input[data-system-action="changeItemMatrixDamage"]').on('change', event => SheetFlow.changeItemMatrixDamage(event));
+    }
+
+    private async _onSourceDrop(event?: DragEvent) {
+        if (!event || !this.isEditable) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const data = parseDropData(event);
+        if (data && typeof data === 'object' && 'uuid' in data && typeof data.uuid === 'string')
+            await this.actor.update({ system: { description: { source: data.uuid } } });
+    }
+
+    /**
+     * Populate modifier tooltips for elements matching a `[data-*]` selector.
+     * Derives the dataset key from the selector, resolves the value via `getValue`,
+     * renders the tooltip template, and assigns it to `dataset.tooltipHtml`.
+     */
+    private async _applyModifierTooltip(
+        selector: `[data-${string}]`,
+        getValue: (id: string) => ModifiableValueType | undefined
+    ): Promise<void> {
+        if (!this.element) return;
+
+        const elements = this.element.querySelectorAll<HTMLElement>(selector);
+        const [, kebabCaseKey] = /\[data-([^\]]+)\]/.exec(selector)!;
+        const datasetKey = kebabCaseKey.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+
+        await Promise.all(
+            [...elements].map(async (element) => {
+                const id = element.dataset[datasetKey];
+                if (!id) return;
+
+                const value = getValue(id);
+                if (!value) return;
+
+                const content = (
+                    await foundry.applications.handlebars.renderTemplate(
+                        SheetFlow.templateBase("common/modifiers-tooltip"),
+                        { value }
+                    )
+                ).trim();
+
+                if (!content) return;
+
+                element.dataset.tooltipHtml = content;
+                element.dataset.tooltipClass = "sr5v2";
+            })
+        );
+    }
+
+    /**
+     * Prepare Tooltips For Skills, Attributes, and Limits
+     * - these tooltips display all the modifiers for the ModifiedValue
+     */
+    async prepareModifierTooltips() {
+        if (!this.element) return;
+
+        await Promise.all([
+            this._applyModifierTooltip("[data-attribute-modifier-tooltip]", (id) => this.actor.getAttribute(id)),
+            this._applyModifierTooltip("[data-limit-modifier-tooltip]", (id) => this.actor.getLimit(id)),
+            this._applyModifierTooltip("[data-skill-modifier-tooltip]", (id) => this.actor.getSkillById(id)),
+            this._applyModifierTooltip("[data-modifier-tooltip-path]", (path) =>
+                foundry.utils.getProperty(this.actor.system, path) as ModifiableValueType | undefined
+            ),
+        ]);
+    }
+
+    protected override _getHeaderControls() {
+        const controls = super._getHeaderControls();
+        controls.unshift({
+            action: 'resetActorRunData',
+            icon: 'fas fa-arrow-rotate-right',
+            label: 'SR5.Labels.ActorSheet.ResetActorForNewRun',
+            ownership: 3, // OWNER
+        })
+
+        return controls;
+    }
+
+    static async #favoriteItem(this: SR5BaseActorSheet, event: PointerEvent) {
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const uuid = SheetFlow.closestUuid(event.target);
+        const itemId = SheetFlow.closestItemId(event.target);
+
+        const favoriteId = this.actor.items.get(itemId) ? itemId : uuid;
+
+        const newFavorites = this.actor.system.favorites.slice();
+
+        if (newFavorites.includes(favoriteId)) {
+            newFavorites.splice(newFavorites.indexOf(favoriteId), 1);
+        } else {
+            newFavorites.push(favoriteId);
+        }
+        await this.actor.update({ system: { favorites: newFavorites } });
+    }
+
+    /**
+     * Get the options for Initiative Perception
+     */
+    _prepareInitiativePresence() {
+        const options: { label: string, value: string }[] = [];
+        let value = '';
+        if (this.actor.isType('spirit', 'character')) {
+            const initiative = this.actor.system.initiative;
+            value = initiative.perception === 'matrix'
+                ? this.actor.isUsingHotSim
+                    ? 'hot_sim' : 'cold_sim'
+                : initiative.perception;
+            if (initiative.meatspace) {
+                options.push({
+                    label: 'SR5.InitCatMeatspace',
+                    value: 'meatspace'
+                })
+            }
+            if (this.actor.system.special === 'magic') {
+                options.push({
+                    label: 'SR5.InitCatAstral',
+                    value: 'astral'
+                })
+            }
+            if (initiative['matrix']) {
+                options.push({
+                    label: 'SR5.Labels.ActorSheet.ColdSim',
+                    value: 'cold_sim',
+                });
+                options.push({
+                    label: 'SR5.HotSim',
+                    value: 'hot_sim'
+                });
+            }
+        }
+
+        return { options, value };
+    }
+
+    _prepareInitiativeFormulaModes() {
+        const modes = [
+            { id: 'meatspace' as const, label: 'SR5.InitCatMeatspace' },
+            { id: 'astral' as const, label: 'SR5.InitCatAstral' },
+            { id: 'matrix' as const, label: 'SR5.Labels.ActorSheet.Matrix' },
+        ];
+
+        return modes.filter(mode => this.actor.system.initiative?.[mode.id]);
+    }
+
+    /**
+     * Handle Changing Initiative Perception
+     * - the select handles hot sim vs cold sim and doesn't match our dataset exactly
+     * - this is more of a band-aid until we do appv2
+     * @param event
+     */
+    async _onInitiativePerceptionChange(event: Event) {
+        const newValue = (event.currentTarget as HTMLSelectElement)?.value as InitiativeModeOptions | undefined;
+        if (!newValue) return;
+
+        const supportedModes = ['meatspace', 'astral', 'cold_sim', 'hot_sim'] as const;
+        if (!supportedModes.includes(newValue)) return;
+
+        await this.actor.setInitiativeMode(newValue);
+    }
+
+    /**
+     * Handle display of item types within the actors inventory section.
+     *
+     * Unexpected means there is no use for this type but the user added it anyway.
+     * Inventory types means they should always be shown, even if there are none.
+     * All other item types will be collected at some tab / place on the sheet.
+     */
+    _addInventoryItemTypes(inventory: InventorySheetData) {
+        // Show all item types but remove empty unexpected item types.
+        const inventoryTypes = this.getInventoryItemTypes();
+        for (const type of Object.keys(inventory.types)) {
+            if (inventoryTypes.includes(type as Item.ConfiguredSubType)) continue;
+            if (inventory.types[type].items.length === 0) delete inventory.types[type];
+        }
+
+        return inventory;
+    }
+
+    /**
+     * Add any item type to the inventory display that's configured for this actor sheet type.
+     *
+     * @param inventory The inventory to check and add types to.
+     */
+    _addInventoryTypes(inventory: InventorySheetData) {
+        for (const type of this.getInventoryItemTypes()) {
+            if (Object.hasOwn(inventory.types, type)) continue;
+
+            inventory.types[type] = {
+                type,
+                label: SR5.itemTypes[type],
+                isOpen: this._inventoryOpenClose[type],
+                items: []
+            };
+        }
+    }
+
+    /**
+     * Override ApplicationMixin._onDrop shim to handle default Foundry onDrop behavior for all ActorSheets.
+     * NOTE: The current drag&drop implementation is borked and needs cleanup across: SR5ApplicationMixin as base for actor and item sheets.
+     */
+    protected override async _onDrop(event: DragEvent) {
+        return await (ActorSheetV2.prototype as any)._onDrop.call(this, event);
+    }
+
+    /**
+     * Guard against non-HTMLElement drag sources and keep actor item/effect drag payload creation stable.
+     * NOTE: The current drag&drop implementation is borked and needs cleanup across: SR5ApplicationMixin as base for actor and item sheets.
+     */
+    protected override async _onDragStart(event: DragEvent) {
+        const target = event.currentTarget as HTMLElement | null;
+        const targetElement = event.target as HTMLElement | null;
+        if (targetElement?.dataset && 'link' in targetElement.dataset) return;
+
+        let dragData;
+
+        if (target?.dataset.itemId) {
+            const item = this.actor.items.get(target.dataset.itemId);
+            if (item) {
+                dragData = item.toDragData();
+            }
+        }
+
+        if (target?.dataset.effectId) {
+            const effect = this.actor.effects.get(target.dataset.effectId);
+            if (effect) {
+                dragData = effect.toDragData();
+            }
+        }
+
+        if (!dragData) return;
+        event.dataTransfer?.setData('text/plain', JSON.stringify(dragData));
+    }
+
+    protected override async _onDropItem(event: DragEvent, item: SR5Item) {
+        if (item.isType('skill') && item.system.type === 'set') {
+            await SkillSetFlow.replaceSkillSet(this.actor, item);
+            return null;
+        }
+
+        if (item.isType('skill')) {
+            await ActorSkillFlow.addSkill(this.actor, item.toObject() as Item.CreateData<'skill'>, { warnOnDuplicate: true });
+            return null;
+        }
+
+
+        // Avoid adding item types to the actor, that aren't handled on the sheet anywhere.
+        if (this.getHandledItemTypes().includes(item.type) || this.getInventoryItemTypes().includes(item.type)) {
+            return super._onDropItem(event, item);
+        }
+        return null;
+    }
+
+    protected override async _onDropActiveEffect(event: DragEvent, effect: SR5ActiveEffect) {
+        if (effect.actor?.uuid === this.actor.uuid) return null;
+        // if the effect is just supposed to apply to the item's test, it won't work on an actor
+        if (effect.appliesToAnyOf(['test_item'])) {
+            ui.notifications?.warn(game.i18n.localize('SR5.ActiveEffect.CannotAddTestViaItemToActor'));
+            return null;
+        }
+        return super._onDropActiveEffect(event, effect);
+    }
+
+    protected override async _onDropActor(event: DragEvent, actor: SR5Actor) {
+        await super._onDropActor(event, actor);
+        const itemData = {
+            name: actor.name ?? `${game.i18n.localize('SR5.New')} ${game.i18n.localize(SR5.itemTypes['contact'])}`,
+            type: 'contact' as Item.SubType,
+            system: { linkedActor: actor.uuid }
+        };
+        await this.actor.createEmbeddedDocuments('Item', [itemData], { renderSheet: true });
+        return null;
+    }
+
+    static #toggleInventoryVisibility(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const listHeader = event.target?.closest<HTMLElement>('.list-item-header');
+        const type = listHeader?.dataset?.itemType;
+        if (!type) return;
+
+        const current = this._inventoryOpenClose[type] ?? true;
+
+        this._setInventoryTypeVisibility(type, !current);
+        void this.render();
+    }
+
+    _setInventoryVisibility(this: SR5BaseActorSheet, isOpen: boolean) {
+        Object.keys(CONFIG.Item.typeLabels).forEach(type => { this._setInventoryTypeVisibility(type, isOpen); });
+    }
+
+    _setInventoryTypeVisibility(this: SR5BaseActorSheet, type: string, isOpen: boolean) {
+        this._inventoryOpenClose[type] = isOpen
+    }
+
+    static async #createEffect(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const effect = [{
+            name: game.i18n.localize("SR5.ActiveEffect.New"),
+            origin: this.actor.uuid,
+        }];
+
+        await this.actor.createEmbeddedDocuments('ActiveEffect', effect);
+    }
+
+    static async #editEffect(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const id = SheetFlow.closestEffectId(event.target);
+        const item = this.actor.effects.get(id);
+        if (item) {
+            await item.sheet?.render(true);
+        } else {
+            // check for uuid
+            const uuid = SheetFlow.closestUuid(event.target);
+            const doc = await fromUuid(uuid);
+            if (doc && doc instanceof SR5ActiveEffect) {
+                await doc.sheet?.render(true);
+            }
+        }
+    }
+
+    static async #toggleEffect(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+
+        const id = SheetFlow.closestEffectId(event.target);
+        const item = this.actor.effects.get(id);
+        if (item) {
+            const disabled = !item.disabled;
+            await item.update({ disabled });
+        } else {
+            const uuid = SheetFlow.closestUuid(event.target);
+            const doc = await fromUuid(uuid);
+            if (doc instanceof SR5ActiveEffect) {
+                const disabled = !doc.disabled;
+                await doc.update({ disabled });
+            }
+        }
+    }
+
+    static async #deleteEffect(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+
+        const userConsented = await Helpers.confirmDeletion();
+        if (!userConsented) return;
+
+        const id = SheetFlow.closestEffectId(event.target);
+        const item = this.actor.effects.get(id);
+        if (!item) return;
+
+        await this.actor.deleteEmbeddedDocuments('ActiveEffect', [id]);
+    }
+
+    protected async _handleCreateItem(event: PointerEvent) {
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const type = SheetFlow.closestAction(event.target)!.dataset.itemType!;
+
+        // Unhide section new item will be in
+        this._setInventoryTypeVisibility(type, true);
+
+        const itemData = {
+            type: type as Item.ConfiguredSubType,
+            name: `${game.i18n.localize('SR5.New')} ${game.i18n.localize(SR5.itemTypes[type])}`
+        } satisfies Item.CreateData;
+
+        // Inject special case context based on item type
+        if (type === 'call_in_action') this._handleCreateCallInActionItem(event, itemData);
+        if (type === 'skill') this._handleCreateSkillItem(event, itemData);
+        if (type === 'matrix_action') this._handleCreateMatrixActionItem(event, itemData);
+
+        const items = type === 'skill' && foundry.utils.getProperty(itemData, 'system.type') === 'skill'
+            ? await ActorSkillFlow.addSkill(this.actor, itemData as Item.CreateData<'skill'>, { defaultName: itemData.name, warnOnDuplicate: true })
+            : await this.actor.createEmbeddedDocuments('Item', [itemData]);
+        if (!items) return;
+
+        // Add the item to the selected inventory.
+        if (this.selectedInventory !== this.actor.defaultInventory.name) {
+            await this.actor.inventory.addItems(this.selectedInventory, items as SR5Item[]);
+        }
+        for (const item of items) {
+            await item.sheet?.render(true, { mode: 'edit' } as any);
+        }
+    }
+
+    /**
+     * Call In Actions need to prefill the actor type as it is used to filter the item when creating
+     * it directly from the sheet sections. If left empty, the created item will not be shown on sheet.
+     */
+    _handleCreateCallInActionItem(event: PointerEvent, itemData: Item.CreateData) {
+        const actorType = SheetFlow.closestAction(event.target)!.dataset.actorType;
+        if (!actorType) console.error(`Shadowrun 5e | Tried to create a Call In Action item without an actor-type data attribute context!`);
+        itemData['system.actor_type'] = actorType;
+    }
+
+    /**
+     * Skill items need to prefill the skill category as it is used to filter the item when creating
+     * it directly from the sheet sections. If left empty, the created item will not be shown on sheet.
+     */
+    _handleCreateSkillItem(event: PointerEvent, itemData: Item.CreateData) {
+        const skillAction = SheetFlow.closestAction(event.target)!;
+        const skillType = skillAction.dataset.skillType || 'skill';
+        const skillCategory = skillAction.dataset.skillCategory as string;
+        const skillKnowledgeType = skillAction.dataset.skillKnowledgeType as string;
+
+        CreateItemFlow.injectMinimumSkillData(itemData, skillType, skillCategory, skillKnowledgeType);
+    }
+
+    /**
+     * Matrix action items are created the same as normal action items, but need additional data injection when creating.
+     * Otherwise they will not show up on the appropriate matrix action sections on sheet.
+     * 
+     * On sheet 'matrix action' are using a wrong item type (matrix_action) to differentiate them during creation.
+     * NOTE: If further action categories need additional data injection, we should handle all within the same function, similar to this
+     *       and switch to an data attribute to differentiate between each instead of manipulating the create item type data attribute.
+     */
+    _handleCreateMatrixActionItem(event: PointerEvent, itemData: Item.CreateData) {
+        let actionCategories: string[];
+        try {
+            const actionCategoriesJSON = SheetFlow.closestAction(event.target)!.dataset.actionCategories;
+            actionCategories = JSON.parse(actionCategoriesJSON ?? '');
+        } catch (error) {
+            console.error(`Shadowrun 5e | Error while creating Matrix Action item: ${error}`);
+            return;
+        }
+
+        if (!actionCategories || actionCategories.length === 0) console.error(`Shadowrun 5e | Tried to create a Matrix Action item without action-categories data attribute context!`);
+
+        itemData['system.action.categories'] = actionCategories;
+        itemData['system.action.test'] = 'MatrixTest';
+        itemData['type'] = 'action';
+    }
+
+    /**
+     * Create a new item based on the Item Header creation action and the item type of that header.
+     *
+     * @param event
+     */
+    static async #createItem(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        return this._handleCreateItem(event);
+    }
+
+    static async #editItem(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const id = SheetFlow.closestItemId(event.target);
+        let item = this.actor.items.get(id);
+        if (!item) {
+            const uuid = SheetFlow.closestUuid(event.target);
+            // @ts-expect-error typing clashes between items.get and fromUuid
+            item = await fromUuid(uuid);
+        }
+        if (item) await item.sheet?.render(true, { mode: 'edit' } as any);
+    }
+
+    static async #moveItem(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        await this._moveItemToInventory(event.target);
+    }
+
+    async _handleDeleteItem(item: SR5Item) {
+        // remove from the inventory tracking system
+        return this.actor.inventory.removeItem(item).then(async () => {
+            await item.delete()
+        });
+    }
+
+    static async #deleteItem(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+
+        const userConsented = await Helpers.confirmDeletion();
+        if (!userConsented) return;
+
+        const id = SheetFlow.closestItemId(event.target);
+        const item = this.actor.items.get(id);
+        if (!item) return;
+        await this._handleDeleteItem(item);
+    }
+
+    static async #rollItem(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const iid = SheetFlow.closestUuid(event.target);
+        const item = await fromUuid(iid);
+
+        if (!(item instanceof SR5Item)) return;
+        await this._handleRollItem(item, event);
+    }
+
+    async _handleRollItem(item: SR5Item, event: PointerEvent) {
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        if (!Hooks.call('SR5_PreActorItemRoll', this.actor, item)) return;
+        await item.castAction(event, this.actor);
+    }
+
+    /**
+     * Set any kind of condition monitor to a specific cell value.
+     *
+     * @event Most return a currentTarget with a value dataset
+     */
+    static async #modifyConditionMonitor(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+
+        const target = event.target?.closest<HTMLElement>('[data-action="modifyConditionMonitor"]');
+        if (!target) return;
+        const track = target.dataset?.id;
+
+        // if this is a matrix track for an item, handle it differently
+        const uuid = event.target?.closest<HTMLElement>('[data-uuid]')?.dataset?.uuid ?? '';
+        if (track === 'matrix' && uuid) {
+            const document = await fromUuid(uuid);
+            if (document instanceof SR5Item) {
+                let value = Number(target.dataset.value);
+                if (document.getConditionMonitor().value === value) {
+                    value = 0;
+                }
+                return document.setMatrixDamage(value);
+            }
+        }
+
+        const data: Actor.UpdateData = {};
+        let value = Number(target.dataset.value as string);
+
+        // if the clicked on cell is the current value for it's track, set the value to 0 to clear it
+        if (track === 'stun' && this.actor.getStunTrack()?.value === value) {
+            value = 0;
+        } else if (track === 'physical' && this.actor.getPhysicalTrack()?.value === value) {
+            value = 0;
+        } else if (track === 'edge' && this.actor.getEdge().uses === value) {
+            value = 0;
+        } else if (track === 'matrix' && this.actor.getMatrixTrack()?.value === value) {
+            value = 0;
+        }
+
+        if (track === 'stun' || track === 'physical') {
+            const property = `system.track.${track}.value`;
+            data[property] = value;
+        } else if (track === 'edge') {
+            const property = `system.attributes.edge.uses`;
+            data[property] = value;
+        } else if (track === 'overflow') {
+            const property = 'system.track.physical.overflow.value';
+            data[property] = value;
+        } else if (track === 'matrix') {
+            await this.actor.setMatrixDamage(value);
+        }
+
+        if (data) await this.actor.update(data);
+
+        await this.document.applyDefeatedStatus();
+    }
+
+    /**
+     * Reset all condition tracks to zero values.
+     * @param event
+     */
+    static async #clearConditionMonitor(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+
+        const track = event.target?.closest<HTMLElement>('[data-id]')?.dataset?.id;
+
+        const uuid = event.target?.closest<HTMLElement>('[data-uuid]')?.dataset?.uuid ?? '';
+        if (track === 'matrix' && uuid) {
+            const document = await fromUuid(uuid);
+            if (document instanceof SR5Item) {
+                return await document.setMatrixDamage(0);
+            }
+        }
+
+        const data = {};
+        if (track === 'stun') {
+            data[`system.track.stun.value`] = 0;
+        }
+        // Clearing the physical monitor should also clear the overflow.
+        else if (track === 'physical') {
+            data[`system.track.physical.value`] = 0;
+            data['system.track.physical.overflow.value'] = 0;
+
+        } else if (track === 'edge') {
+            data[`system.attributes.edge.uses`] = 0;
+
+        } else if (track === 'overflow') {
+            data['system.track.physical.overflow.value'] = 0;
+
+        } else if (track === 'matrix') {
+            await this.actor.setMatrixDamage(0);
+        }
+
+        if (data) await this.actor.update(data);
+        await this.actor.applyDefeatedStatus();
+    }
+
+    /**
+     * Handle interaction with a damage track title.
+     * @param event
+     */
+    static async #rollConditionMonitor(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const track = event.target?.closest<HTMLElement>('[data-id]')?.dataset?.id;
+
+        switch (track) {
+            case 'stun':
+                await this.actor.rollGeneralAction('natural_recovery_stun', { event });
+                break;
+            case 'physical':
+                await this.actor.rollGeneralAction('natural_recovery_physical', { event });
+                break;
+            case 'edge':
+                await this.actor.rollAttribute('edge', { event });
+                break;
+        }
+    }
+
+    /**
+     * Special fields are shared across all actor types.
+     *
+     * These are used as indicators about what kind of 'special' a character might be.
+     *
+     * @param sheetData ActorSheetData as created within getData method
+     */
+    _prepareSpecialFields(sheetData: SR5ActorSheetData) {
+        sheetData.awakened = sheetData.system.special === 'magic';
+        sheetData.emerged = sheetData.system.special === 'resonance';
+    }
+
+    /**
+     * Pretty up display of zero value actor modifiers.
+     *
+     * @param sheetData ActorSheetData as created within getData method
+     */
+    _prepareActorModifiers(sheetData: SR5ActorSheetData) {
+        // Empty zero value modifiers for display purposes.
+        const { modifiers } = sheetData.system;
+
+        const modifierList = Object.keys(modifiers);
+        modifierList.sort();
+        // shift global to the front of the list
+        modifierList.splice(modifierList.indexOf("global"), 1);
+        modifierList.unshift('global');
+
+        const sorted = {};
+        for (const modifier of modifierList) {
+            sorted[modifier] = Number(modifiers[modifier]) || '';
+        }
+
+        sheetData.system.modifiers = sorted as typeof modifiers;
+        sheetData.woundTolerance = 3 + ('wound_tolerance' in modifiers ? modifiers.wound_tolerance : 0);
+    }
+
+    /**
+     * Prepare Actor Sheet Inventory display.
+     *
+     * Each item can  be in one custom inventory or the default inventory.
+     */
+    async _prepareItemsInventory() {
+        // All custom and default actor inventories.
+        const inventoriesSheet: InventoriesSheetData = {};
+        // Simple item to inventory mapping.
+        const itemIdInventory: Record<string, InventoryType> = {};
+
+        // All inventories for showing all items, but not as default
+        // Add first, for it to appear on top.
+        inventoriesSheet[this.actor.allInventories.name] = {
+            name: this.actor.allInventories.name,
+            label: this.actor.allInventories.label,
+            types: {}
+        };
+        this._addInventoryTypes(inventoriesSheet[this.actor.allInventories.name]);
+
+        // Default inventory for items without a defined one.
+        // Add first for display purposes on sheet.
+        inventoriesSheet[this.actor.defaultInventory.name] = {
+            name: this.actor.defaultInventory.name,
+            label: this.actor.defaultInventory.label,
+            types: {}
+        };
+        this._addInventoryTypes(inventoriesSheet[this.actor.defaultInventory.name]);
+
+        Object.values(this.actor.system.inventories).forEach(inventory => {
+            const { name, label, itemIds } = inventory;
+
+            // Avoid re-adding default inventories.
+            if (!Object.hasOwn(inventoriesSheet, name)) {
+                inventoriesSheet[name] = {
+                    name,
+                    label,
+                    types: {}
+                };
+            }
+
+            // Add default inventory types for this sheet type first, so they appear on top.
+            this._addInventoryTypes(inventoriesSheet[name]);
+
+            // Inform user about duplicate inventory mapping for a single item.
+            itemIds.forEach(id => {
+                itemIdInventory[id] = inventory;
+            });
+        });
+
+        const handledTypes = this.getHandledItemTypes();
+
+        // Check all items and using the item to inventory mapping add them to that inventory.
+        for (const item of this.actor.items) {
+            if (!item.id) continue;
+
+            // Handled types are on the sheet outside the inventory.
+            if (handledTypes.includes(item.type)) continue;
+
+            // Determine what inventory the item sits in.
+            const inventory = itemIdInventory[item.id] || this.actor.defaultInventory;
+            // Build inventory list this item should be shown an.
+            const addTo: string[] = inventory.showAll ? Object.keys(inventoriesSheet) : [inventory.name];
+
+            for (const name of addTo) {
+                const inventorySheet = inventoriesSheet[name];
+
+                // Should an item have been added to any inventory that wouldn't cary it's type normaly
+                // add missing type so the user can interact with it.
+                if (!inventorySheet.types[item.type]) {
+                    inventorySheet.types[item.type] = {
+                        type: item.type,
+                        label: SR5.itemTypes[item.type],
+                        isOpen: this._inventoryOpenClose[item.type],
+                        items: []
+                    };
+                }
+
+                inventorySheet.types[item.type].items.push(item);
+            }
+        }
+
+        Object.values(inventoriesSheet).forEach(inventory => {
+            this._addInventoryItemTypes(inventory);
+
+            // Sort the items.
+            Object.values(inventory.types).forEach((type) => {
+                type.items.sort(sortByName);
+            })
+        });
+
+        return inventoriesSheet;
+    }
+
+    /**
+     * Choose the selected inventory to actually display.
+     *
+     * @param inventories
+     */
+    _prepareSelectedInventory(inventories: InventoriesSheetData) {
+        return inventories[this.selectedInventory];
+    }
+
+    /**
+     * Categorize and sort spells to display cleanly.
+     *
+     * @param inventories
+     */
+    _prepareSortedCategorizedSpells(spellSheets: SR5Item[]) {
+        const sortedSpells: Record<string, SR5Item[]> = {};
+        const spellTypes: string[] = ['combat', 'detection', 'health', 'illusion', 'manipulation', 'notfound'];
+
+        // Add all spell types in system.
+        spellTypes.forEach(type => {
+            sortedSpells[type] = [];
+        });
+
+        spellSheets.forEach(spell => {
+            // Check if the spell category is defined and if it's something we expect, if not we use the 'notfound' category
+            const category = ((spell.system.category === undefined) || !spellTypes.includes(spell.system.category)) ? 'notfound' : spell.system.category;
+            sortedSpells[category].push(spell);
+        });
+
+        spellTypes.forEach(type => {
+            sortedSpells[type].sort((a, b): number => {
+                return a.name.localeCompare(b.name);
+            });
+        });
+
+        return sortedSpells;
+    }
+
+    /**
+     * Used by the sheet to choose whether to show or hide hideable fields
+     */
+    _prepareContentVisibility(data) {
+        const contentVisibility: Record<string, boolean> = {}
+        const defaultVisibility = !this.hideEmptyCategories();
+
+        // If prefix is empty uses the category as a prefix
+        const setVisibility = (category: string, prefix?: string) => {
+            contentVisibility[prefix || category + '_list'] = defaultVisibility || data.itemType[category].length > 0;
+        }
+
+        contentVisibility['default'] = defaultVisibility;
+        setVisibility('adept_power');
+        setVisibility('spell');
+        setVisibility('ritual');
+        setVisibility('summoning');
+
+        return contentVisibility;
+    }
+
+    /**
+     * Show if any items are in the inventory or if the actor is supposed to have an inventory.
+     *
+     * A sheet is supposed to show an inventory if there are item types defined or an item of some
+     * type exists in any of its inventories.
+     *
+     * @param inventories
+     */
+    _prepareHasInventory(inventories: InventoriesSheetData) {
+        if (this.getInventoryItemTypes().length > 0) return true;
+
+        for (const inventory of Object.values(inventories)) {
+            if (Object.keys(inventory.types).length > 0) return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Prepare items for easy type by type display on actors sheets with lists per item type.
+     *
+     * NOTE: This method uses sheet item types, instead of item types. A sheet item type allows
+     * to sub-group items of one type into separate lists as needed.
+     *
+     * @param data An object containing Actor Sheet data, as would be returned by ActorSheet.getData
+     * @returns Sorted item lists per sheet item type.
+     */
+    _prepareItemTypes(): Record<string, SR5Item[]> {
+        const itemsByType: Record<string, SR5Item[]> = {};
+
+        // Most sheet items are raw item types, some are sub types.
+        // These are just for display purposes and has been done for call_in_action items.
+        const sheetItemTypes = [
+            ...Object.keys(CONFIG.Item.typeLabels),
+            'summoning',
+            'compilation'
+        ];
+
+        // Add all item types in system.
+        sheetItemTypes.forEach(type => {
+            itemsByType[type] = [];
+        });
+
+        // Add existing items to their sheet types as sheet items
+        for (const item of this.actor.items) {
+            itemsByType[item.type].push(item);
+
+            if (item.isSummoning) itemsByType['summoning'].push(item);
+            if (item.isCompilation) itemsByType['compilation'].push(item);
+        }
+
+        // Sort items for each sheet type.
+        Object.entries(itemsByType).forEach(([type, items]) => {
+            switch (type) {
+                case 'quality':
+                    (items as SR5Item<'quality'>[]).sort(sortByQuality);
+                    break;
+                case 'program':
+                    items.sort(sortByEquipped);
+                    break;
+                default:
+                    items.sort(sortByName);
+                    break;
+            }
+        });
+
+        return itemsByType;
+    }
+
+    /**
+     * @param sheetData An object containing Actor Sheet data, as would be returned by ActorSheet.getData
+     */
+    _prepareActorTypeFields(sheetData: SR5ActorSheetData) {
+        sheetData.isCharacter = this.actor.isType('character');
+        sheetData.isSpirit = this.actor.isType('spirit');
+        sheetData.isVehicle = this.actor.isType('vehicle');
+        sheetData.hasSkills = this.actor.hasSkills;
+        sheetData.canAlterSpecial = this.actor.canAlterSpecial;
+        sheetData.hasFullDefense = this.actor.hasFullDefense;
+    }
+
+    /**
+     * Count the currently active and max programs for sheet display in this style:
+     *
+     * Only personas using a device will show this count.
+     *
+     * @param itemTypes
+     * @returns (<active>/<max>) or ''
+     */
+    _prepareProgramCount(itemTypes: Record<string, SR5Item[]>): string {
+        if (!itemTypes.program) return '';
+        if (!this.actor.hasDevicePersona()) return '';
+
+        const active = itemTypes.program.filter(program => program.system.technology?.equipped).length;
+        const activeDevice = this.actor.getMatrixDevice();
+        const max = activeDevice?.system.programs ?? 0;
+
+        return `(${active}/${max})`;
+    }
+
+    _prepareSpiritOptionalPowerCounts(sheetData: SR5ActorSheetData) {
+        sheetData.optionalPowerCount = 0;
+        sheetData.optionalPowerSelected = 0;
+        sheetData.optionalPowerTotal = 0;
+
+        if (!sheetData.isSpirit) return;
+        const spirit = this.actor.asType('spirit');
+        if (!spirit) return;
+
+        const optionalPowers = (sheetData.itemType.critter_power ?? [])
+            .filter(item => item.isType('critter_power') && item.system.optional !== 'standard');
+
+        sheetData.optionalPowerCount = Math.floor(spirit.system.attributes.force.value / 3);
+        sheetData.optionalPowerSelected = optionalPowers.filter(item => item.system.optional === 'enabled_option').length;
+        sheetData.optionalPowerTotal = optionalPowers.length;
+    }
+    /**
+     * Prepare skills with sorting.
+     *
+     * @param sheetData What is to be displayed on sheet.
+     */
+    _prepareSkills(sheetData: SR5ActorSheetData) {
+        sheetData.system.skills = this._sortSkills(sheetData, this.document.system.skills);
+    }
+
+    _sortSkills(sheetData: SR5ActorSheetData, skills: SR5Actor['system']['skills']) {
+        sheetData.system.skills.active = SkillFieldPrep.sortSkills(skills.active);
+        sheetData.system.skills.language = SkillFieldPrep.sortSkills(skills.language);
+        sheetData.system.skills.knowledge.street = SkillFieldPrep.sortSkills(skills.knowledge.street);
+        sheetData.system.skills.knowledge.academic = SkillFieldPrep.sortSkills(skills.knowledge.academic);
+        sheetData.system.skills.knowledge.professional = SkillFieldPrep.sortSkills(skills.knowledge.professional);
+        sheetData.system.skills.knowledge.interests = SkillFieldPrep.sortSkills(skills.knowledge.interests);
+
+        return sheetData.system.skills;
+    }
+
+    _prepareSkillGroups(): SheetSkillGroup[] {
+        const getDisplayRating = (item: SR5Item<'skill'>): number => {
+            const rawRating = item.system.group.rating;
+            
+            if (!this.actor.isType('spirit')) return rawRating;
+            if (rawRating <= 0) return 0;
+
+            const force = this.actor.system.attributes.force.value;
+            return this.actor.system.half_value_skill ? Math.ceil(force / 2) : force;
+        };
+
+        // NOTE: SR5Actor.itemsForType seems to not be loaded on actors when they're opened from a pack or copied over from it.
+        return this.actor.getSkillGroups()
+            .map(item => ({
+                item,
+                label: SkillNamingFlow.localizeSkillgroupName(item.name),
+                displayRating: getDisplayRating(item),
+            }))
+            .sort(sortByLocalizedLabel);
+    }
+
+    hideEmptyCategories() {
+        return !this.actor.system.category_visibility.default;
+    }
+
+    /** Setup untrained skill filter within getData */
+    static async #filterUntrainedSkills(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        this._filters.showUntrainedSkills = !this._filters.showUntrainedSkills;
+        event.target.closest<HTMLElement>('.active-skills-header')!
+            .querySelector<HTMLElement>('.skill-rtg-label')!
+            .innerText = game.i18n.localize(this._filters.showUntrainedSkills ? 'SR5.Rtg' : 'SR5.RtgAboveZero');
+        this.#filterActiveSkillsElements();
+    }
+
+    static async #handleFilterActiveSkills(
+        this: SR5BaseActorSheet, event: KeyboardEvent | null, query: string, rgx: RegExp, content: HTMLElement | null
+    ) {
+        this._filters.skills = query;
+        this.#filterActiveSkillsElements();
+    }
+
+    #filterActiveSkillsElements() {
+        const skillContainer = this.element.querySelector<HTMLElement>('#active-skills-scroll');
+        if (!skillContainer) return;
+
+        const activeSkillRows = Array.from(
+            skillContainer.querySelectorAll<HTMLDivElement>('[data-skill-id][data-category="active"]'),
+        ).map((listItemElem) => {
+            const container = listItemElem.parentElement;
+            if (!container) return null;
+
+            const skillId = listItemElem.dataset.skillId;
+            if (!skillId) return null;
+
+            const skill = this.actor.getSkillById(skillId);
+            if (!skill) return null;
+
+            return { container, skillId, skill };
+        }).filter((row): row is NonNullable<typeof row> => row !== null);
+
+        const scoreBySkillId = new Map<string, number>();
+        const hasTextQuery = foundry.applications.ux.SearchFilter.cleanQuery(this._filters.skills).length > 0;
+        if (hasTextQuery) {
+            for (const match of getFuzzyMatches(
+                activeSkillRows,
+                this._filters.skills,
+                row => this._getSkillSearchString(row.skillId, row.skill),
+            )) {
+                scoreBySkillId.set(match.item.skillId, match.score);
+            }
+        }
+
+        const sortByLabel = (left: typeof activeSkillRows[number], right: typeof activeSkillRows[number]) => {
+            return this._getSkillLabelOrName(left.skill).localeCompare(this._getSkillLabelOrName(right.skill), game.i18n.lang);
+        };
+
+        activeSkillRows.sort((left, right) => {
+            const leftScore = scoreBySkillId.get(left.skillId);
+            const rightScore = scoreBySkillId.get(right.skillId);
+
+            if (leftScore !== undefined && rightScore !== undefined) {
+                if (leftScore !== rightScore) return rightScore - leftScore;
+                return sortByLabel(left, right);
+            }
+
+            if (leftScore !== undefined) return -1;
+            if (rightScore !== undefined) return 1;
+            return sortByLabel(left, right);
+        });
+
+        const firstNonActiveSkillRow = Array.from(skillContainer.children)
+            .find(child => !child.querySelector<HTMLElement>('[data-skill-id][data-category="active"]')) ?? null;
+
+        for (const row of activeSkillRows) {
+            skillContainer.insertBefore(row.container, firstNonActiveSkillRow);
+            row.container.classList.add('active-skill-row');
+
+            const hasTextMatch = !hasTextQuery || scoreBySkillId.has(row.skillId);
+            if (this._isSkillFiltered(row.skillId, row.skill, hasTextMatch)) {
+                row.container.classList.remove('hidden');
+            } else {
+                row.container.classList.add('hidden');
+            }
+        }
+    }
+
+    _isSkillFiltered(skillId: string, skill: SkillFieldType, hasTextMatch?: boolean) {
+        // a newly created skill shouldn't be filtered, no matter what.
+        // Therefore disqualify empty skill labels/names from filtering and always show them.
+        const isFilterable = this._getSkillLabelOrName(skill).length > 0;
+        const isHiddenForText = !(hasTextMatch ?? this._doesSkillContainText(skillId, skill, this._filters.skills));
+        const isHiddenForUntrained = !this._filters.showUntrainedSkills && skill.value === 0;
+
+        return !(isFilterable && (isHiddenForUntrained || isHiddenForText));
+    }
+
+    _getSkillLabelOrName(skill: SkillFieldType) {
+        return skill.label || skill.name || '';
+    }
+
+    _getSkillSearchString(key: string, skill: SkillFieldType) {
+        const name = this._getSkillLabelOrName(skill);
+        const searchKey = skill.name === undefined ? key : '';
+        const specs = skill.specs.join(' ');
+        return `${searchKey} ${name} ${specs}`;
+    }
+
+    /**
+     * Determine if a given skill contains a given search text in any way.
+     * 
+     * Name and translation, specializations will be searched.
+     *
+     * @param key search string fall back if skill is not provided.
+     * @param skill skill to be searched through
+     * @param text text to search for, can be an empty string.
+     * @returns true, if skill contains search text
+     */
+    _doesSkillContainText(key: string, skill: SkillFieldType, text: string) {
+        return matchesFuzzyQuery(text, this._getSkillSearchString(key, skill));
+    }
+
+    _isSkillMagic(id: string, skill: SR5Item<'skill'>) {
+        return skill.system.skill.attribute === 'magic' || id === 'astral_combat' || id === 'assensing';
+    }
+
+    _isSkillResonance(skill: SR5Item<'skill'>) {
+        return skill.system.skill.attribute === 'resonance';
+    }
+
+    private _closestSkillTarget(target: HTMLElement): HTMLElement | null {
+        return target.closest('[data-skill-id]');
+    }
+
+    async _editSkill(target: HTMLElement) {
+        const closest = this._closestSkillTarget(target);
+        const skillId = closest?.dataset.skillId;
+        if (!skillId) return;
+
+        const skill = this.actor.items.get(skillId);
+        if (!skill) return;
+
+        // @ts-expect-error TODO: tamif - skill-items resolve type error
+        await skill.sheet?.render(true, { mode: 'edit' });
+    }
+
+    static async #editSkill(this: SR5BaseActorSheet, event: PointerEvent) {
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        await this._editSkill(event.target);
+    }
+
+    static async #rollSkill(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const closest = this._closestSkillTarget(event.target);
+        const skillName = closest?.dataset.skillName;
+        if (!skillName) return;
+
+        await this.actor.rollSkill(skillName, { event });
+    }
+
+    static async #rollSkillSpec(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const closest = this._closestSkillTarget(event.target);
+        const skillName = closest?.dataset.skillName;
+        if (skillName) {
+            await this.actor.rollSkill(skillName, { event, specialization: true });
+        }
+    }
+
+    async _openSkillSource(target: HTMLElement) {
+        const skillId = this._closestSkillTarget(target)?.dataset.skillId;
+
+        const skill = skillId ? this.actor.getSkill(skillId) : null;
+        if (!skill) {
+            console.error(`Shadowrun 5e | Editing skill failed due to missing skill ${skillId}`); return;
+        }
+
+        await LinksHelpers.openSource(skill.link);
+    }
+
+    static async #rollAttribute(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const attribute = event.target?.closest<HTMLElement>('[data-attribute-id]')?.dataset?.attributeId;
+        if (attribute === 'rating') {
+            await this.actor.rollDeviceRating();
+        } else if (attribute) {
+            await this.actor.rollAttribute(attribute, { event });
+        }
+    }
+
+    static async #toggleSpiritForceAttribute(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!this.actor.isType('spirit')) return;
+        if (!isElementInstance(event.target, HTMLElement)) return;
+
+        const attributeId = event.target.closest<HTMLElement>('[data-attribute-id]')?.dataset.attributeId;
+        if (!attributeId || attributeId === 'force') return;
+
+        const enabled = !!this.actor.system.attributes[attributeId]?.applies_special;
+        await this.actor.update({ system: { attributes: { [attributeId]: { applies_special: !enabled } } } });
+    }
+
+    static async #toggleSpriteLevelAttribute(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!this.actor.isType('sprite')) return;
+        if (!isElementInstance(event.target, HTMLElement)) return;
+
+        const attributeId = event.target.closest<HTMLElement>('[data-attribute-id]')?.dataset.attributeId;
+        if (!attributeId) return;
+
+        const isSpriteLevelAttribute = ['resonance', 'attack', 'sleaze', 'data_processing', 'firewall'].includes(attributeId);
+        if (!isSpriteLevelAttribute) return;
+
+        if (attributeId === 'resonance') {
+            const enabled = !!this.actor.system.attributes.resonance.applies_special;
+            await this.actor.update({ system: { attributes: { resonance: { applies_special: !enabled } } } });
+            return;
+        }
+
+        const enabled = !!this.actor.system.matrix[attributeId]?.applies_special;
+        await this.actor.update({ system: { matrix: { [attributeId]: { applies_special: !enabled } } } });
+    }
+
+    /**
+     * Change the quantity on an item shown within a sheet item list.
+     *
+     * @param event A DOM mouse/touch event
+     */
+    async _onListItemChangeQuantity(event: Event) {
+        const iid = SheetFlow.closestItemId(event.currentTarget);
+        const item = this.actor.items.get(iid);
+        const quantity = parseInt((event.currentTarget as HTMLInputElement).value);
+
+        // Inform users about issues with templating or programming.
+        if (!Number.isFinite(quantity) || !item?.system?.technology) {
+            console.error(`Shadowrun 5e | Tried altering technology quantity on an item without technology data: ${item?.id}`, item);
+            return;
+        }
+
+        await SheetFlow.changeItemQuantity(item, quantity);
+    }
+
+    /**
+     * Toggle an Item or Effect to be hidden/visible on an actor sheet
+     * - this is used in part with the `isVisible` handlebar helper
+     * @param event
+     * @private
+     */
+    static async #toggleItemVisible(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const uuid = SheetFlow.closestUuid(event.target);
+        const itemId = SheetFlow.closestItemId(event.target);
+        const effectId = SheetFlow.closestEffectId(event.target);
+        // if we got an effectId, use its Effect ID to make actor's hidden effects keep when getting imported or made as token actors
+        const hiddenId = effectId || (this.actor.items.get(itemId) ? itemId : uuid);
+        if (hiddenId) {
+            const hidden_items = this.actor.system.hidden_items.slice();
+
+            const index = hidden_items.indexOf(hiddenId);
+
+            if (index >= 0) {
+                hidden_items.splice(index, 1);
+            } else {
+                hidden_items.push(hiddenId);
+            }
+            await this.actor.update({ system: { hidden_items } });
+        }
+    }
+
+    /**
+     * Change the equipped status of an item shown within a sheet item list.
+     */
+    static async #onToggleEquippedItem(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const id = SheetFlow.closestItemId(event.target);
+        const item = this.actor.items.get(id);
+        if (!item) return;
+
+        if (item.isType('critter_power', 'sprite_power')) {
+            switch (item.system.optional) {
+                case 'standard':
+                    return;
+                case 'enabled_option':
+                    await item.update({ system: { optional: 'disabled_option', enabled: false } });
+                    break;
+                case 'disabled_option':
+                    await item.update({ system: { optional: 'enabled_option', enabled: true } });
+                    break;
+            }
+        } else if (item.canBeEquipped()) {
+            // Handle the equipped state.
+            if (item.isType('device')) {
+                await this.document.equipOnlyOneItemOfType(item);
+            } else {
+                await item.update({ system: { technology: { equipped: !item.isEquipped() } } })
+            }
+            this.actor.render(false);
+        }
+    }
+
+    /**
+     * Toggle the Wireless state of an item, iterating through the different states
+     * @param event
+     */
+    static async #toggleWirelessState(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+
+        const uuid = SheetFlow.closestUuid(event.target);
+        const item = await fromUuid(uuid);
+        if (!(item instanceof SR5Item)) return;
+
+        // iterate through the states of online -> silent -> offline
+        const newState = event.shiftKey ? 'none'
+            : item.isWireless()
+                ? item.isRunningSilent()
+                    ? 'offline'
+                    : 'silent'
+                : 'online';
+
+        // update the embedded item with the new wireless state
+        await item.update({ system: { technology: { wireless: newState } } });
+    }
+
+    /**
+     * Change selected inventory for this sheet.
+     */
+    _onSelectInventory(event: Event) {
+        event.preventDefault();
+
+        const inventory = String($(event.currentTarget!).val());
+
+        if (inventory)
+            this.selectedInventory = inventory;
+
+        void this.render();
+    }
+
+    /**
+     * After selecting a new ammo for a weapon
+     */
+    async _onWeaponAmmoSelect(event: Event) {
+        const id = SheetFlow.closestItemId(event.currentTarget);
+        const item = this.actor.items.get(id);
+        if (!item?.isType('weapon')) return;
+        const newTarget = (event.currentTarget as HTMLSelectElement).value;
+        if (!newTarget) return;
+        await item.equipAmmo(newTarget);
+    }
+
+    static async #reloadAmmo(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const id = SheetFlow.closestItemId(event.target);
+        const item = this.actor.items.get(id);
+        if (item) return item.reloadAmmo(false);
+    }
+
+    static async #partialReloadAmmo(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const id = SheetFlow.closestItemId(event.target);
+        const item = this.actor.items.get(id);
+        if (item) return item.reloadAmmo(true);
+    }
+
+    /**
+     * Sync matrix attribute changes (order) made on the actor sheet into item data of the selected cyberdeck.
+     *
+     * This is done whenever a user changes matrix attribute order directly from the actor sheet matrix section.
+     * Its intent is to also order matrix attribute order on the selected matrix device of that actor.
+     *
+     * @param event A mouse/pointer event
+     */
+    async _onMatrixAttributeSelected(event: Event) {
+        if (!("matrix" in this.actor.system)) return;
+
+        const iid = this.actor.system.matrix!.device;
+        const item = this.actor.items.get(iid);
+        if (!item) {
+            console.error('could not find item');
+            return;
+        }
+        const currentTarget = event.currentTarget as HTMLInputElement;
+        // grab matrix attribute (sleaze, attack, etc.)
+        const attribute = currentTarget.dataset.att as MatrixAttribute;
+        // grab device attribute (att1, att2, ...)
+        const changedSlot = currentTarget.value;
+
+        return item.changeMatrixAttributeSlot(changedSlot, attribute);
+    }
+
+    async _onChangeSkillRating(event: Event) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLInputElement)) return;
+        const closest = this._closestSkillTarget(event.target);
+        const skillId = closest?.dataset.skillId;
+        if (!skillId) return;
+        const rating = event.target.type === 'checkbox'
+            ? (event.target.checked ? 1 : 0)
+            : Number(event.target.value);
+        if (isNaN(rating)) return;
+
+        await SkillItemFlow.changeSkillRating(this.actor, skillId, rating);
+    }
+
+    /**
+     * Prepare applied Situation Modifiers for display (read-only) on any actor sheet.
+     *
+     * Some modifiers might be hidden, when the document doesn't fullfill criterea for it.
+     *
+     * @returns List of prepare sit. mod data
+     */
+    _prepareSituationModifiers(): { category: string, label: string, value: number, hidden: boolean }[] {
+        const modifiers = this.actor.getSituationModifiers();
+        modifiers.applyAll();
+        if (!modifiers) return [];
+
+        return Object.entries(modifiers._modifiers).map(
+            ([category, modifier]: [string, SituationModifier]) => {
+                const hidden = this._hideSituationModifier(category as Shadowrun.SituationModifierType);
+
+                const label = SR5.modifierTypes[category];
+                return { category, value: modifier.total, hidden, label };
+            }
+        );
+    }
+
+    /**
+     * Determine if a situation modifier category should be hidden from an actor sheet.
+     *
+     * @param category Modifier category to maybe hide
+     * @returns true, hide this category from the actors sheet.
+     */
+    _hideSituationModifier(category: Shadowrun.SituationModifierType): boolean {
+        switch (category) {
+            case 'background_count':
+                return !this.actor.isAwakened();
+            case 'environmental':
+                return this.actor.isType('sprite');
+            // Defense modifier is already shown in general modifier section.
+            case 'defense':
+                return true;
+            case 'recoil':
+                return !this.actor.hasPhysicalBody
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Show the situation modifiers application for this actor doucment
+     * @param this FoundryVTT binds 'this' to the instance, even though the method is staic.
+     */
+    static #openSituationalModifiers(this: SR5BaseActorSheet) {
+        void new SituationModifiersApplication(this.actor).render({ force: true });
+    }
+
+    /**
+     * Clear the fresh import flag for all owned items on the actor sheet.
+     */
+    static async #clearFreshImports(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+
+        const allItems = this.actor.items;
+        console.debug(`Shadowrun 5e | Clearing fresh import flags for ${allItems.size} owned items`, event);
+        const updates = allItems
+            .filter(item => item.system.importFlags?.isFreshImport === true)
+            .map(item => ({
+                _id: item.id,
+                system: { importFlags: { isFreshImport: false } }
+            }));
+
+        if (updates.length > 0) {
+            await this.actor.updateEmbeddedDocuments('Item', updates);
+        }
+    }
+
+    /**
+     * Trigger a full reset of all run related actor data.
+     *
+     * @param event
+     */
+    static async #resetActorRunData(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        const userConsented = await Helpers.confirmDeletion();
+        if (!userConsented) return;
+        await this.actor.resetRunData()
+    }
+
+    /**
+     * Prepare keybindings to be shown when hovering over a rolling icon
+     * in any list item view that has rolls.
+     */
+    _prepareKeybindings() {
+        return {
+            skip: game.keybindings.get('shadowrun5e', 'hide-test-dialog').map(binding => binding.key.replace('Key', '').toUpperCase()).join(', '),
+            card: game.keybindings.get('shadowrun5e', 'show-item-card').map(binding => binding.key.replace('Key', '').toUpperCase()).join(', '),
+            qtySome: game.keybindings.get('shadowrun5e', 'add-remove-some-qty').map(binding => binding.key.replace('Key', '').toUpperCase()).join(', '),
+            qtyMany: game.keybindings.get('shadowrun5e', 'add-remove-many-qty').map(binding => binding.key.replace('Key', '').toUpperCase()).join(', '),
+        }
+    }
+
+    /**
+     * These effect apply to types are meant to be shown on the item effects section of the effects sheet.
+     *
+     * They are limited to those effects directly affecting this actor. Effects affecting other actors, aren't shown
+     * on the actors own sheet.
+     */
+    get itemEffectApplyTos() {
+        return ['actor', 'item', 'test_all', 'test_item', 'test_target', 'modifier'];
+    }
+
+    override async _onFirstRender(context, options) {
+        await super._onFirstRender(context, options);
+
+        this._createContextMenu(this._getItemListContextOptions.bind(this), "[data-item-id][data-context-menu='item']", {
+            hookName: "getItemListContextOptions",
+            jQuery: false,
+            fixed: true,
+        });
+        this._createContextMenu(this._getEffectListContextOptions.bind(this), "[data-effect-id][data-context-menu='effect']", {
+            hookName: "getEffectListContextOptions",
+            jQuery: false,
+            fixed: true,
+        });
+        this._createContextMenu(this._getSkillListContextOptions.bind(this), "[data-skill-id][data-context-menu='skill']", {
+            hookName: "getSkillListContextOptions",
+            jQuery: false,
+            fixed: true,
+        });
+        this._createContextMenu(this._getAttributeContextOptions.bind(this), "[data-attribute-id][data-context-menu='attribute']", {
+            hookName: "getAttributeContextOptions",
+            jQuery: false,
+            fixed: true,
+        });
+    }
+    _getSkillListContextOptions() {
+        return [
+            SheetFlow._getSourceContextOption(),
+            {
+                name: "SR5.ContextOptions.AddSkillEffect",
+                icon: "<i class='fas fa-file-circle-plus'></i>",
+                callback: async (target: HTMLElement) => {
+                    const skillTarget = this._closestSkillTarget(target)!;
+                    const skillId = skillTarget.dataset.skillId!;
+
+                    await EffectCreationFlow.skill(this.actor, skillId);
+                }
+            },
+            {
+                name: "SR5.ContextOptions.EditSkill",
+                icon: "<i class='fas fa-pen-to-square'></i>",
+                callback: async (target: HTMLElement) => {
+                    await this._editSkill(target);
+                }
+            },
+            {
+                name: "SR5.ContextOptions.DeleteSkill",
+                icon: "<i class='fas fa-trash'></i>",
+                callback: async (target: HTMLElement) => {
+                    const userConsented = await Helpers.confirmDeletion();
+                    if (!userConsented) return;
+
+                    const skillTarget = this._closestSkillTarget(target)!;
+                    const skillId = skillTarget.dataset.skillId!;
+                    const skill = this.actor.items.get(skillId);
+                    if (skill) await skill.delete();
+                }
+            }
+        ]
+    }
+
+    _getAttributeContextOptions() {
+        return [
+            SheetFlow._getSourceContextOption(),
+            {
+                name: "SR5.ContextOptions.AddAttributeEffect",
+                icon: "<i class='fas fa-file-circle-plus'></i>",
+                callback: async (target: HTMLElement) => {
+                    const attributeId = (target.closest<HTMLElement>('[data-attribute-id]'))?.dataset.attributeId;
+                    if (!attributeId) return;
+                    const attribute = this.actor.getAttribute(attributeId);
+                    if (!attribute) return;
+                    let path = '';
+                    if (this.actor.matrixData()?.[attributeId]) {
+                        path = `system.matrix.${attributeId}`;
+                    } else if (this.actor.getVehicleStats()?.[attributeId]) {
+                        path = `system.vehicle_stats.${attributeId}`;
+                    } else if (this.actor.getAttributes()[attributeId]) {
+                        path = `system.attributes.${attributeId}`;
+                    }
+                    const effectData = {
+                        name: `${game.i18n.localize(attribute.label)} ${game.i18n.localize('SR5.Effect')}`,
+                        system: {
+                            applyTo: 'actor' as const,
+                            changes: [
+                                {
+                                    key: path,
+                                    type: 'add',
+                                    priority: 0,
+                                    value: '',
+                                }
+                            ],
+                        }
+                    };
+                    await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData], { renderSheet: true });
+                }
+            },
+        ]
+    }
+
+    _getItemListContextOptions() {
+        return [
+            SheetFlow._getSourceContextOption(),
+            {
+                // context menu to view items that aren't an embedded item of this actor
+                name: "SR5.ContextOptions.ViewItem",
+                icon: "<i class='fas fa-eye'></i>",
+                condition: (target: HTMLElement) => {
+                    const id = SheetFlow.closestItemId(target);
+                    const item = this.actor.items.get(id);
+                    if (item) return false;
+                    const uuid = SheetFlow.closestUuid(target);
+                    const document = fromUuidSync(uuid);
+                    return document && document instanceof SR5Item;
+                },
+                callback: async (target: HTMLElement) => {
+                    const uuid = SheetFlow.closestUuid(target);
+                    const document = await fromUuid(uuid);
+                    if (document instanceof SR5Item) {
+                        await document.sheet?.render(true)
+                    }
+                }
+            },
+            {
+                name: "SR5.ContextOptions.EditItem",
+                icon: "<i class='fas fa-pen-to-square'></i>",
+                condition: (target: HTMLElement) => {
+                    const id = SheetFlow.closestItemId(target);
+                    const item = this.actor.items.get(id);
+                    return item !== undefined;
+                },
+                callback: async (target: HTMLElement) => {
+                    const id = SheetFlow.closestItemId(target);
+                    const item = this.actor.items.get(id);
+                    if (item) {
+                        await item.sheet?.render(true, { mode: 'edit' } as any)
+                    }
+                }
+            },
+            {
+                name: "SR5.ContextOptions.MoveItem",
+                icon: "<i class='fas fa-arrow-right-arrow-left'></i>",
+                condition: (target: HTMLElement) => {
+                    const id = SheetFlow.closestItemId(target);
+                    const item = this.actor.items.get(id);
+                    if (!item) return false;
+                    return item.isType('equipment', 'weapon', 'ammo', 'modification', 'armor', 'bioware', 'cyberware', 'device');
+                },
+                callback: async (target: HTMLElement) => {
+                    await this._moveItemToInventory(target);
+                }
+            },
+            {
+                name: "SR5.ContextOptions.DeleteItem",
+                icon: "<i class='fas fa-trash'></i>",
+                condition: (target: HTMLElement) => {
+                    const id = SheetFlow.closestItemId(target);
+                    const item = this.actor.items.get(id);
+                    return item !== undefined;
+                },
+                callback: async (target: HTMLElement) => {
+                    const userConsented = await Helpers.confirmDeletion();
+                    if (!userConsented) return;
+
+                    const id = SheetFlow.closestItemId(target);
+                    const item = this.actor.items.get(id);
+                    if (item) {
+                        await this._handleDeleteItem(item);
+                    }
+                }
+            }
+        ]
+    }
+
+    _getEffectListContextOptions() {
+        return [
+            SheetFlow._getSourceContextOption(),
+            {
+                name: "SR5.ContextOptions.EditEffect",
+                icon: "<i class='fas fa-pen-to-square'></i>",
+                condition: (target: HTMLElement) => {
+                    const id = SheetFlow.closestEffectId(target);
+                    const item = this.actor.effects.get(id);
+                    if (item) return true;
+                    const uuid = SheetFlow.closestUuid(target);
+                    const doc = fromUuidSync(uuid);
+                    return (doc instanceof SR5ActiveEffect);
+                },
+                callback: async (target: HTMLElement) => {
+                    const id = SheetFlow.closestEffectId(target);
+                    const item = this.actor.effects.get(id);
+                    if (item) {
+                        await item.sheet?.render(true)
+                    } else {
+                        const uuid = SheetFlow.closestUuid(target);
+                        const doc = fromUuidSync(uuid);
+                        if (doc instanceof SR5ActiveEffect) {
+                            await doc.sheet?.render(true);
+                        }
+                    }
+                }
+            },
+            {
+                name: "SR5.ContextOptions.DeleteEffect",
+                icon: "<i class='fas fa-trash'></i>",
+                condition: (target: HTMLElement) => {
+                    const id = SheetFlow.closestEffectId(target);
+                    const item = this.actor.effects.get(id);
+                    return item !== undefined;
+                    // don't check for effects by uuid for deletion
+                },
+                callback: async (target: HTMLElement) => {
+                    const userConsented = await Helpers.confirmDeletion();
+                    if (!userConsented) return;
+
+                    const id = SheetFlow.closestEffectId(target);
+                    await this.actor.deleteEmbeddedDocuments('ActiveEffect', [id]);
+                }
+            }
+        ]
+    }
+
+    async _prepareActions() {
+        const actions = await PackItemFlow.getActorSheetActions(this.actor);
+
+        // Prepare sorting and display of a possibly translated document name.
+        const sheetActions: sheetAction[] = [];
+        for (const action of actions) {
+            sheetActions.push({
+                name: PackItemFlow.localizePackAction(action.name),
+                description: await foundry.applications.ux.TextEditor.implementation.enrichHTML(action.system.description.value),
+                action
+            });
+        }
+
+        return sheetActions.sort(Helpers.sortByName.bind(Helpers));
+    }
+
+    static async #toggleInitiativeBlitz(this: SR5BaseActorSheet, event: Event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const blitz = this.actor.system.initiative.blitz;
+        await this.actor.update({system: { initiative: { blitz: !blitz }}});
+    }
+
+    static async #rollInitiative(this: SR5BaseActorSheet, event: Event) {
+        event.preventDefault();
+        event.stopPropagation();
+        await this.actor.rollInitiative();
+    }
+
+    static async #renameInventory(this: SR5BaseActorSheet, event: Event) {
+        const inventory = SheetFlow.closestAction(event.target)!.dataset.inventory!;
+        if (this.actor.inventory.disallowRename(inventory)) {
+            ui.notifications?.warn(game.i18n.localize('SR5.Warnings.CantEditDefaultInventory'));
+            return;
+        }
+        const app = new InventoryRenameApp(this.actor, inventory, 'edit');
+        await app.render(true);
+    }
+    /**
+     * Create an inventory place on the actor for gear organization.
+     */
+    static async #createInventory(this: SR5BaseActorSheet, event: Event) {
+        event.preventDefault();
+        const app = new InventoryRenameApp(this.actor, '', 'create');
+        await app.render(true);
+        void this.render();
+    }
+
+    /**
+     * Remove the currently selected inventory.
+     */
+    static async #removeInventory(this: SR5BaseActorSheet, event: Event) {
+        event.preventDefault();
+
+        // TODO: Allow for options overwriting title/message and so forth.
+        const userConsented = await Helpers.confirmDeletion();
+        if (!userConsented) return;
+        const inventory = SheetFlow.closestAction(event.target)!.dataset.inventory!;
+
+        if (this.actor.inventory.disallowRemove(inventory)) {
+            ui.notifications?.warn(game.i18n.localize('SR5.Errors.DefaultInventoryCantBeRemoved'));
+            return;
+        }
+
+        await this.actor.inventory.remove(this.selectedInventory);
+
+        // Preselect default instead of none.
+        this.selectedInventory = this.actor.defaultInventory.name;
+        void this.render();
+    }
+
+    /**
+     * Allow users to remove the documents skillset manually.
+     */
+    static async #removeSkillSet(this: SR5BaseActorSheet, event: Event) {
+        event.preventDefault();
+
+        if (!this.actor.system.skillset) return;
+
+        const userConsented = await Helpers.confirmDeletion();
+        if (!userConsented) return;
+
+        await SkillSetFlow.removeSkillSet(this.actor);
+    }
+
+    async _moveItemToInventory(target: HTMLElement) {
+
+        const id = SheetFlow.closestItemId(target);
+        const item = this.actor.items.get(id);
+        if (!item) return;
+
+        // Ask user about what inventory to move the item to.
+        const dialog = new MoveInventoryDialog(this.actor, item, this.selectedInventory);
+        const inventory = await dialog.select() as unknown as string;
+        if (dialog.canceled) return;
+
+        await this.actor.inventory.addItems(inventory, item);
+    }
+
+    /**
+     * Show / hide the items description within a sheet item l ist.
+     */
+    static async #toggleSkillDescription(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const id = this._closestSkillTarget(event.target)?.dataset.skillId;
+        if (!id) return;
+        if (this.expandedSkills.has(id)) {
+            this.expandedSkills.delete(id);
+            event.target?.closest('.list-item-container')?.classList.remove('expanded');
+        } else {
+            this.expandedSkills.add(id);
+            event.target?.closest('.list-item-container')?.classList.add('expanded');
+            const skill = this.actor.items.get(id) as Item<'skill'>;
+            if (skill) {
+                const html = await TextEditor.enrichHTML(skill.system.description.value, { secrets: this.actor.isOwner, });
+                if (html) {
+                    event.target.closest('.list-item-container')!.querySelector('.description-body')!.innerHTML = html;
+                }
+            }
+        }
+    }
+
+    static async #addItemQty(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const id = SheetFlow.closestItemId(event.target);
+        let item = this.actor.items.get(id);
+        if (!item) {
+            const uuid = SheetFlow.closestUuid(event.target);
+            item = await fromUuid(uuid) as any;
+        }
+        if (item instanceof SR5Item) {
+            await SheetFlow.addToQuantity(item, event);
+        }
+    }
+
+    static async #removeItemQty(this: SR5BaseActorSheet, event: PointerEvent) {
+        event.preventDefault();
+        if (!isElementInstance(event.target, HTMLElement)) return;
+        const id = SheetFlow.closestItemId(event.target);
+        let item = this.actor.items.get(id);
+        if (!item) {
+            const uuid = SheetFlow.closestUuid(event.target);
+            item = await fromUuid(uuid) as any;
+        }
+        if (item instanceof SR5Item) {
+            await SheetFlow.removeFromQuantity(item, event);
+        }
+    }
+}

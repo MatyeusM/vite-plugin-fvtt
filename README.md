@@ -174,10 +174,28 @@ local/foundry-v13/ + local/data-v13/ (port 30013, node 22)
 local/foundry-v14/ + local/data-v14/ (port 30014, node 24)
 ```
 
-Start one via `mise run -C local start-v12|start-v13|start-v14`.
+Start one via `mise run -C local start-v12|start-v13|start-v14`. The v13/v14 tasks boot their test
+world (`testv13` / `testv14`) directly.
+
+Each data dir symlinks its system to the compiled output, so run `npm run build` in
+`local/v13-system` or `local/v14-system` once before starting Foundry.
 
 > ⚠️ Single Foundry license key: run only **one** instance at a time. Never run v12/v13/v14
 > concurrently.
+
+### End-to-end tests
+
+`vitest run` includes an end-to-end suite that drives a real instance through the dev server. It
+skips itself unless a usable instance is already up, so the same command works locally and in CI:
+
+```sh
+mise run -C local start-v14   # or start-v13
+pnpm run test -- --run
+```
+
+The suite targets whichever version is listening (only one instance may run at a time); force one
+with `FVTT_E2E_VERSION=v13`. Foundry rewrites world data on every boot, so restore the frozen
+fixtures afterwards with `mise run -C local reset-data`.
 
 ## 📄 License
 

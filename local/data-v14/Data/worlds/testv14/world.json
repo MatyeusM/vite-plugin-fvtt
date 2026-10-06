@@ -1,0 +1,16 @@
+{
+  "title": "Plugin Test",
+  "system": "shadowrun5e",
+  "joinTheme": "minimal",
+  "id": "testv14",
+  "coreVersion": "14.368",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14"
+  },
+  "systemVersion": "0.37.0",
+  "lastPlayed": "Tue Oct 06 2026 12:18:55 GMT+0200 (Central European Summer Time)",
+  "playtime": 430,
+  "description": "",
+  "flags": {}
+}

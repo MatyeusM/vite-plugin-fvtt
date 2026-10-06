@@ -1,0 +1,89 @@
+@use "variables";
+
+@mixin basic-rollable {
+    &:hover {
+        @include linkHovered;
+    }
+}
+@mixin rollable {
+    &:hover {
+        @include linkHovered;
+        cursor: pointer;
+    }
+}
+
+@mixin clickable {
+    &:hover {
+        cursor: pointer;
+    }
+}
+
+@mixin systemFonts {
+    font-family: variables.$systemFonts;
+}
+
+@mixin title {
+    font-family: variables.$systemFonts;
+    color: variables.$color;
+    @include textOutline;
+}
+
+@mixin textOutline {
+    color: variables.$color;
+    text-shadow: -1px -1px 0 variables.$outline-color, 1px -1px 0 variables.$outline-color, -1px 1px 0 variables.$outline-color,
+        1px 1px 0 variables.$outline-color;
+}
+
+@mixin shortUnder {
+    position: relative;
+    &:after {
+        content: '';
+        display: block;
+        position: absolute;
+        width: 50%;
+        transform: translateX(50%);
+        border-bottom: variables.$border-under;
+    }
+}
+
+@mixin sheet {
+    background: linear-gradient(rgba(0, 0, 0, 0.60), rgba(0, 0, 0, 0.60)), url("assets/page.webp") repeat;
+    color: variables.$color;
+}
+
+@mixin linkHovered {
+    text-shadow: 0 0 8px var(--color-shadow-primary);
+    color: variables.$fLightRed;
+}
+
+/// A collapsible <details> panel with a caret that follows the open state.
+///
+/// Expects a leading <i> inside the <summary>; the default marker is dropped in its favour.
+@mixin collapsible {
+    summary {
+        display: flex;
+        align-items: center;
+        gap: 0.4em;
+        font-weight: bold;
+        cursor: pointer;
+        list-style: none;
+
+        &::-webkit-details-marker {
+            display: none;
+        }
+
+        i {
+            width: 0.75em;
+            text-align: center;
+            transition: transform 150ms ease;
+        }
+    }
+
+    &[open] > summary {
+        margin-bottom: 0.5em;
+
+        i {
+            transform: rotate(90deg);
+        }
+    }
+}

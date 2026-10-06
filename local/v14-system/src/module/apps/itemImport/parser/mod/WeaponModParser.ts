@@ -1,0 +1,40 @@
+import { Parser, SystemType } from '../Parser';
+import { Accessory } from '../../schema/WeaponsSchema';
+import { CompendiumKey } from '../../importer/Constants';
+import { ImportHelper as IH } from '../../helper/ImportHelper';
+
+export class WeaponModParser extends Parser<'modification'> {
+    protected readonly parseType = 'modification';
+
+    protected override getSystem(jsonData: Accessory) {
+        const system = this.getBaseSystem();
+        
+        if (jsonData.mount) {
+            const mount = jsonData.mount._TEXT.toLowerCase().split('/')[0] || '';
+            system.mod_weapon.mount_point = mount as SystemType<'modification'>['mod_weapon']['mount_point'];
+        }
+        
+        system.type = 'weapon';
+        system.mod_weapon.rc = Number(jsonData.rc?._TEXT) || 0;
+        system.mod_weapon.accuracy = Number(jsonData.accuracy?._TEXT) || 0;
+
+        return system;
+    }
+
+    protected override setImporterFlags(entity: Item.CreateData, jsonData: Accessory): void {
+        super.setImporterFlags(entity, jsonData);
+
+        entity.system!.importFlags!.category = jsonData.mount?._TEXT || "Other";
+    }
+
+    protected override async getFolder(jsonData: Accessory, compendiumKey: CompendiumKey): Promise<Folder> {
+        const category = jsonData.mount ? jsonData.mount._TEXT : "Other";
+        const rootFolder = "Weapon-Mod";
+        let folderName = IH.getTranslatedCategory('weapons', category);
+
+        if (folderName.includes("/")) 
+            folderName = "Multiple Points";
+
+        return IH.getFolder(compendiumKey, rootFolder, folderName);
+    }
+}

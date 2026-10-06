@@ -1,0 +1,88 @@
+{
+  "name": "Negotiation",
+  "type": "skill",
+  "img": "systems/shadowrun5e/icons/skills/social-negotiation.webp",
+  "system": {
+    "description": {
+      "value": "",
+      "chat": "",
+      "source": ""
+    },
+    "importFlags": null,
+    "type": "skill",
+    "skill": {
+      "category": "active",
+      "rating": 0,
+      "defaulting": true,
+      "attribute": "charisma",
+      "specializations": [],
+      "group": "",
+      "requirement": "mundane",
+      "action": {
+        "opposed": {
+          "type": "",
+          "test": "OpposedTest",
+          "description": "",
+          "mod": 0,
+          "skill": "negotiation",
+          "attribute": "charisma",
+          "attribute2": "",
+          "armor": false,
+          "resist": {
+            "test": "",
+            "skill": "",
+            "attribute": "",
+            "attribute2": "",
+            "armor": false,
+            "mod": 0
+          }
+        }
+      },
+      "language": {
+        "isNative": false
+      },
+      "knowledgeType": "academic",
+      "limit": {
+        "attribute": ""
+      }
+    },
+    "group": {
+      "skills": [],
+      "rating": 0
+    },
+    "set": {
+      "skills": [],
+      "groups": [],
+      "default": {
+        "type": ""
+      }
+    },
+    "source": {
+      "uuid": ""
+    }
+  },
+  "effects": [],
+  "folder": null,
+  "flags": {
+    "shadowrun5e": {
+      "embeddedItems": []
+    }
+  },
+  "ownership": {
+    "default": 0
+  },
+  "_id": "BiX8JaHYHSTudcLu",
+  "_key": "!items!BiX8JaHYHSTudcLu",
+  "_stats": {
+    "compendiumSource": null,
+    "coreVersion": "14.367",
+    "createdTime": null,
+    "duplicateSource": null,
+    "exportSource": null,
+    "lastModifiedBy": null,
+    "modifiedTime": null,
+    "systemId": "shadowrun5e",
+    "systemVersion": "0.37.4"
+  },
+  "sort": 0
+}

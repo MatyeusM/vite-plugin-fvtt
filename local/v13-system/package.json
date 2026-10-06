@@ -1,0 +1,42 @@
+{
+    "sideEffects": [
+        "src/shadowrun5e.ts"
+    ],
+    "devDependencies": {
+        "@ethaks/fvtt-quench": "^0.10.0",
+        "@foundryvtt/foundryvtt-cli": "^1.0.3",
+        "@types/node": "^22.5.2",
+        "@typescript-eslint/eslint-plugin": "^6.13.2",
+        "@yaireo/tagify": "^4.17.9",
+        "buffer": "^6.0.3",
+        "eslint": "^8.55.0",
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-config-standard-with-typescript": "^40.0.0",
+        "eslint-plugin-deprecation": "^3.0.0",
+        "eslint-plugin-prettier": "^5.0.1",
+        "events": "^3.3.0",
+        "fvtt-types": "github:League-of-Foundry-Developers/foundry-vtt-types#bbdb3a779c5c0a7c2d85c1cf65d5b153132bd12f",
+        "prettier-eslint": "^16.1.2",
+        "sax": "^1.6.1",
+        "sass": "^1.77.8",
+        "timers": "^0.1.1",
+        "typescript": "^5.4.5",
+        "vite": "^8.3.0",
+        "vite-plugin-fvtt": "file:../..",
+        "xml2js": "^0.6.2",
+        "yargs": "^17.7.2"
+    },
+    "scripts": {
+        "watch": "vite build --watch --mode development",
+        "dev": "vite",
+        "build": "vite build",
+        "build:db": "node ./utils/packs.mjs package pack",
+        "unpack:db": "node ./utils/packs.mjs package unpack",
+        "test": "tsc --project tsconfig.json --noEmit",
+        "lint": "npx eslint .",
+        "lint:fix": "npx eslint . --fix",
+        "lint:errors": "npx eslint . --quiet",
+        "lint:errors:fix": "npx eslint . --quiet --fix",
+        "prettier": "npx prettier --write **/*.ts"
+    }
+}

@@ -1,0 +1,119 @@
+import { SR5Actor } from '../actor/SR5Actor';
+import { SR5Item } from '../item/SR5Item';
+import { SuccessTest, SuccessTestData, TestOptions } from './SuccessTest';
+import { DeepPartial } from "fvtt-types/utils";
+import { OpposedTestData } from './OpposedTest';
+import { MatrixTestDataFlow } from './flows/MatrixTestDataFlow';
+
+export interface MatrixTestData extends SuccessTestData {
+    // If decker and target reside on different Grids
+    sameGrid: boolean
+    // Disallow changing of the sameGrid checkbox in the dialog. Used when targeting defines this values.
+    sameGridDisabled: boolean
+    // If decker has a direct connection to the target
+    directConnection: boolean
+    // The persona uuid. This would be the user main persona icon, not necessarily the device.
+    personaUuid: string | undefined
+    // The icon uuid. This would be the actual mark placement target. Can be a device, a persona device, a host or actor.
+    iconUuid: string | undefined
+    // Should the mark be placed on the main icon / persona or icons connected to it?
+    targetMainIcon: boolean
+}
+
+export interface OpposedMatrixTestData extends OpposedTestData {
+    against: MatrixTestData
+    personaUuid: string
+    iconUuid: string
+    targetMainIcon: boolean
+    directConnection: boolean
+}
+
+/**
+ * Matrix Tests are the base Test type used to create Matrix Tests
+ * - TODO possibly move these things to be done with hooks but that may be a bit difficult with needing the extra Icon and Token data
+ *
+ * See MarkPlacementFlow for more details on the test flow.
+ */
+export class MatrixTest<T extends MatrixTestData = MatrixTestData> extends SuccessTest<T> {
+    declare actor: SR5Actor;
+
+    // The icon targeted by the action.
+    // If an actor was selected, this will point to either the persona device or the actor itself, if no persona device is used.
+    declare icon: SR5Actor | SR5Item;
+    // The persona matrix actor. If in use, icon will either point to the actor, if no persona device is used, or the persona device.
+    declare persona: SR5Actor|null;
+    // The devices connected to the main icon persona / host.
+    declare devices: (SR5Actor | SR5Item)[];
+    // Started ic on selected host.
+    declare ic: SR5Actor[];
+    // Host used as main icon.
+    declare host: SR5Item|null;
+    // Grid used as main icon.
+    declare grid: SR5Item|null;
+
+    override _prepareData(data: DeepPartial<T>, options: Partial<TestOptions> = {}): T {
+        const prepared = super._prepareData(data, options);
+        return MatrixTestDataFlow._prepareData(prepared);
+    }
+
+    /**
+     * Brute Force is a matrix action.
+     */
+    override get testCategories(): Shadowrun.ActionCategories[] {
+        return ['matrix'];
+    }
+
+    /**
+     * Any matrix action gets the noise modifier.
+     */
+    override get testModifiers(): Shadowrun.ModifierTypes[] {
+        const modifiers = super.testModifiers;
+        modifiers.push('noise');
+        return modifiers;
+    }
+
+    override get _dialogTemplate(): string {
+        return 'systems/shadowrun5e/templates/apps/dialogs/matrix-test-dialog.hbs';
+    }
+
+    override get _chatMessageTemplate() {
+        return 'systems/shadowrun5e/templates/chat/matrix-test-message.hbs';
+    }
+
+    override prepareBaseValues() {
+        // Order of operations is important, as some modifiers need these test
+        MatrixTestDataFlow.prepareTestValues(this);
+
+        super.prepareBaseValues();
+    }
+
+    override async populateDocuments() {
+        // Order of operation might be important to allow matrix flows to insert targets before those are populated.
+        MatrixTestDataFlow.populateDocuments(this);
+        await super.populateDocuments();
+    }
+
+    override prepareTestModifiers() {
+        super.prepareTestModifiers();
+        MatrixTestDataFlow.prepareTestModifiers(this);
+    }
+
+    override async addTarget(document: SR5Actor | SR5Item) {
+        await MatrixTestDataFlow.addTarget(this, document);
+    }
+
+    /**
+     * Clean up faulty test data after dialog has been shown.
+     */
+    override async _cleanUpAfterDialog() {
+        await super._cleanUpAfterDialog();
+        await MatrixTestDataFlow.setIconUuidBasedOnPlacementSelection(this);
+    }
+
+    get iconOptions(): { value: string, label: string }[] {
+        return this.devices.map(device => ({
+            value: device.uuid ?? '',
+            label: device.name ?? ''
+        }));
+    }
+}

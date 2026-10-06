@@ -1,0 +1,24 @@
+<form>
+    <div class="dialog-content-common">
+        {{> 'systems/shadowrun5e/templates/apps/dialogs/parts/success-test-documents.hbs'}}
+        <hr/>
+        <div>
+            <div class="form-line">
+                <div class="label">
+                    {{localize "SR5.Attributes"}}
+                </div>
+                <div class="inputs">
+                    <select name="test.data.attribute1">
+                        {{selectOptions config.attributes selected=test.data.attribute1 localize=true sort=true blank=''}}
+                    </select>
+                    <select name="test.data.attribute2">
+                        {{selectOptions config.attributes selected=test.data.attribute2 localize=true sort=true blank=''}}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div>
+        {{> 'systems/shadowrun5e/templates/apps/dialogs/parts/success-test-common.hbs'}}
+    </div>
+</form>

@@ -2,14 +2,35 @@
 
 ## [Unreleased]
 
+### Added
+
+- Environment validation: invalid `FOUNDRY_URL`/`FOUNDRY_PORT` values in `.env.foundryvtt*` now fail
+  fast with a clear message instead of starting a misconfigured dev server.
+- Dev server warns (once per connection) when Foundry VTT is unreachable, instead of failing socket
+  calls silently.
+- Test coverage for environment loading and validation.
+
 ### Changed
 
+- Widened `vite` peer range to `^7.0.0 || ^8.0.0` (was `^7.0.0`); Vite 8 was already supported via
+  oxc minification.
+- Refreshed README (requirements, env files, language/pack/template behavior, `buildPacks` option,
+  minification, dev scripts).
+- Updated dependencies (TypeScript 7, Vitest 5, Vite 8.3, tsdown 0.23, oxfmt 0.68, and minors).
 - Migrated linter and formatter from ESLint and Prettier to `oxlint` and `oxfmt`. TypeScript 7.1 is
   not due until the end of November, meaning TypeScript cannot update without hacks to make ESLint
   work.
 
 ### Fixed
 
+- Test runner no longer collects `*.spec.ts` files from the gitignored `local/` Foundry test
+  systems.
+- The upstream socket connection now forwards the browser's request headers, so the session cookie
+  reaches Foundry VTT. Required since 14.366, which authenticates the socket via cookie rather than
+  query parameter; without it the dev server never connects and templates cannot resolve. Thank you
+  [IvanMathy](https://github.com/IvanMathy) for identifying the cause and sending the fix.
+- Template interception falls back to Foundry when the local template cannot be read, instead of
+  dropping the request with an unhandled error.
 - Cleanup upstream connection on socket disconnect: Prevents resource leak by closing the upstream
   connection when the socket disconnects.
 

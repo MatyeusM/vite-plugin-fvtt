@@ -1,0 +1,443 @@
+import { SR5Combat } from "./SR5Combat";
+import { SR5Die } from "../rolls/SR5Die";
+import { SR5Roll } from "../rolls/SR5Roll";
+import { Migrator } from "../migrator/Migrator";
+import { CombatRules } from "../rules/CombatRules";
+import { FLAGS, SR, SYSTEM_NAME } from "../constants";
+import { SocketMessage } from "../sockets";
+
+const INITIATIVE_MODE_OPTIONS = ['meatspace', 'astral', 'cold_sim', 'hot_sim'] as const;
+export type InitiativeModeOptions = typeof INITIATIVE_MODE_OPTIONS[number];
+
+export type ChangeModeMessageData = {
+    combatantId: string;
+    fromMode: InitiativeModeOptions;
+    toMode: InitiativeModeOptions;
+    previousInit: number;
+    currentInit: number;
+    totalAdjust: number;
+    baseAdjust: number;
+    diceCountAdjust: number;
+    diceRoll: SR5Roll | null;
+    diceRolls: number[];
+};
+
+function isInitiativeMode(value: unknown): value is InitiativeModeOptions {
+    return typeof value === 'string' && (INITIATIVE_MODE_OPTIONS as readonly string[]).includes(value);
+}
+
+export class SR5Combatant extends Combatant<"base"> {
+    override get visible(): boolean {
+        return !this.system.pad && super.visible;
+    }
+
+    static override migrateData(source: any) {
+        Migrator.migrate("Combatant", source);
+        return super.migrateData(source);
+    }
+
+    /**
+     * Handles socket messages forwarding combatant mutations that require GM permissions
+     * (e.g. updating the parent Combat document) from a non-GM user to an active GM.
+     *
+     * Socket payloads are untrusted (any client can emit them, and the sender is not
+     * authenticated), so both the operation and its arguments are validated explicitly rather
+     * than dispatched generically.
+     */
+    static async _handleCombatantSocketMessage(message: Shadowrun.SocketMessageData) {
+        if (!game.user?.isGM) return;
+
+        const { combatId, combatantId, fnName, args } = message.data ?? {};
+        if (typeof combatId !== 'string' || typeof combatantId !== 'string') return;
+
+        const combatant = game.combats.get(combatId)?.combatants.get(combatantId);
+        if (!combatant) return;
+
+        switch (fnName) {
+            case 'applyModeChange': {
+                if (!Array.isArray(args) || args.length !== 2) return;
+
+                const [fromMode, toMode] = args;
+                if (!isInitiativeMode(fromMode) || !isInitiativeMode(toMode)) return;
+                return combatant.applyModeChange(fromMode, toMode);
+            }
+            case 'toggleSeizeInitiative':
+                return combatant.toggleSeizeInitiative();
+        }
+    }
+
+    override async update(...args: Parameters<Combatant["update"]>) {
+        await Migrator.updateMigratedDocument(this);
+        return super.update(...args);
+    }
+
+    /** Checks if the combatant can perform an action. */
+    canAct(): boolean {
+        return this.initiative !== null && this.initiative > 0;
+    }
+
+    /** Checks if the combatant has already acted in the current pass. */
+    acted(): boolean {
+        return this.system.acted;
+    }
+
+    protected override _getInitiativeFormula(): string {
+        const baseFormula = super._getInitiativeFormula();
+        const passesCompleted = this.parent.pass - SR.combat.FIRST_PASS;
+
+        if (passesCompleted <= 0) return baseFormula;
+
+        const penalty = Math.abs(passesCompleted * SR.combat.PASS_PENALTY);
+        return `${baseFormula} - ${penalty}[Pass]`;
+    }
+
+    protected override async _preDelete(...args: Parameters<Combatant["_preDelete"]>) {
+        await this.deleteFlow();
+        return super._preDelete(...args);
+    }
+
+    /**
+     * Cleans up combat-specific state and modifiers from the actor when they 
+     * are removed from the combat encounter or when the combat ends.
+     */
+    async deleteFlow() {
+        await this.actor?.clearProgressiveRecoil();
+        await this.actor?.removeDefenseMultiModifier();
+    }
+
+    /** Adjusts the combatant's initiative score by a given amount and reports it to the chat log. */
+    async adjustInitiative(adjustment: number): Promise<this | undefined> {
+        if (this.initiative === null || adjustment === 0) return this;
+
+        const previousInit = this.initiative;
+        const currentInit = previousInit + adjustment;
+
+        const updated = await this.update({ initiative: currentInit });
+        if (updated) await this._postInitiativeChangeCard(previousInit, currentInit);
+
+        return updated;
+    }
+
+    /**
+     * Toggles the 'Seize the Initiative' edge action for this combatant, spending or refunding edge
+     * and recording a history snapshot for undo.
+     *
+     * Creating the history snapshot updates the parent Combat document, which non-GM users can't do,
+     * so the whole operation is forwarded to an active GM when triggered by a player.
+     */
+    async toggleSeizeInitiative(): Promise<void> {
+        const { actor, combat, id } = this;
+        if (!actor || !combat || !id) return;
+
+        const seized = this.system.seize ?? false;
+
+        // Re-seizing / un-seizing is a GM-only correction (SR5 rule guard).
+        if (seized && !game.user?.isGM) {
+            ui.notifications.warn(game.i18n.localize('SR5.COMBAT.CannotSeizeAgain'));
+            return;
+        }
+
+        if (!game.user?.isGM) {
+            SocketMessage.emitForGM(FLAGS.DoCombatantFunction, {
+                combatId: combat.id, combatantId: id, fnName: 'toggleSeizeInitiative', args: [],
+            });
+            return;
+        }
+
+        const edge = actor.system.attributes.edge;
+        await combat.createHistorySnapshot();
+        await this.update({ system: { seize: !seized } });
+        const nextUses = Math.min(edge.value, Math.max(0, edge.uses + (seized ? 1 : -1)));
+        await actor.update({
+            system: { attributes: { edge: { uses: nextUses } } }
+        });
+    }
+
+    /**
+     * Processes a change in the combatant's initiative mode (e.g., transitioning from meatspace to hot_sim).
+     *
+     * Depending on the game's configured `InitiativeModeUpdateStrategy`, this method will either:
+     * 1. **Reroll:** Trigger a complete initiative reroll using the combat tracker.
+     * 2. **Delta Math:** Mathematically calculate the difference in base stats and dice, roll the 
+     * delta dice, and apply the combined adjustment to the combatant's current initiative.
+     *
+     * It also creates a history snapshot for undo purposes and posts a summary card to the chat log.
+     *
+     * @param fromMode - The initiative mode the combatant is leaving.
+     * @param toMode - The initiative mode the combatant is entering.
+     * @returns Resolves when the database updates and chat messages are complete.
+     */
+    async applyModeChange(
+        fromMode: InitiativeModeOptions,
+        toMode: InitiativeModeOptions,
+    ) {
+        const { actor, combat, id, initiative: prevInitTotal, system } = this;
+        if (!actor || !combat || !id || prevInitTotal === null || fromMode === toMode) return;
+
+        // Non-GM users can't update the Combat document (e.g. the history snapshot below),
+        // so forward the whole flow to an active GM to run in order.
+        if (!game.user?.isGM) {
+            SocketMessage.emitForGM(FLAGS.DoCombatantFunction, {
+                combatId: combat.id, combatantId: id, fnName: 'applyModeChange', args: [fromMode, toMode],
+            });
+            return;
+        }
+
+        await combat.createHistorySnapshot();
+
+        const { blitz, last: prevInit } = system.initiative;
+        const nextInit = actor.system.initiative.current;
+
+        // Reroll strategy exits early
+        if (game.settings.get(SYSTEM_NAME, FLAGS.InitiativeModeUpdateStrategy) === 'reroll') {
+            await combat.rollInitiative(id, { updateTurn: false, hasBlitz: blitz });
+            return;
+        }
+
+        // Calculate adjustments inline
+        const diceCountAdjust = (blitz ? SR.initiatives.ranges.dice.max : nextInit.dice.value) - prevInit.dice.value;
+        const baseAdjust = nextInit.constant.value - prevInit.constant.value;
+
+        const diceRoll = await this._rollD6(Math.abs(diceCountAdjust));
+        const diceRolls = diceRoll?.diceResults ?? [];
+        const rawSum = diceRolls.reduce((sum, value) => sum + value, 0);
+        const totalAdjust = baseAdjust + (diceCountAdjust < 0 ? -rawSum : rawSum);
+
+        await this.update({
+            system: { initiative: { last: nextInit } },
+            initiative: prevInitTotal + totalAdjust,
+        });
+
+        await this._postModeCard({
+            combatantId: id,
+            fromMode,
+            toMode,
+            previousInit: prevInitTotal,
+            currentInit: prevInitTotal + totalAdjust,
+            totalAdjust,
+            baseAdjust,
+            diceCountAdjust,
+            diceRoll,
+            diceRolls,
+        });
+    }
+
+    private async _rollD6(diceCount: number): Promise<SR5Roll | null> {
+        if (diceCount <= 0) return null;
+
+        const roll = new SR5Roll(`${diceCount}d6`);
+        await roll.evaluate();
+        return roll;
+    }
+
+    private async _postModeCard(data: ChangeModeMessageData): Promise<void> {
+        const prevConfig = this._getModeConfig(data.fromMode);
+        const currConfig = this._getModeConfig(data.toMode);
+        const hasDiceRoll = data.diceRolls.length > 0;
+
+        let adjustmentClass = 'is-neutral';
+        if (data.totalAdjust > 0) {
+            adjustmentClass = 'is-positive';
+        } else if (data.totalAdjust < 0) {
+            adjustmentClass = 'is-negative';
+        }
+
+        const content = await foundry.applications.handlebars.renderTemplate(
+            'systems/shadowrun5e/templates/chat/initiative-mode-change-message.hbs',
+            {
+                ...this._cardCombatantData(),
+                previousModeClass: prevConfig.cls,
+                previousModeIcon: prevConfig.icon,
+                previousModeTitle: game.i18n.format('SR5.COMBAT.ModeTitle', { mode: game.i18n.localize(prevConfig.label) }),
+                currentModeClass: currConfig.cls,
+                currentModeIcon: currConfig.icon,
+                currentModeTitle: game.i18n.format('SR5.COMBAT.ModeTitle', { mode: game.i18n.localize(currConfig.label) }),
+                previousInitiativeTitle: game.i18n.format('SR5.COMBAT.ModeChangePreviousInitiative'),
+                currentInitiativeTitle: game.i18n.format('SR5.COMBAT.ModeChangeNewInitiative'),
+                previousInitiative: data.previousInit,
+                currentInitiative: data.currentInit,
+                adjustment: this._formatSigned(data.totalAdjust),
+                adjustmentClass,
+                rollTooltip: this._rollTooltip(data),
+                showAdjustTooltip: hasDiceRoll,
+            }
+        );
+
+        const messageData = {
+            content,
+            speaker: foundry.documents.ChatMessage.implementation.getSpeaker({
+                alias: game.i18n.localize('SR5.COMBAT.ModeChangedLabel'),
+            }),
+            flags: { core: { initiativeRoll: true } },
+            sound: hasDiceRoll ? CONFIG.sounds.dice : undefined,
+        } as ChatMessage.CreateData;
+
+        const rollMode = this.hidden ? 'gm' : 'public';
+        if (this.hidden) {
+            messageData.whisper = this._hiddenCardWhisperTargets();
+        } else {
+            ChatMessage.applyMode(messageData, 'public');
+        }
+
+        const message = await foundry.documents.ChatMessage.implementation.create(messageData);
+        if (message && hasDiceRoll && data.diceRoll)
+            void this.playDSNInitiativeAnimation(data.diceRoll, rollMode, message);
+    }
+
+    async playDSNInitiativeAnimation(
+        roll: Roll,
+        rollMode: ChatMessage.MessageMode,
+        message: Pick<ChatMessage, 'id' | 'speaker' | 'whisper'>,
+    ): Promise<boolean> {
+        if (!game.modules.get('dice-so-nice')?.active || !game.dice3d) return false;
+        // @ts-expect-error Accessing a setting from another module; no types available.
+        if (game.settings.get('dice-so-nice', 'disabledForInitiative') === true) return false;
+
+        const users = (message.whisper ?? []).filter((w): w is string => !!w);
+        const whisper = users.length > 0 ? users : null;
+        const synchronize = rollMode === 'public' || !!whisper;
+        const blind = rollMode === 'blind';
+        const activePlayers = this.players.find((user) => user.active);
+        const rollUser = activePlayers ?? this.players[0] ?? game.user;
+
+        return game.dice3d?.showForRoll(
+            roll,
+            rollUser,
+            synchronize,
+            whisper,
+            blind,
+            message.id,
+            message.speaker,
+        );
+    }
+
+    /** Posts a chat card showing an initiative score adjustment. */
+    async _postInitiativeChangeCard(previousInit: number, currentInit: number): Promise<void> {
+        const adjustment = currentInit - previousInit;
+        const increased = adjustment > 0;
+
+        const content = await foundry.applications.handlebars.renderTemplate(
+            'systems/shadowrun5e/templates/chat/initiative-change-message.hbs',
+            {
+                ...this._cardCombatantData(),
+                previousInitiativeTitle: game.i18n.localize('SR5.COMBAT.ModeChangePreviousInitiative'),
+                currentInitiativeTitle: game.i18n.localize('SR5.COMBAT.ModeChangeNewInitiative'),
+                previousInitiative: previousInit,
+                currentInitiative: currentInit,
+                adjustment: this._formatSigned(adjustment),
+                adjustmentClass: increased ? 'is-positive' : 'is-negative',
+                adjustmentIcon: increased ? 'fa-solid fa-angles-up' : 'fa-solid fa-angles-down',
+                adjustmentTitle: game.i18n.localize(increased ? 'SR5.COMBAT.InitiativeIncreased' : 'SR5.COMBAT.InitiativeDecreased'),
+            }
+        );
+
+        const messageData = {
+            content,
+            speaker: foundry.documents.ChatMessage.implementation.getSpeaker({
+                alias: game.i18n.localize('SR5.COMBAT.InitiativeChangedLabel'),
+            }),
+            flags: { core: { initiativeRoll: true } },
+        } as ChatMessage.CreateData;
+
+        if (this.hidden) {
+            messageData.whisper = this._hiddenCardWhisperTargets();
+        } else {
+            ChatMessage.applyMode(messageData, 'public');
+        }
+
+        await foundry.documents.ChatMessage.implementation.create(messageData);
+    }
+
+    /** Whisper targets for hidden cards: GMs plus non-GM owners (`applyMode(..., 'gm')` skips owners). */
+    private _hiddenCardWhisperTargets(): string[] {
+        const gmIds = game.users.filter(user => user.isGM).map(user => user.id);
+        const ownerIds = this.players.map(user => user.id);
+        return [...new Set([...gmIds, ...ownerIds])];
+    }
+
+    /** Shared identification data (name, image and links) used by this combatant's chat cards. */
+    private _cardCombatantData() {
+        return {
+            tokenId: this.token?.id ?? null,
+            documentUuid: this.actor?.uuid ?? this.token?.uuid ?? null,
+            name: this.name ?? game.i18n.localize('COMBAT.UnknownCombatant'),
+            combatantImage: this.token?.texture?.src ?? this.actor?.img ?? null,
+        };
+    }
+
+    private _getModeConfig(mode: InitiativeModeOptions) {
+        const key = (mode === 'cold_sim' || mode === 'hot_sim') ? 'matrix' : mode;
+        return SR5Combat.INITIATIVE_MODE_CONFIG[key];
+    }
+
+    private _formatSigned(value: number): string {
+        return value >= 0 ? `+${value}` : `${value}`;
+    }
+
+    private _rollTooltip(data: ChangeModeMessageData): string {
+        const baseText = `${this._formatSigned(data.baseAdjust)}`;
+        const hasDice = data.diceRolls.length > 0;
+        
+        if (!hasDice) {
+            return `
+                <div class="dice-tooltip initiative-total-tooltip">
+                    <span class="initiative-tooltip-base">${baseText}</span>
+                </div>
+            `;
+        }
+
+        const dieItems = data.diceRolls.map(value => {
+            const mockResult = { result: value, active: true } as const;
+            const cssClasses = SR5Die.getResultCSS(mockResult).filter(Boolean).join(' ');
+            return `<li class="roll ${cssClasses}">${value}</li>`;
+        });
+
+        const dicePrefix = data.diceCountAdjust < 0 ? '- ' : '+ ';
+
+        return `
+            <div class="dice-tooltip initiative-total-tooltip">
+                <div class="initiative-tooltip-dice">
+                    <span class="initiative-tooltip-paren">${dicePrefix}(</span>
+                    <ol class="dice-rolls">
+                        ${dieItems.join('')}
+                    </ol>
+                    <span class="initiative-tooltip-paren">)</span>
+                </div>
+                <span class="initiative-tooltip-base">${baseText}</span>
+            </div>
+        `;
+    }
+
+    /** Handles updates at the start of a combatant's turn. */
+    async turnUpdate(pass: number): Promise<void> {
+        const historyReset = game.settings.get(SYSTEM_NAME, FLAGS.TokenMovementHistoryReset);
+        if (pass === SR.combat.FIRST_PASS && historyReset === 'firstActionPhase') {
+            await this.clearMovementHistory();
+        }
+
+        await this.actor?.removeDefenseMultiModifier();
+
+        if (!this.system.attackedLastTurn) {
+            await this.actor?.clearProgressiveRecoil();
+        }
+
+        await this.update({ system: { attackedLastTurn: false } });
+    }
+
+    /** Prepares the data object for updating at the end of an initiative pass. */
+    initPassUpdateData() {
+        return {
+            _id: this._id!,
+            system: { acted: false },
+            initiative: CombatRules.initAfterPass(this.initiative),
+        } as const;
+    }
+
+    /** Prepares the data object for updating at the end of a combat round. */
+    roundUpdateData() {
+        return {
+            _id: this._id!,
+            system: { acted: false, seize: false, coinFlip: Math.random() },
+        } as const;
+    }
+}

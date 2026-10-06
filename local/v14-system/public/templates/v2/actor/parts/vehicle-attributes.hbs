@@ -1,0 +1,84 @@
+{{> "systems/shadowrun5e/templates/v2/actor/parts/limits.hbs" }}
+<div class="attributes">
+    {{#if @root.isEditMode}}
+        {{> "systems/shadowrun5e/templates/v2/actor/parts/vehicle-paired-attribute.hbs"
+            label="SR5.Vehicle.Stats.Handling"
+            onRoadAttribute=system.vehicle_stats.handling
+            onRoadField=systemFields.vehicle_stats.fields.handling
+            offRoadAttribute=system.vehicle_stats.off_road_handling
+            offRoadField=systemFields.vehicle_stats.fields.off_road_handling
+            isOffRoad=system.isOffRoad
+        }}
+        {{> "systems/shadowrun5e/templates/v2/actor/parts/vehicle-paired-attribute.hbs"
+            label="SR5.Vehicle.Stats.Speed"
+            onRoadAttribute=system.vehicle_stats.speed
+            onRoadField=systemFields.vehicle_stats.fields.speed
+            offRoadAttribute=system.vehicle_stats.off_road_speed
+            offRoadField=systemFields.vehicle_stats.fields.off_road_speed
+            isOffRoad=system.isOffRoad
+        }}
+        {{> "systems/shadowrun5e/templates/v2/actor/parts/vehicle-paired-attribute.hbs"
+            label="SR5.Vehicle.Stats.Acceleration"
+            onRoadAttribute=system.vehicle_stats.acceleration
+            onRoadField=systemFields.vehicle_stats.fields.acceleration
+            offRoadAttribute=system.vehicle_stats.off_road_acceleration
+            offRoadField=systemFields.vehicle_stats.fields.off_road_acceleration
+            isOffRoad=system.isOffRoad
+        }}
+    {{else}}
+        {{> "systems/shadowrun5e/templates/v2/actor/parts/vehicle-paired-attribute.hbs"
+            label="SR5.Vehicle.Stats.Handling"
+            onRoadAttribute=system.vehicle_stats.handling
+            onRoadField=systemFields.vehicle_stats.fields.handling
+            offRoadAttribute=system.vehicle_stats.off_road_handling
+            offRoadField=systemFields.vehicle_stats.fields.off_road_handling
+            isOffRoad=system.isOffRoad
+            cssClass=(ifThen (eq system.environment 'speed') 'vehicle-environment-inactive' '')
+        }}
+        {{> "systems/shadowrun5e/templates/v2/actor/parts/vehicle-paired-attribute.hbs"
+            label="SR5.Vehicle.Stats.Speed"
+            onRoadAttribute=system.vehicle_stats.speed
+            onRoadField=systemFields.vehicle_stats.fields.speed
+            offRoadAttribute=system.vehicle_stats.off_road_speed
+            offRoadField=systemFields.vehicle_stats.fields.off_road_speed
+            isOffRoad=system.isOffRoad
+            cssClass=(ifThen (eq system.environment 'handling') 'vehicle-environment-inactive' '')
+        }}
+        {{> "systems/shadowrun5e/templates/v2/actor/parts/vehicle-paired-attribute.hbs"
+            label="SR5.Vehicle.Stats.Acceleration"
+            onRoadAttribute=system.vehicle_stats.acceleration
+            onRoadField=systemFields.vehicle_stats.fields.acceleration
+            offRoadAttribute=system.vehicle_stats.off_road_acceleration
+            offRoadField=systemFields.vehicle_stats.fields.off_road_acceleration
+            isOffRoad=system.isOffRoad
+        }}
+    {{/if}}
+    {{> "systems/shadowrun5e/templates/v2/actor/parts/attribute.hbs"
+        attribute=system.attributes.body
+        attributeField=systemFields.attributes.fields.body
+    }}
+    {{> "systems/shadowrun5e/templates/v2/actor/parts/attribute.hbs"
+        label="SR5.Armor.label"
+        attribute=system.armor.rating
+        attributeField=systemFields.armor.fields.rating
+        modifierTooltipPath="armor.rating"
+    }}
+    {{#unless system.vehicle_stats.pilot.hidden}}
+        {{> "systems/shadowrun5e/templates/v2/actor/parts/attribute.hbs"
+            attribute=system.vehicle_stats.pilot
+            attributeField=systemFields.vehicle_stats.fields.pilot
+        }}
+    {{/unless}}
+    {{#unless system.vehicle_stats.sensor.hidden}}
+        {{> "systems/shadowrun5e/templates/v2/actor/parts/attribute.hbs"
+            attribute=system.vehicle_stats.sensor
+            attributeField=systemFields.vehicle_stats.fields.sensor
+        }}
+    {{/unless}}
+    {{#unless system.vehicle_stats.seats.hidden}}
+        {{> "systems/shadowrun5e/templates/v2/actor/parts/attribute.hbs"
+            attribute=system.vehicle_stats.seats
+            attributeField=systemFields.vehicle_stats.fields.seats
+        }}
+    {{/unless}}
+</div>

@@ -1,0 +1,31 @@
+<div class="sr5 chat-card roll-card sr5-roll-card-v2">
+    <div class="card-title card-header card-header--title">
+        <span class="test-name">{{localize "SR5.Labels.Message.FailedAttackAction"}}</span>
+    </div>
+    <div class="card-title card-header card-header--entities">
+        <div class="container container--fluid">
+            <div class="container__row">
+                <div class="container__col">
+                    <div class="document">
+                        <a class="chat-select-link" data-token-id="{{speaker.token.id}}"><img
+                            src="{{speakerImg speaker.actor}}" class="entity-selectable"
+                            data-tooltip="{{speakerName speaker.actor}}" /></a>
+                        <h3 class="header-name"><a class="chat-document-link"
+                            data-uuid="{{speaker.actor.uuid}}">{{speakerName speaker.actor}}</a></h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-main-content">
+        <div class="card-content card-content--damage">
+            <div class="left-side">
+                {{> 'systems/shadowrun5e/templates/rolls/parts/Damage.hbs'
+                name=(localize "SR5.Damage")
+                tooltip=(localize "SR5.Incoming")
+                damage=damage
+                }}
+            </div>
+        </div>
+    </div>
+</div>

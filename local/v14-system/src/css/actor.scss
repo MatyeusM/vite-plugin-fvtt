@@ -1,0 +1,296 @@
+@use 'config';
+@use "config/mixins";
+@use "config/variables";
+
+
+.sr5v2.actor {
+    .tab .list-item:not(.list-item-header) {
+        color: var(--sr5v2-text-primary);
+
+        label,
+        a,
+        span,
+        .item-name-link,
+        .list-item-icons,
+        .list-item-icons a,
+        .list-item-icons i {
+            color: inherit;
+        }
+    }
+
+    .limit {
+        @include mixins.systemFonts;
+        padding: 0 0.1em;
+        margin-top: -2px;
+        text-align: center;
+        font-size: 1.1rem;
+        display: flex;
+        flex-flow: column nowrap;
+        justify-content: center;
+        align-items: center;
+        align-content: center;
+    }
+
+    .attributes {
+        display: flex;
+        flex-flow: row nowrap;
+        justify-content: space-around;
+        padding-bottom: 2px;
+        margin-bottom: 3px;
+        margin-top: 2px;
+        // gap: 0.25rem;
+
+        .attribute {
+            flex: 1;
+            display: flex;
+            flex-flow: column nowrap;
+            gap: 2px;
+
+            .matrix-att-selector {
+                line-height: 1rem;
+                height: 1rem;
+                max-height: 1rem;
+
+                > option {
+                    &[selected] {
+                        text-align: center;
+                    }
+                }
+            }
+
+            > label {
+                white-space: nowrap;
+                display: flex;
+                flex-flow: row nowrap;
+                justify-content: center;
+                &.edit-mode {
+                    font-size: 0.8rem;
+                }
+            }
+
+            .attribute-button {
+                border-color: transparent;
+                &:hover {
+                    border-color: variables.$light;
+                }
+            }
+
+            .force-apply-toggle {
+                padding: 0;
+            }
+
+            .force-apply-toggle.downlight {
+                opacity: 0.45;
+                filter: grayscale(0.5);
+            }
+
+            .attribute-value {
+                display: flex;
+                flex-flow: row nowrap;
+                justify-content: center;
+                align-items: center;
+                gap: 0.25rem;
+                max-width: 8rem;
+            }
+
+            &.vehicle-paired-attribute .attribute-value {
+                gap: 0.1rem;
+            }
+
+            &.vehicle-paired-attribute .attribute-separator {
+                line-height: 1;
+            }
+
+            &.vehicle-paired-attribute .road-mode-input {
+                display: inline-flex;
+            }
+
+            &.vehicle-paired-attribute .road-mode-input.road-mode-inactive > button {
+                opacity: 0.45;
+                filter: saturate(0.5);
+            }
+
+            &.vehicle-environment-inactive {
+                .attribute-value button {
+                    opacity: 0.45;
+                    filter: saturate(0.5);
+                }
+            }
+        }
+    }
+
+    .active-skills-header {
+        cursor: pointer;
+        label {
+            cursor: pointer;
+        }
+        &:hover {
+            background: var(--sr5v2-bg-hover);
+            color: var(--sr5v2-link-hover) !important;
+            label {
+                color: var(--sr5v2-link-hover) !important;
+            }
+        }
+    }
+
+    #filter-active-skills {
+        background: none;
+        padding-left: 4px;
+        color: var(--sr5v2-label);
+        border-bottom: 1px solid var(--sr5v2-border);
+    }
+
+    #active-skills-scroll {
+        > .list-item-container.active-skill-row {
+            background: none;
+        }
+
+        > .list-item-container.active-skill-row:not(.hidden):nth-child(even of .active-skill-row:not(.hidden)) {
+            background: rgba(variables.$white, 0.03);
+        }
+    }
+
+    select#select-inventory {
+        height: 1rem;
+        max-height: 1rem;
+    }
+
+    .condition-monitor-container {
+        padding: 0.25rem;
+    }
+
+    .movement-container {
+        display: flex;
+        flex-flow: row nowrap;
+        padding-top: .25rem;
+        padding-bottom: .25rem;
+        gap: .25rem;
+        align-items: center;
+        justify-content: start;
+    }
+
+    // display initiative information and allow for
+    .initiative-container {
+        display: flex;
+        justify-content: end;
+        align-items: stretch;
+        align-content: stretch;
+        gap: .25rem;
+        padding: .25rem;
+        overflow: hidden;
+
+        // this selects things like cold sim, hot sim, meatspace, astral
+        .presence-select {
+            min-width: 7rem;
+        }
+
+        .initiative-label {
+            text-align: center;
+            align-self: center;
+        }
+
+        .initiative-blitz-toggle {
+            color: variables.$white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85), 0 0 1px rgba(0, 0, 0, 0.85);
+
+            &:hover {
+                color: variables.$white;
+            }
+
+            i {
+                color: inherit;
+            }
+        }
+
+        .blitz-active {
+            animation: blitzShine 3s linear infinite;
+        }
+
+        @keyframes blitzShine {
+            0% { color: variables.$white; }
+            50% { color: variables.$edge; }
+            100% { color: variables.$white; }
+        }
+
+        @keyframes blitzShineLight {
+            0% { color: var(--sr5v2-text-primary); }
+            50% { color: var(--sr5v2-label); }
+            100% { color: var(--sr5v2-text-primary); }
+        }
+
+        .initiative-col {
+            display: flex;
+            flex-flow: column nowrap;
+            flex: 1;
+            justify-content: space-between;
+            align-items: center;
+            align-content: end;
+        }
+
+        .initiative-center {
+            display: flex;
+            flex-flow: row nowrap;
+            justify-content: center;
+        }
+
+        .initiative-end {
+            display: flex;
+            flex-flow: row nowrap;
+            justify-content: end;
+        }
+    }
+
+    .list-item.spirit-initiative-formula-item {
+        flex-flow: column nowrap;
+        align-items: stretch;
+        align-content: stretch;
+        gap: 0.3rem;
+    }
+
+    .list-item.spirit-initiative-formula-item .list-item-start.spirit-initiative-formula-label {
+        width: 100%;
+        flex: 0 0 auto;
+    }
+
+    .list-item.spirit-initiative-formula-item .list-item-col.spirit-initiative-formula-col {
+        width: 100%;
+        flex: 0 0 auto;
+        justify-content: flex-start;
+        align-items: flex-start;
+        align-content: flex-start;
+    }
+
+    .list-item.spirit-initiative-formula-item .list-item-col.spirit-initiative-formula-col .spirit-initiative-formula-line {
+        display: flex;
+        flex-flow: row nowrap;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.2rem;
+        width: 100%;
+        white-space: nowrap;
+    }
+
+    .list-item.spirit-initiative-formula-item .spirit-initiative-formula-line .spirit-initiative-attribute {
+        flex: 1 1 0;
+        min-width: 5rem;
+    }
+
+}
+
+body.theme-light .sr5v2.actor:not(.theme-dark),
+.sr5v2.actor.theme-light {
+    .initiative-container {
+        .initiative-blitz-toggle {
+            color: var(--sr5v2-text-primary);
+            text-shadow: none;
+
+            &:hover {
+                color: var(--sr5v2-text-primary);
+            }
+        }
+
+        .initiative-blitz-toggle.blitz-active {
+            animation-name: blitzShineLight;
+        }
+    }
+}

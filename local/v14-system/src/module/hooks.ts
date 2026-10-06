@@ -1,0 +1,777 @@
+import { CompileSpriteTest } from './tests/CompileSpriteTest';
+import { OpposedSummonSpiritTest } from './tests/OpposedSummonSpiritTest';
+import { OpposedRitualTest } from './tests/OpposedRitualTest';
+import { RitualSpellcastingTest } from './tests/RitualSpellcastingTest';
+import { SR5 } from './config';
+import { Migrator } from './migrator/Migrator';
+import { registerSystemSettings } from './settings';
+import { FLAGS, SR, SYSTEM_NAME, SYSTEM_SOCKET } from './constants';
+import { getSRStatus } from './statusEffects';
+import { SR5Actor } from './actor/SR5Actor';
+import { SR5Item } from './item/SR5Item';
+import { SR5ItemSheet } from './item/SR5ItemSheet';
+import { SR5Token } from './token/SR5Token';
+import { SR5ActiveEffect } from "./effect/SR5ActiveEffect";
+import { SR5Combat } from './combat/SR5Combat';
+import { SR5Combatant } from './combat/SR5Combatant';
+import { SR5CombatTracker } from './token/SR5CombatTracker';
+import { HandlebarManager } from './handlebars/HandlebarManager';
+
+import { OverwatchScoreTracker } from './apps/gmtools/OverwatchScoreTracker';
+import { TimeControlApplication } from './apps/gmtools/TimeControlApplication';
+import { WorldTimeFlow } from './flows/WorldTimeFlow';
+import { ExtendedTestManager } from './apps/ExtendedTestManager';
+import { ExtendedTestFlow } from './flows/ExtendedTestFlow';
+import { ExtendedTestDueFlow } from './flows/ExtendedTestDueFlow';
+import { ActorImporter } from './apps/itemImport/apps/ActorImporter';
+import { BulkImporter } from './apps/itemImport/apps/BulkImporter';
+import { CharacterImporter } from './apps/actorImport/characterImporter/CharacterImporter';
+import { ChangelogApplication } from "./apps/ChangelogApplication";
+import { SituationModifiersApplication } from './apps/SituationModifiersApplication';
+import { SR5ICActorSheet } from "./actor/sheets/SR5ICActorSheet";
+import { SR5ActiveEffectConfig } from "./effect/SR5ActiveEffectConfig";
+import { SR5VehicleActorSheet } from "./actor/sheets/SR5VehicleActorSheet";
+import { SR5CharacterSheet } from "./actor/sheets/SR5CharacterSheet";
+import { SR5SpiritActorSheet } from "./actor/sheets/SR5SpiritActorSheet";
+import { SR5SpriteActorSheet } from "./actor/sheets/SR5SpriteActorSheet";
+
+import { SR5Die } from './rolls/SR5Die';
+import { SR5Roll } from "./rolls/SR5Roll";
+import { SuccessTest } from "./tests/SuccessTest";
+import { TeamworkTest } from "./actor/flows/TeamworkFlow";
+import { OpposedTest } from "./tests/OpposedTest";
+import { PhysicalDefenseTest } from "./tests/PhysicalDefenseTest";
+import { RangedAttackTest } from "./tests/RangedAttackTest";
+import { PhysicalResistTest } from "./tests/PhysicalResistTest";
+import { MeleeAttackTest } from "./tests/MeleeAttackTest";
+import { SpellCastingTest } from "./tests/SpellCastingTest";
+import { DrainTest } from "./tests/DrainTest";
+import { TestCreator } from "./tests/TestCreator";
+import { CombatSpellDefenseTest } from "./tests/CombatSpellDefenseTest";
+import { ComplexFormTest } from "./tests/ComplexFormTest";
+import { AttributeOnlyTest } from "./tests/AttributeOnlyTest";
+import { NaturalRecoveryStunTest } from "./tests/NaturalRecoveryStunTest";
+import { NaturalRecoveryPhysicalTest } from "./tests/NaturalRecoveryPhysicalTest";
+import { FadeTest } from "./tests/FadeTest";
+import { ThrownAttackTest } from "./tests/ThrownAttackTest";
+import { PilotVehicleTest } from "./tests/PilotVehicleTest";
+import { DronePerceptionTest } from "./tests/DronePerceptionTest";
+import { DroneInfiltrationTest } from "./tests/DroneInfiltrationTest";
+import { SuppressionDefenseTest } from './tests/SuppressionDefenseTest';
+import { SummonSpiritTest } from './tests/SummonSpiritTest';
+import { BruteForceTest } from './tests/BruteForceTest';
+import { HackOnTheFlyTest } from './tests/HackOnTheFlyTest';
+import { MatrixHooks } from './tests/hooks/MatrixHooks';
+import { MatrixResistTest } from './tests/MatrixResistTest';
+import { OpposedBruteForceTest } from './tests/OpposedBruteForceTest';
+import { OpposedHackOnTheFlyTest } from './tests/OpposedHackOnTheFlyTest';
+import { MatrixDefenseTest } from './tests/MatrixDefenseTest';
+import { MatrixTest } from './tests/MatrixTest';
+import { BiofeedbackResistTest } from './tests/BiofeedbackResistTest';
+import { CheckOverwatchScoreTest } from '@/module/tests/CheckOverwatchScoreTest';
+import { OpposedCheckOverwatchScoreTest } from '@/module/tests/OpposedCheckOverwatchScoreTest';
+
+import { createItemMacro, createSkillMacro, rollItemMacro, rollSkillMacro } from './macros';
+
+import { registerSystemKeybindings } from './keybindings';
+import { SkillTest } from './tests/SkillTest';
+
+import { ActionFollowupFlow } from './item/flows/ActionFollowupFlow';
+import { OpposedCompileSpriteTest } from './tests/OpposedCompileSpriteTest';
+import { SR5CallInActionSheet } from './item/sheets/SR5CallInActionSheet';
+import { SR5ChatMessage } from './chatMessage/SR5ChatMessage';
+import VisionConfigurator from './vision/visionConfigurator';
+import { DataDefaults } from './data/DataDefaults';
+import { AutocompleteInlineHooksFlow } from './effect/autoinline/AutocompleteInlineHooksFlow';
+import { DocumentSituationModifiers } from './rules/DocumentSituationModifiers';
+import { RenderSettings } from './systemLinks';
+import registerSR5Tours from './tours/tours';
+import { SuccessTestEffectsFlow } from './effect/flows/SuccessTestEffectsFlow';
+import { JournalEnrichers } from './journal/enricher';
+import { DataStorage } from './data/DataStorage';
+import { IconAssign } from './apps/iconAssigner/IconAssign';
+import { RoutingLibIntegration } from './integrations/routingLibIntegration';
+import { initDiceSoNice } from './rolls/DiceSoNice';
+import { SR5TokenDocument } from './token/SR5TokenDocument';
+import { SR5TokenRuler } from './token/SR5TokenRuler';
+
+import { CombatDM } from './types/combat/Combat';
+import { CombatantDM } from './types/combat/Combatant';
+
+import { Character } from './types/actor/Character';
+import { IC } from './types/actor/IC';
+import { Spirit } from './types/actor/Spirit';
+import { Sprite } from './types/actor/Sprite';
+import { Vehicle } from './types/actor/Vehicle';
+
+import { ActiveEffectDM } from './types/effect/ActiveEffect';
+import { Action } from './types/item/Action';
+import { AdeptPower } from './types/item/AdeptPower';
+import { Ammo } from './types/item/Ammo';
+import { Armor } from './types/item/Armor';
+import { Bioware } from './types/item/Bioware';
+import { CallInAction } from './types/item/CallInAction';
+import { ComplexForm } from './types/item/ComplexForm';
+import { Contact } from './types/item/Contact';
+import { CritterPower } from './types/item/CritterPower';
+import { Cyberware } from './types/item/Cyberware';
+import { Device } from './types/item/Device';
+import { Echo } from './types/item/Echo';
+import { Equipment } from './types/item/Equipment';
+import { Grid } from './types/item/Grid';
+import { Host } from './types/item/Host';
+import { Lifestyle } from './types/item/Lifestyle';
+import { Metamagic } from './types/item/Metamagic';
+import { Modification } from './types/item/Modification';
+import { Program } from './types/item/Program';
+import { Quality } from './types/item/Quality';
+import { Ritual } from './types/item/Ritual';
+import { Sin } from './types/item/Sin';
+import { Spell } from './types/item/Spell';
+import { SpritePower } from './types/item/SpritePower';
+import { Weapon } from './types/item/Weapon';
+
+import { SRStorage } from './storage/storage';
+import { MatrixICFlow } from './actor/flows/MatrixICFlow';
+import { MatrixNetworkFlow } from './item/flows/MatrixNetworkFlow';
+import { SocketMessage } from './sockets';
+import { TagifyHooks } from '@/module/tagify/TagifyHooks';
+import { RiggingHooks } from '@/module/tests/hooks/RiggingHooks';
+import { SocketMessageFlow } from './flows/SocketMessageFlow';
+import { CompendiumBrowser } from './apps/compendiumBrowser/CompendiumBrowser';
+import { Skill } from './types/item/Skill';
+import { SR5SkillSheet } from './item/sheets/SR5SkillSheet';
+import { SkillGroupFlow } from './actor/flows/SkillGroupFlow';
+import { OpposedMatrixTest } from './tests/OpposedMatrixTest';
+
+// Redeclare SR5config as a global as foundry-vtt-types CONFIG with SR5 property causes issues.
+export const SR5CONFIG = SR5;
+
+export class HooksManager {
+    static registerHooks() {
+        console.log('Shadowrun 5e | Registering system hooks');
+        // Register your highest level hook callbacks here for a quick overview of what's hooked into.
+
+        Hooks.once('init', () => {
+            HooksManager.init();
+
+            // Custom Module Integrations
+            // See src/module/integartions for more information.
+            if (game.modules.get('routinglib')?.active) {
+                RoutingLibIntegration.init();
+            }
+
+            if (game.modules.get('dice-so-nice')?.active) {
+                initDiceSoNice();
+            }
+        });
+        Hooks.once('aipSetup', AutocompleteInlineHooksFlow.aipSetupHook);
+
+        Hooks.on('ready', HooksManager.ready.bind(HooksManager));
+        Hooks.on('hotbarDrop', HooksManager.hotbarDrop.bind(HooksManager));
+        Hooks.on('getSceneControlButtons', HooksManager.getSceneControlButtons.bind(HooksManager));
+        Hooks.on('renderCompendiumDirectory', HooksManager.renderCompendiumDirectory.bind(HooksManager));
+        Hooks.on('renderActorDirectory', HooksManager.renderActorDirectory.bind(HooksManager));
+        Hooks.on('renderTokenHUD', SituationModifiersApplication.onRenderTokenHUD.bind(SituationModifiersApplication));
+        Hooks.on('moveToken', SR5TokenDocument.moveToken.bind(SR5Token));
+        Hooks.on('renderTokenConfig', SR5Token.tokenConfig.bind(HooksManager));
+        Hooks.on('renderPrototypeTokenConfig', SR5Token.tokenConfig.bind(HooksManager));
+        Hooks.on('createItem', (item) => { void HooksManager.syncSkillGroupMembership(item); });
+        Hooks.on('updateItem', (item, data, options, userId) => { void HooksManager.updateIcConnectedToHostItem(item, data, options, userId); });
+        Hooks.on('updateItem', (item) => { void HooksManager.syncSkillGroupMembership(item); });
+        Hooks.on('deleteItem', (item) => { void HooksManager.syncSkillGroupMembership(item); });
+        Hooks.on('getChatMessageContextOptions', SuccessTest.chatMessageContextOptions.bind(SuccessTest));
+        Hooks.on('renderChatMessageHTML', HooksManager.chatMessageListeners.bind(HooksManager));
+        // Register and update managed extended tests from finished test rolls.
+        Hooks.on('sr5_afterTestComplete', (test: SuccessTest) => { void ExtendedTestFlow.handleTestComplete(test); });
+        // Announce extended tests game time has made rollable again. Debounced, as holding a
+        // time preset would otherwise scan every record per tick.
+        Hooks.on('updateWorldTime', foundry.utils.debounce(() => { void ExtendedTestDueFlow.announceDue(); }, 250));
+
+        Hooks.on('renderChatLog', HooksManager.chatLogListeners.bind(HooksManager));
+
+        MatrixHooks.registerHooks();
+        RiggingHooks.registerHooks();
+        TagifyHooks.registerHooks();
+
+        RenderSettings.listen();
+
+        if (import.meta.env.DEV) {
+            void import('./hooks-dev').then(({ DevHooks }) => {
+                DevHooks.registerHooks();
+            });
+        }
+    }
+
+    static init() {
+        console.log(`Loading Shadowrun 5e System
+___________________
+ ___________ _____ 
+/  ___| ___ \\  ___|
+\\ \`--.| |_/ /___ \\ 
+ \`--. \\    /    \\ \\
+/\\__/ / |\\ \\/\\__/ /
+\\____/\\_| \\_\\____/ 
+===================
+`);
+        // Create a shadowrun5e namespace within the game global
+        game['shadowrun5e'] = {
+            canvas: {},
+            /**
+             * System level Document implementations.
+             */
+            SR5Actor,
+            SR5Item,
+            SR5ActiveEffect,
+            /**
+             * Macro hooks used when something's dropped onto the hotbar.
+             */
+            rollItemMacro,
+            rollSkillMacro,
+            /**
+             * Should you only really need dice handling, use this. If you need more complex testing behaviour,
+             * check the Test implementations.
+             */
+            SR5Roll,
+
+            /**
+             * You want to open the compendium browser?
+             */
+            CompendiumBrowser,
+
+            /**
+             * You want to create a test from whatever source?
+             * Use this.
+             */
+            test: TestCreator,
+            data: DataDefaults,
+
+            /**
+             * You want to access or alter situational modifiers on any document?
+             * Use this.
+             */
+            modifiers: DocumentSituationModifiers,
+
+            /**
+             * .tests define what test implementation to use for each test type (key).
+             * Should you want to override default behavior for SuccessTest types, overwrite
+             * the SuccessTest class reference here
+             */
+            tests: {
+                SuccessTest,
+                OpposedTest,
+                MeleeAttackTest,
+                RangedAttackTest,
+                ThrownAttackTest,
+                PhysicalDefenseTest,
+                MatrixTest,
+                MatrixDefenseTest,
+                SuppressionDefenseTest,
+                PhysicalResistTest,
+                SpellCastingTest,
+                RitualSpellcastingTest,
+                OpposedRitualTest,
+                CombatSpellDefenseTest,
+                DrainTest,
+                FadeTest,
+                ComplexFormTest,
+                AttributeOnlyTest,
+                SkillTest,
+                NaturalRecoveryStunTest,
+                NaturalRecoveryPhysicalTest,
+                PilotVehicleTest,
+                DronePerceptionTest,
+                DroneInfiltrationTest,
+                SummonSpiritTest,
+                OpposedSummonSpiritTest,
+                CompileSpriteTest,
+                OpposedCompileSpriteTest,
+                BruteForceTest,
+                OpposedBruteForceTest,
+                HackOnTheFlyTest,
+                OpposedHackOnTheFlyTest,
+                MatrixResistTest,
+                BiofeedbackResistTest,
+                CheckOverwatchScoreTest,
+                OpposedCheckOverwatchScoreTest,
+                OpposedMatrixTest
+            },
+            /**
+             * Subset of tests meant to be used as the main, active test.
+             *
+             * These will show up on actions when defining the main test to be used.
+             */
+            activeTests: {
+                SuccessTest,
+                MeleeAttackTest,
+                RangedAttackTest,
+                ThrownAttackTest,
+                PhysicalResistTest,
+                MatrixTest,
+                MatrixDefenseTest,
+                SuppressionDefenseTest,
+                SpellCastingTest,
+                ComplexFormTest,
+                PhysicalDefenseTest,
+                NaturalRecoveryStunTest,
+                NaturalRecoveryPhysicalTest,
+                DrainTest,
+                FadeTest,
+                PilotVehicleTest,
+                DronePerceptionTest,
+                DroneInfiltrationTest,
+                SummonSpiritTest,
+                CompileSpriteTest,
+                RitualSpellcastingTest,
+                BruteForceTest,
+                HackOnTheFlyTest,
+                MatrixResistTest,
+                BiofeedbackResistTest,
+                CheckOverwatchScoreTest
+            },
+            /**
+             * Subset of tests meant to be used as opposed tests.
+             *
+             * These will show up on actions when defining an opposed test.
+             */
+            opposedTests: {
+                OpposedTest,
+                PhysicalDefenseTest,
+                MatrixDefenseTest,
+                SuppressionDefenseTest,
+                CombatSpellDefenseTest,
+                OpposedSummonSpiritTest,
+                OpposedCompileSpriteTest,
+                OpposedRitualTest,
+                OpposedBruteForceTest,
+                OpposedHackOnTheFlyTest,
+                OpposedCheckOverwatchScoreTest,
+                OpposedMatrixTest
+            },
+            /**
+             * Subset of tests meant to be used as resist tests.
+             *
+             * Instead of showing on the action configuration these are connected to active or opposed test.
+             */
+            resistTests: {
+                PhysicalResistTest,
+                MatrixResistTest,
+                BiofeedbackResistTest
+            },
+            /**
+             * Subset of tests meant to follow a main active test
+             */
+            followedTests: {
+                DrainTest,
+                FadeTest
+            },
+
+            /**
+             * Amount of delay used on user filter inputs.
+             * This came out of an unclear user issue regarding multi-char UTF symbol inputs, to allow
+             * 'interactive' changing of the delay on the user side until a sweet spot could be found.
+             */
+            inputDelay: 300,
+
+            /**
+             * The global data storage for the system.
+             */
+            storage: SRStorage,
+
+
+            /**
+             *The Character Importer for the SR5 system.
+             */
+            CharacterImporter
+        };
+
+        // Register document classes
+        CONFIG.Actor.documentClass = SR5Actor;
+        CONFIG.Item.documentClass = SR5Item;
+        CONFIG.ui.combat = SR5CombatTracker;
+        CONFIG.Combat.documentClass = SR5Combat;
+        CONFIG.Combatant.documentClass = SR5Combatant;
+        CONFIG.ChatMessage.documentClass = SR5ChatMessage;
+        CONFIG.ActiveEffect.documentClass = SR5ActiveEffect;
+
+        CONFIG.Token.objectClass = SR5Token;
+        CONFIG.Token.documentClass = SR5TokenDocument;
+        CONFIG.Token.rulerClass = SR5TokenRuler;
+        CONFIG.Token.movement.actions['run'] = {
+            label: 'SR5.MovementTypes.Run',
+            icon: 'fa-solid fa-person-running',
+            canSelect: () => false,
+            getAnimationOptions: () => ({ movementSpeed: CONFIG.Token.movement.defaultSpeed * 2 }),
+        };
+        CONFIG.Token.movement.actions['sprint'] = {
+            label: 'SR5.MovementTypes.Sprint',
+            icon: 'fa-solid fa-person-running-fast',
+            canSelect: () => false,
+            getAnimationOptions: () => ({ movementSpeed: CONFIG.Token.movement.defaultSpeed * 3 }),
+        };
+
+        // Register initiative directly (outside of system.json) as DnD5e does it.
+        CONFIG.Combat.initiative.formula = "@initiative.current.constant.value[Base] + @initiative.current.dice.text[Dice] - @wounds.value[Wounds]";
+
+        // Register general SR5Roll for JSON serialization support.
+        CONFIG.Dice.terms[SR5Die.DENOMINATION] = SR5Die;
+        CONFIG.Dice.rolls.push(SR5Roll);
+        // @ts-expect-error // Register the SR5Roll dnd5e style.
+        CONFIG.Roll = SR5Roll;
+
+        // Add Shadowrun configuration onto general Foundry config for module access.
+        // @ts-expect-error // TODO: Add declaration merging
+        CONFIG.SR5 = SR5;
+
+        CONFIG.Actor.compendiumIndexFields.push("system.description", "system.importFlags.isFreshImport");
+        CONFIG.Item.compendiumIndexFields.push("system.description", "system.importFlags.isFreshImport");
+
+        CONFIG.ActiveEffect.dataModels["base"] = ActiveEffectDM;
+
+        CONFIG.Actor.dataModels["character"] = Character;
+        CONFIG.Actor.dataModels["ic"] = IC;
+        CONFIG.Actor.dataModels["spirit"] = Spirit;
+        CONFIG.Actor.dataModels["sprite"] = Sprite;
+        CONFIG.Actor.dataModels["vehicle"] = Vehicle;
+
+        CONFIG.Combat.dataModels["base"] = CombatDM;
+        CONFIG.Combatant.dataModels["base"] = CombatantDM;
+
+        CONFIG.Item.dataModels["action"] = Action;
+        CONFIG.Item.dataModels["ammo"] = Ammo;
+        CONFIG.Item.dataModels["armor"] = Armor;
+        CONFIG.Item.dataModels["adept_power"] = AdeptPower;
+        CONFIG.Item.dataModels["bioware"] = Bioware;
+        CONFIG.Item.dataModels["call_in_action"] = CallInAction;
+        CONFIG.Item.dataModels["complex_form"] = ComplexForm;
+        CONFIG.Item.dataModels["contact"] = Contact;
+        CONFIG.Item.dataModels["critter_power"] = CritterPower;
+        CONFIG.Item.dataModels["cyberware"] = Cyberware;
+        CONFIG.Item.dataModels["device"] = Device;
+        CONFIG.Item.dataModels["echo"] = Echo;
+        CONFIG.Item.dataModels["equipment"] = Equipment;
+        CONFIG.Item.dataModels["grid"] = Grid;
+        CONFIG.Item.dataModels["host"] = Host;
+        CONFIG.Item.dataModels["lifestyle"] = Lifestyle;
+        CONFIG.Item.dataModels["metamagic"] = Metamagic;
+        CONFIG.Item.dataModels["modification"] = Modification;
+        CONFIG.Item.dataModels["program"] = Program;
+        CONFIG.Item.dataModels["quality"] = Quality;
+        CONFIG.Item.dataModels["ritual"] = Ritual;
+        CONFIG.Item.dataModels["sin"] = Sin;
+        CONFIG.Item.dataModels["skill"] = Skill;
+        CONFIG.Item.dataModels["spell"] = Spell;
+        CONFIG.Item.dataModels["sprite_power"] = SpritePower;
+        CONFIG.Item.dataModels["weapon"] = Weapon;
+
+        CONFIG.time.turnTime = SR.combat.TURN_TIME_SECONDS;
+        CONFIG.time.roundTime = SR.combat.ROUND_TIME_SECONDS;
+
+        // Keep expired effects (greyed, restartable) instead of deleting.
+        // Explicit so a core/module change can't silently flip it to "delete".
+        CONFIG.ActiveEffect.expiryAction = "update";
+
+        // Register the SR5-custom expiry events so Foundry's registry knows to call isExpiryEvent for them.
+        // sr5MyActionStart fires on the owner's action phase start (any pass); dispatched by SR5Combat._onUpdate.
+        CONFIG.ActiveEffect.expiryEvents.sr5MyActionStart = "SR5.ActiveEffect.ExpiryTriggers.MyActionStart";
+        // sr5MyActionEnd fires when advancing away from the owner's completed action phase.
+        CONFIG.ActiveEffect.expiryEvents.sr5MyActionEnd = "SR5.ActiveEffect.ExpiryTriggers.MyActionEnd";
+
+        registerSystemSettings();
+        registerSystemKeybindings();
+
+        CONFIG.statusEffects = [
+            ...CONFIG.statusEffects.slice(0, 5),
+            ...getSRStatus(),
+            ...CONFIG.statusEffects.slice(5),
+        ];
+
+        // Register sheets for collection documents.
+        // NOTE: See dnd5e for a multi class approach for all actor types using the types array in Actors.registerSheet
+        foundry.documents.collections.Actors.unregisterSheet('core', foundry.appv1.sheets.ActorSheet);
+        foundry.documents.collections.Actors.registerSheet(SYSTEM_NAME, SR5CharacterSheet, {
+            label: "SR5.SheetActor",
+            makeDefault: true,
+            types: ['character']
+        });
+        foundry.documents.collections.Actors.registerSheet(SYSTEM_NAME, SR5ICActorSheet, {
+            label: "SR5.SheetActor",
+            makeDefault: true,
+            types: ['ic']
+        });
+        foundry.documents.collections.Actors.registerSheet(SYSTEM_NAME, SR5VehicleActorSheet, {
+            label: "SR5.SheetActor",
+            makeDefault: true,
+            types: ['vehicle']
+        });
+        foundry.documents.collections.Actors.registerSheet(SYSTEM_NAME, SR5SpiritActorSheet, {
+            label: "SR5.SheetActor",
+            makeDefault: true,
+            types: ['spirit']
+        });
+        foundry.documents.collections.Actors.registerSheet(SYSTEM_NAME, SR5SpriteActorSheet, {
+            label: "SR5.SheetActor",
+            makeDefault: true,
+            types: ['sprite']
+        });
+
+
+        foundry.documents.collections.Items.unregisterSheet('core', foundry.appv1.sheets.ItemSheet);
+        foundry.documents.collections.Items.registerSheet(SYSTEM_NAME, SR5ItemSheet, {
+            label: "SR5.SheetItem",
+            makeDefault: true
+        });
+        foundry.documents.collections.Items.registerSheet(SYSTEM_NAME, SR5CallInActionSheet, {
+            label: "SR5.SheetItem",
+            makeDefault: true,
+            types: ['call_in_action']
+        });
+        foundry.documents.collections.Items.registerSheet(SYSTEM_NAME, SR5SkillSheet, {
+            label: "SR5.SheetItem",
+            makeDefault: true,
+            types: ['skill']
+        });
+
+        // Register configs for embedded documents.
+        foundry.applications.apps.DocumentSheetConfig.unregisterSheet(ActiveEffect, 'core', foundry.applications.sheets.ActiveEffectConfig);
+        foundry.applications.apps.DocumentSheetConfig.registerSheet(ActiveEffect, SYSTEM_NAME, SR5ActiveEffectConfig, {
+            makeDefault: true
+        })
+
+        HooksManager.configureVision()
+
+        HooksManager.configureTextEnrichers();
+
+        // Preload might reduce loading time during play.
+        HandlebarManager.loadTemplates();
+
+        // Register Tours
+        registerSR5Tours();
+
+        DataStorage.validate();
+    }
+
+    static async ready() {
+        await IconAssign.refreshIconFiles();
+
+        if (game.user?.isGM) {
+            Migrator.BeginMigration();
+
+            await WorldTimeFlow.initialize();
+
+            if (ChangelogApplication.showApplication)
+                new ChangelogApplication().render(true);
+        }
+
+        Hooks.on('renderJournalPageSheet', JournalEnrichers.setEnricherHooks.bind(JournalEnrichers));
+        HooksManager.registerSocketListeners();
+    }
+
+    /**
+     * Handle drop events on the hotbar creating different macros.
+     *
+     * NOTE: FoundryVTT Hook callbacks won't be resolved when returning a promise.
+     *       While this function calls async methods, it's order of operations isn't important.
+     *
+     * @param bar
+     * @param dropData
+     * @param slot
+     * @return false when callback has been handled, otherwise let Foundry default handling kick in
+     */
+    static hotbarDrop(bar, dropData, slot): boolean {
+        switch (dropData.type) {
+            case 'Item':
+                createItemMacro(dropData, slot);
+                return false;
+        }
+        return true;
+    }
+
+    static getSceneControlButtons(controls) {
+        if (game.user?.isGM) {
+            const overwatchScoreTrackControl = {
+                name: 'overwatch-score-tracker',
+                title: 'CONTROLS.SR5.OverwatchScoreTracker',
+                icon: 'fas fa-network-wired',
+                button: true,
+                onChange: (_event: Event, active: boolean) => {
+                    if (!active) return;
+                    OverwatchScoreTracker.open();
+                }
+            };
+            controls.tokens.tools[overwatchScoreTrackControl.name] = overwatchScoreTrackControl;
+
+            const timeControl = {
+                name: 'sr5-time-control',
+                title: 'CONTROLS.SR5.TimeControl',
+                icon: 'far fa-clock',
+                button: true,
+                onChange: (_event: Event, active: boolean) => {
+                    if (!active) return;
+                    TimeControlApplication.open();
+                }
+            };
+            controls.tokens.tools[timeControl.name] = timeControl;
+        }
+
+        const extendedTestManagerControl = {
+            name: 'sr5-extended-test-manager',
+            title: 'CONTROLS.SR5.ExtendedTestManager',
+            icon: 'fas fa-hourglass-half',
+            button: true,
+            onChange: (_event: Event, active: boolean) => {
+                if (!active) return;
+                ExtendedTestManager.open();
+            }
+        };
+        controls.tokens.tools[extendedTestManagerControl.name] = extendedTestManagerControl;
+
+        const situationModifiersControl = SituationModifiersApplication.getControl();
+        controls.tokens.tools[situationModifiersControl.name] = situationModifiersControl;
+
+        const successTestControl = {
+            name: 'sr5-success-test',
+            title: 'SR5.Tests.SuccessTest',
+            icon: 'fas fa-dice',
+            button: true,
+            onChange: (_event: Event, active: boolean) => {
+                if (!active) return;
+                void TestCreator.promptSuccessTest();
+            },
+        };
+        controls.tokens.tools[successTestControl.name] = successTestControl;
+    }
+
+    /**
+     * Register renderChatMessage Hooks using FoundryVTT Hooks.on for each registered test type.
+     *
+     * This will avoid calling the same method on different types twice.
+     *
+     * Must be called on 'ready' or after game.shadowrun is registered.
+     */
+    static renderChatMessage() {
+        console.debug('Shadowrun5e | Registering new chat messages related hooks');
+    }
+
+    /**
+     * Extend rendering of Sidebar tab 'CompendiumDirectory' by
+     * - the Chummer Compendium Import button
+     * 
+     * @param app Foundry CompendiumDirectory app instance
+     * @param html HTML element of the app
+     * @returns 
+     */
+    static renderCompendiumDirectory(app: foundry.applications.sidebar.tabs.CompendiumDirectory, html: HTMLElement) {
+        const browser = $('<button class="sr5 import-button"><i class="fa-solid fa-book-open-reader"></i><span>Open Compendium Browser</span></button>');
+        $(html).find('.header-actions').append(browser);
+        browser.on('click', () => { void new CompendiumBrowser().render({ force: true }); });
+
+        if (!game.user?.isGM) return;
+
+        const button = $('<button class="sr5 import-button"><i class="fa-solid fa-file-import"></i><span>Import Chummer Data</span></button>');
+        $(html).find('.header-actions').append(button);
+
+        button.on('click', () => { void new BulkImporter().render({ force: true }); });
+    }
+
+    static renderActorDirectory(app: foundry.applications.sidebar.tabs.ActorDirectory, html: HTMLElement) {
+        if (!game.user?.can("ACTOR_CREATE"))
+            return;
+
+        const button = $('<button class="sr5 import-button"><i class="fa-solid fa-file-import"></i><span>Import Actor</span></button>');
+        $(html).find('.header-actions').append(button);
+
+        button.on('click', () => { void new ActorImporter().render({ force: true }); });
+    }
+
+    /**
+     * Handle all updateItem calls for all item types.
+     * 
+     * @param item The item updates.
+     * @param data The update data given.
+     * @param id The items id.
+     */
+    static async updateIcConnectedToHostItem(item: SR5Item, data: Item.UpdateData, options: Item.Database.UpdateOptions, userId: string) {
+        // Trigger type specific behaviour.
+        if (item.isType('host'))
+            await MatrixICFlow.handleUpdateItemHost(item);
+    }
+
+    static async syncSkillGroupMembership(item: SR5Item) {
+        if (!item.actor) return;
+        if (!item.isType('skill')) return;
+        if (!['group', 'skill'].includes(item.system.type)) return;
+
+        await SkillGroupFlow.syncSkillItemGroups(item.actor);
+    }
+
+    /**
+     * This method is used as a simple place to register socket hook handlers for the system.
+     *
+     * You can use the SocketMessage for sending messages using a socket event message id and generic data object.
+     */
+    static registerSocketListeners() {
+        if (!game.socket || !game.user) return;
+        console.log('Registering Shadowrun5e system socket messages...');
+        const hooks = {
+            [FLAGS.DoCombatFunction]: [SR5Combat._handleSocketMessage.bind(SR5Combat)],
+            [FLAGS.DoCombatantFunction]: [SR5Combatant._handleCombatantSocketMessage.bind(SR5Combatant)],
+            [FLAGS.CreateTargetedEffects]: [SuccessTestEffectsFlow._handleCreateTargetedEffectsSocketMessage.bind(SuccessTestEffectsFlow)],
+            [FLAGS.TeamworkTestFlow]: [TeamworkTest._handleUpdateSocketMessage.bind(TeamworkTest)],
+            [FLAGS.SetDataStorage]: [DataStorage._handleSetDataStorageSocketMessage.bind(DataStorage)],
+            [FLAGS.UnsetDataStorage]: [DataStorage._handleUnsetDataStorageSocketMessage.bind(DataStorage)],
+            [FLAGS.UpdateDocumentsAsGM]: [SocketMessageFlow.handleUpdateDocumentsAsGMMessage.bind(SocketMessage)],
+            [FLAGS.ApplyExtendedTestRoll]: [ExtendedTestFlow._handleApplyRollSocketMessage.bind(ExtendedTestFlow)],
+        } as const;
+
+        game.socket.on(SYSTEM_SOCKET, async (message: Shadowrun.SocketMessageData, senderId?: string) => {
+            console.log('Shadowrun 5e | Received system socket message.', message);
+
+            const handlers = hooks[message.type] as typeof hooks[keyof typeof hooks] | undefined;
+            if (!handlers?.length) return console.warn('Shadowrun 5e | System socket message has no registered handler!', message);
+            // In case of targeted socket message only execute with target user (intended for GM usage)
+            if (message.userId && game.user?.id !== message.userId) return;
+            if (message.userId && game.user?.id) console.log('Shadowrun 5e | GM is handling system socket message');
+
+            for (const handler of handlers) {
+                console.debug(`Shadowrun 5e | Handover system socket message to handler: ${handler.name}`);
+                try {
+                    await handler(message, senderId);
+                } catch (error) {
+                    console.error(`Shadowrun 5e | Error occurred in socket message handler ${handler.name}`, error);
+                }
+            }
+        });
+    }
+
+    static async chatMessageListeners(message: ChatMessage, html, data) {
+        await SuccessTest.chatMessageListeners(message, html, data);
+        await OpposedTest.chatMessageListeners(message, html, data);
+        await ActionFollowupFlow.chatMessageListeners(message, html, data);
+        await TeamworkTest.chatMessageListeners(message, html);
+        await JournalEnrichers.messageRequestHooks(html);
+        await MatrixNetworkFlow.chatMessageListeners(message, html, data);
+        await ExtendedTestDueFlow.chatMessageListeners(message, html);
+    }
+
+    static async chatLogListeners(chatLog: ChatLog, html, data) {
+        await SuccessTest.chatLogListeners(chatLog, html, data);
+        await OpposedTest.chatLogListeners(chatLog, html, data);
+        await ActionFollowupFlow.chatLogListeners(chatLog, html, data);
+        await TeamworkTest.chatLogListeners(chatLog, html);
+        await JournalEnrichers.chatlogRequestHooks(html);
+    }
+
+    static configureVision() {
+        //register detection modes
+        VisionConfigurator.configureAstralPerception()
+        VisionConfigurator.configureThermographicVision()
+        VisionConfigurator.configureLowlight()
+        VisionConfigurator.configureAR()
+    }
+
+    static configureTextEnrichers() {
+        JournalEnrichers.setEnrichers();
+    }
+
+}

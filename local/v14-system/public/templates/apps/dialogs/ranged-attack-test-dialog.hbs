@@ -1,0 +1,49 @@
+<form>
+    <div class="dialog-content-common">
+        {{> 'systems/shadowrun5e/templates/apps/dialogs/parts/success-test-documents.hbs'}}
+        <hr/>
+        <div>
+            <div class="fire-mode-summary">
+                <div class="fire-mode-summary-row">
+                    <div class="fire-mode-summary-cell">
+                        <span>{{localize "TYPES.Item.ammo"}}</span>
+                        <strong>{{test.fireModeSummary.ammo}}</strong>
+                    </div>
+                    <div class="fire-mode-summary-cell has-reset">
+                        <span data-tooltip="SR5.Tooltips.RangedAttack.Recoil">{{localize 'SR5.Recoil'}}</span>
+                        <strong data-tooltip="SR5.Tooltips.RangedAttack.RecoilBeforeAttack">{{test.fireModeSummary.recoil}}</strong>
+                        <button id="reset-progressive-recoil" class="fire-mode-summary-reset roll" type="button" data-tooltip="SR5.Tooltips.RangedAttack.ResetRecoil">↺</button>
+                    </div>
+                    <div class="fire-mode-summary-cell">
+                        <span data-tooltip="SR5.Tooltips.RangedAttack.RecoilCompensation">RC</span>
+                        <strong>{{test.fireModeSummary.rc}}</strong>
+                    </div>
+                </div>
+                <div class="fire-mode-summary-row">
+                    <div class="fire-mode-summary-cell">
+                        <span>{{localize 'SR5.Defense'}}</span>
+                        <strong>{{test.fireModeSummary.defense}}</strong>
+                    </div>
+                    <div class="fire-mode-summary-cell">
+                        <span>{{localize 'SR5.Bullets'}}</span>
+                        <strong>{{test.fireModeSummary.rounds}}</strong>
+                    </div>
+                    <div class="fire-mode-summary-cell">
+                        <span>{{localize 'SR5.Action'}}</span>
+                        <strong>{{test.fireModeSummary.action}}</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group fire-mode-select-row">
+                <label>{{localize 'SR5.FireMode'}}</label>
+                <select name="test.data.fireModeSelected">
+                    {{selectOptions test.fireModeOptions selected=test.data.fireModeSelected}}
+                </select>
+            </div>
+            {{> 'systems/shadowrun5e/templates/apps/dialogs/parts/attack-range-dialog-fragment.hbs'}}
+        </div>
+        <div>
+            {{> 'systems/shadowrun5e/templates/apps/dialogs/parts/success-test-common.hbs'}}
+        </div>
+    </div>
+</form>

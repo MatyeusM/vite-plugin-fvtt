@@ -1,0 +1,1616 @@
+/**
+ * Shadowrun 5 configuration for static values.
+ *
+ * NOTE: Do NOT import code into this file, as this might cause circular imports.
+ */
+
+export const SR5 = {
+    compendiums: {
+        root: 'SR5.Compendiums.Root',
+
+        // Actors
+        critter: 'SR5.Compendiums.Critter',
+        drone: 'SR5.Compendiums.Drone',
+
+        //Items
+        gear: 'SR5.Compendiums.Gear',
+        trait: 'SR5.Compendiums.Trait',
+        magic: 'SR5.Compendiums.Magic',
+        modification: 'SR5.Compendiums.Modification',
+        weapon: 'SR5.Compendiums.Weapon',
+    },
+
+    actorTypes: {
+        character: 'SR5.ActorTypes.Character',
+        spirit: 'SR5.ActorTypes.Spirit',
+        sprite: 'SR5.ActorTypes.Sprite',
+        vehicle: 'SR5.ActorTypes.Vehicle',
+        ic: 'SR5.ActorTypes.IC',
+    },
+
+    itemTypes: {
+        action: 'SR5.ItemTypes.Action',
+        adept_power: 'SR5.ItemTypes.AdeptPower',
+        ammo: 'SR5.ItemTypes.Ammo',
+        armor: 'SR5.ItemTypes.Armor',
+        bioware: 'SR5.ItemTypes.Bioware',
+        complex_form: 'SR5.ItemTypes.ComplexForm',
+        contact: 'SR5.ItemTypes.Contact',
+        critter_power: 'SR5.ItemTypes.CritterPower',
+        cyberware: 'SR5.ItemTypes.Cyberware',
+        device: 'SR5.ItemTypes.Device',
+        echo: 'SR5.ItemTypes.Echo',
+        equipment: 'SR5.ItemTypes.Equipment',
+        host: 'SR5.ItemTypes.Host',
+        lifestyle: 'SR5.ItemTypes.Lifestyle',
+        metamagic: 'SR5.ItemTypes.Metamagic',
+        modification: 'SR5.ItemTypes.Modification',
+        program: 'SR5.ItemTypes.Program',
+        quality: 'SR5.ItemTypes.Quality',
+        ritual: 'SR5.ItemTypes.Ritual',
+        sin: 'SR5.ItemTypes.Sin',
+        spell: 'SR5.ItemTypes.Spell',
+        sprite_power: 'SR5.ItemTypes.SpritePower',
+        weapon: 'SR5.ItemTypes.Weapon',
+        call_in_action: 'TYPES.Item.call_in_action'
+    },
+
+    // All available attributes. These are available as testable attributes across all actor types.
+    attributes: {
+        agility: 'SR5.AttrAgility',
+        attack: 'SR5.MatrixAttrAttack',
+        body: 'SR5.AttrBody',
+        charisma: 'SR5.AttrCharisma',
+        data_processing: 'SR5.MatrixAttrDataProc',
+        edge: 'SR5.AttrEdge',
+        essence: 'SR5.AttrEssence',
+        firewall: 'SR5.MatrixAttrFirewall',
+        intuition: 'SR5.AttrIntuition',
+        logic: 'SR5.AttrLogic',
+        magic: 'SR5.AttrMagic',
+        reaction: 'SR5.AttrReaction',
+        resonance: 'SR5.AttrResonance',
+        sleaze: 'SR5.MatrixAttrSleaze',
+        strength: 'SR5.AttrStrength',
+        willpower: 'SR5.AttrWillpower',
+        pilot: 'SR5.Vehicle.Stats.Pilot',
+        force: 'SR5.Force',
+        level: 'SR5.Level',
+        initiation: 'SR5.Initiation',
+        submersion: 'SR5.Submersion',
+        rating: 'SR5.Rating',
+    },
+
+    mentalAttributes: ['charisma', 'intuition', 'logic', 'willpower'],
+    physicalAttributes: ['agility', 'body', 'reaction', 'strength'],
+
+    /**
+     * All labels for all limits used across all actor and item types.
+     */
+    limits: {
+        physical: 'SR5.LimitPhysical',
+        social: 'SR5.LimitSocial',
+        mental: 'SR5.LimitMental',
+        astral: 'SR5.LimitAstral',
+        attack: 'SR5.MatrixAttrAttack',
+        sleaze: 'SR5.MatrixAttrSleaze',
+        data_processing: 'SR5.MatrixAttrDataProc',
+        firewall: 'SR5.MatrixAttrFirewall',
+        speed: 'SR5.Vehicle.Stats.Speed',
+        sensor: 'SR5.Vehicle.Stats.Sensor',
+        handling: 'SR5.Vehicle.Stats.Handling',
+        magic: 'SR5.AttrMagic',
+        initiation: 'SR5.Initiation'
+    },
+
+    specialTypes: {
+        mundane: 'SR5.Mundane',
+        magic: 'SR5.Awakened',
+        resonance: 'SR5.Emerged',
+    },
+
+    damageTypes: {
+        physical: 'SR5.DmgTypePhysical',
+        stun: 'SR5.DmgTypeStun',
+        matrix: 'SR5.DmgTypeMatrix'
+    },
+
+    biofeedbackOptions: {
+        physical: 'SR5.DmgTypePhysical',
+        stun: 'SR5.DmgTypeStun',
+    },
+
+    weaponRangeCategories: {
+        manual: {
+            label: 'SR5.Weapon.Range.Category.Manual',
+        },
+        taser: {
+            label: 'SR5.Weapon.Range.Category.Taser',
+            ranges: {
+                short: 5,
+                medium: 10,
+                long: 15,
+                extreme: 20,
+            },
+        },
+        holdOutPistol: {
+            label: 'SR5.Weapon.Range.Category.HoldOutPistol',
+            ranges: {
+                short: 5,
+                medium: 15,
+                long: 30,
+                extreme: 50,
+            },
+        },
+        lightPistol: {
+            label: 'SR5.Weapon.Range.Category.LightPistol',
+            ranges: {
+                short: 5,
+                medium: 15,
+                long: 30,
+                extreme: 50,
+            },
+        },
+        heavyPistol: {
+            label: 'SR5.Weapon.Range.Category.HeavyPistol',
+            ranges: {
+                short: 5,
+                medium: 20,
+                long: 40,
+                extreme: 60,
+            },
+        },
+        machinePistol: {
+            label: 'SR5.Weapon.Range.Category.MachinePistol',
+            ranges: {
+                short: 5,
+                medium: 15,
+                long: 30,
+                extreme: 50,
+            },
+        },
+        smg: {
+            label: 'SR5.Weapon.Range.Category.SMG',
+            ranges: {
+                short: 10,
+                medium: 40,
+                long: 80,
+                extreme: 150,
+            },
+        },
+        assaultRifle: {
+            label: 'SR5.Weapon.Range.Category.AssaultRifle',
+            ranges: {
+                short: 25,
+                medium: 150,
+                long: 350,
+                extreme: 550,
+            },
+        },
+        shotgunFlechette: {
+            label: 'SR5.Weapon.Range.Category.ShotgunFlechette',
+            ranges: {
+                short: 15,
+                medium: 30,
+                long: 45,
+                extreme: 60,
+            },
+        },
+        shotgunSlug: {
+            label: 'SR5.Weapon.Range.Category.ShotgunSlug',
+            ranges: {
+                short: 10,
+                medium: 40,
+                long: 80,
+                extreme: 150,
+            },
+        },
+        sniperRifle: {
+            label: 'SR5.Weapon.Range.Category.SniperRifle',
+            ranges: {
+                short: 50,
+                medium: 350,
+                long: 800,
+                extreme: 1500,
+            },
+        },
+        sportingRifle: {
+            label: 'SR5.Weapon.Range.Category.SportingRifle',
+            ranges: {
+                short: 50,
+                medium: 250,
+                long: 500,
+                extreme: 750,
+            },
+        },
+        lightMachinegun: {
+            label: 'SR5.Weapon.Range.Category.LightMachinegun',
+            ranges: {
+                short: 25,
+                medium: 200,
+                long: 400,
+                extreme: 800,
+            },
+        },
+        mediumHeavyMachinegun: {
+            label: 'SR5.Weapon.Range.Category.MediumHeavyMachinegun',
+            ranges: {
+                short: 40,
+                medium: 250,
+                long: 750,
+                extreme: 1200,
+            },
+        },
+        assaultCannon: {
+            label: 'SR5.Weapon.Range.Category.AssaultCannon',
+            ranges: {
+                short: 50,
+                medium: 300,
+                long: 750,
+                extreme: 1500,
+            },
+        },
+        grenadeLauncher: {
+            label: 'SR5.Weapon.Range.Category.GrenadeLauncher',
+            ranges: {
+                short: 50,
+                medium: 100,
+                long: 150,
+                extreme: 500,
+            },
+        },
+        missileLauncher: {
+            label: 'SR5.Weapon.Range.Category.MissileLauncher',
+            ranges: {
+                short: 70,
+                medium: 150,
+                long: 450,
+                extreme: 1500,
+            },
+        },
+        bow: {
+            label: 'SR5.Weapon.Range.Category.Bow',
+            ranges: {
+                short: 1,
+                medium: 10,
+                long: 30,
+                extreme: 60,
+                attribute: 'strength',
+            },
+        },
+        lightCrossbow: {
+            label: 'SR5.Weapon.Range.Category.LightCrossbow',
+            ranges: {
+                short: 6,
+                medium: 24,
+                long: 60,
+                extreme: 120,
+            },
+        },
+        mediumCrossbow: {
+            label: 'SR5.Weapon.Range.Category.MediumCrossbow',
+            ranges: {
+                short: 9,
+                medium: 36,
+                long: 90,
+                extreme: 150,
+            },
+        },
+        heavyCrossbow: {
+            label: 'SR5.Weapon.Range.Category.HeavyCrossbow',
+            ranges: {
+                short: 15,
+                medium: 45,
+                long: 120,
+                extreme: 180,
+            },
+        },
+        thrownKnife: {
+            label: 'SR5.Weapon.Range.Category.ThrownKnife',
+            ranges: {
+                short: 1,
+                medium: 2,
+                long: 3,
+                extreme: 5,
+                attribute: 'strength',
+            },
+        },
+        net: {
+            label: 'SR5.Weapon.Range.Category.Net',
+            ranges: {
+                short: 0.5,
+                medium: 1,
+                long: 1.5,
+                extreme: 2.5,
+                attribute: 'strength',
+            },
+        },
+        shuriken: {
+            label: 'SR5.Weapon.Range.Category.Shuriken',
+            ranges: {
+                short: 1,
+                medium: 2,
+                long: 5,
+                extreme: 7,
+                attribute: 'strength',
+            },
+        },
+        standardThrownGrenade: {
+            label: 'SR5.Weapon.Range.Category.StandardThrownGrenade',
+            ranges: {
+                short: 2,
+                medium: 4,
+                long: 6,
+                extreme: 10,
+                attribute: 'strength',
+            },
+        },
+        aerodynamicThrownGrenade: {
+            label: 'SR5.Weapon.Range.Category.AerodynamicThrownGrenade',
+            ranges: {
+                short: 2,
+                medium: 4,
+                long: 8,
+                extreme: 15,
+                attribute: 'strength',
+            },
+        },
+        harpoonGun: {
+            label: 'SR5.Weapon.Range.Category.HarpoonGun',
+            ranges: {
+                short: 5,
+                medium: 20,
+                long: 40,
+                extreme: 60,
+            },
+        },
+        harpoonGunUnderwater: {
+            label: 'SR5.Weapon.Range.Category.HarpoonGunUnderwater',
+            ranges: {
+                short: 6,
+                medium: 24,
+                long: 60,
+                extreme: 120,
+            },
+        },
+        flamethrower: {
+            label: 'SR5.Weapon.Range.Category.Flamethrower',
+            ranges: {
+                short: 15,
+                medium: 20,
+                long: -1,
+                extreme: -1,
+            },
+        },
+        sprayPen: {
+            label: 'SR5.Weapon.Range.Category.SprayPen',
+            ranges: {
+                short: 2,
+                medium: -1,
+                long: -1,
+                extreme: -1,
+            },
+        },
+        carbine: {
+            label: 'SR5.Weapon.Range.Category.Carbine',
+            ranges: {
+                short: 10,
+                medium: 40,
+                long: 80,
+                extreme: 150,
+            },
+        }
+
+    },
+
+    elementTypes: {
+        fire: 'SR5.Element.Fire',
+        cold: 'SR5.Element.Cold',
+        acid: 'SR5.Element.Acid',
+        electricity: 'SR5.Element.Electricity',
+        pollutant: 'SR5.Element.Pollutant',
+        radiation: 'SR5.Element.Radiation',
+        water: 'SR5.Element.Water',
+    },
+
+    armorElementTypes: {
+        acid: 'SR5.Armor.FIELDS.armor.acid.label',
+        cold: 'SR5.Armor.FIELDS.armor.cold.label',
+        electricity: 'SR5.Armor.FIELDS.armor.electricity.label',
+        fire: 'SR5.Armor.FIELDS.armor.fire.label',
+        pollutant: 'SR5.Armor.FIELDS.armor.pollutant.label',
+        radiation: 'SR5.Armor.FIELDS.armor.radiation.label',
+        water: 'SR5.Armor.FIELDS.armor.water.label',
+    },
+
+    armorElementHints: {
+        acid: 'SR5.Armor.FIELDS.armor.acid.hint',
+        cold: 'SR5.Armor.FIELDS.armor.cold.hint',
+        electricity: 'SR5.Armor.FIELDS.armor.electricity.hint',
+        fire: 'SR5.Armor.FIELDS.armor.fire.hint',
+        pollutant: 'SR5.Armor.FIELDS.armor.pollutant.hint',
+        radiation: 'SR5.Armor.FIELDS.armor.radiation.hint',
+        water: 'SR5.Armor.FIELDS.armor.water.hint',
+    },
+
+    armorImmunityTypes: {
+        normal_weapons: 'SR5.Armor.Immunity.NormalWeapons',
+        acid: 'SR5.Element.Acid',
+        cold: 'SR5.Element.Cold',
+        electricity: 'SR5.Element.Electricity',
+        fire: 'SR5.Element.Fire',
+        pollutant: 'SR5.Element.Pollutant',
+        radiation: 'SR5.Element.Radiation',
+        water: 'SR5.Element.Water',
+    },
+
+    spellCategories: {
+        combat: 'SR5.Spell.CatCombat',
+        detection: 'SR5.Spell.CatDetection',
+        health: 'SR5.Spell.CatHealth',
+        illusion: 'SR5.Spell.CatIllusion',
+        manipulation: 'SR5.Spell.CatManipulation',
+    },
+
+    spellTypes: {
+        physical: 'SR5.Spell.TypePhysical',
+        mana: 'SR5.Spell.TypeMana',
+    },
+
+    spellRanges: {
+        touch: 'SR5.Spell.RangeTouch',
+        los: 'SR5.Spell.RangeLos',
+        los_a: 'SR5.Spell.RangeLosA',
+    },
+
+    combatSpellTypes: {
+        direct: 'SR5.Spell.CombatDirect',
+        indirect: 'SR5.Spell.CombatIndirect',
+    },
+
+    detectionSpellTypes: {
+        directional: 'SR5.Spell.DetectionDirectional',
+        psychic: 'SR5.Spell.DetectionPsychic',
+        area: 'SR5.Spell.DetectionArea',
+    },
+
+    illusionSpellTypes: {
+        obvious: 'SR5.Spell.IllusionObvious',
+        realistic: 'SR5.Spell.IllusionRealistic',
+    },
+
+    illusionSpellSenses: {
+        'single-sense': 'SR5.Spell.IllusionSingleSense',
+        'multi-sense': 'SR5.Spell.IllusionMultiSense',
+    },
+
+    ritualSpellTypes: {
+        anchored: 'SR5.Ritual.Anchored',
+        material_link: 'SR5.Ritual.MaterialLink',
+        minion: 'SR5.Ritual.Minion',
+        spell: 'SR5.Ritual.Spell',
+        spotter: 'SR5.Ritual.Spotter',
+    },
+
+    attributeRolls: {
+        composure: 'SR5.RollComposure',
+        lift_carry: 'SR5.RollLiftCarry',
+        judge_intentions: 'SR5.RollJudgeIntentions',
+        memory: 'SR5.RollMemory',
+    },
+
+    /**
+     * Used for complex form targeting options.
+     */
+    matrixTargets: {
+        persona: 'SR5.TargetPersona',
+        device: 'SR5.TargetDevice',
+        file: 'SR5.TargetFile',
+        self: 'SR5.TargetSelf',
+        sprite: 'SR5.TargetSprite',
+        host: 'TYPES.Item.host',
+        ic: 'TYPES.Actor.ic',
+        other: 'SR5.TargetOther',
+    },
+
+    gridCategories: {
+        local: 'SR5.Labels.Matrix.Local',
+        global: 'SR5.Labels.Matrix.Global',
+        public: 'SR5.Labels.Matrix.Public'
+    },
+
+    durations: {
+        instant: 'SR5.DurationInstant',
+        sustained: 'SR5.DurationSustained',
+        permanent: 'SR5.DurationPermanent',
+    },
+
+    weaponCategories: {
+        range: 'SR5.Weapon.Category.Range',
+        melee: 'SR5.Weapon.Category.Melee',
+        thrown: 'SR5.Weapon.Category.Thrown',
+    },
+
+    weaponCliptypes: {
+        removable_clip: 'SR5.Weapon.Cliptype.RemovableClip',
+        break_action: 'SR5.Weapon.Cliptype.BreakAction',
+        belt_fed: 'SR5.Weapon.Cliptype.BeltFed',
+        internal_magazin: 'SR5.Weapon.Cliptype.InternalMagazin',
+        muzzle_loader: 'SR5.Weapon.Cliptype.MuzzleLoader',
+        cylinder: 'SR5.Weapon.Cliptype.Cylinder',
+        drum: 'SR5.Weapon.Cliptype.Drum',
+        bow: 'SR5.Weapon.Cliptype.Bow',
+    },
+
+    weaponRanges: {
+        short: 'SR5.Weapon.Range.Short',
+        medium: 'SR5.Weapon.Range.Medium',
+        long: 'SR5.Weapon.Range.Long',
+        extreme: 'SR5.Weapon.Range.Extreme',
+    },
+
+    qualityTypes: {
+        positive: 'SR5.QualityTypePositive',
+        negative: 'SR5.QualityTypeNegative',
+        lifemodule: 'SR5.QualityTypeLifeModule'
+    },
+
+    adeptPower: {
+        types: {
+            active: 'SR5.AdeptPower.Types.Active',
+            passive: 'SR5.AdeptPower.Types.Passive',
+        },
+    },
+
+    deviceCategories: {
+        device: 'SR5.ItemTypes.Device',
+        commlink: 'SR5.DeviceCatCommlink',
+        cyberdeck: 'SR5.DeviceCatCyberdeck',
+        rcc: 'SR5.DeviceCatRCC',
+        living_persona: 'SR5.LivingPersona',
+        host: 'SR5.ItemTypes.Host',
+    },
+
+    cyberwareGrades: {
+        standard: 'SR5.CyberwareGradeStandard',
+        alpha: 'SR5.CyberwareGradeAlpha',
+        beta: 'SR5.CyberwareGradeBeta',
+        delta: 'SR5.CyberwareGradeDelta',
+        gamma: 'SR5.CyberwareGradeGamma',
+        grey: 'SR5.CyberwareGradeGrey',
+        used: 'SR5.CyberwareGradeUsed',
+    },
+
+    skillTypes: {
+        skill: 'SR5.Skill.Types.Skill',
+        group: 'SR5.Skill.Types.Group',
+        set: 'SR5.Skill.Types.Set'
+    },
+
+    skillCategories: {
+        active: 'SR5.Skill.Category.Active',
+        knowledge: 'SR5.Skill.Category.Knowledge',
+        language: 'SR5.Skill.Category.Language',
+    },
+
+    // Attributes used by knowledge skill types.
+    knowledgeAttributes: {
+        academic: 'logic',
+        interests: 'intuition',
+        professional: 'logic',
+        street: 'intuition'
+    },
+
+    skillKnowledgeTypes: {
+        academic: 'SR5.Skill.KnowledgeType.Academic',
+        professional: 'SR5.Skill.KnowledgeType.Professional',
+        interests: 'SR5.Skill.KnowledgeType.Interests',
+        street: 'SR5.Skill.KnowledgeType.Street',
+    },
+
+    knowledgeSkillCategories: {
+        street: 'SR5.KnowledgeSkillStreet',
+        academic: 'SR5.KnowledgeSkillAcademic',
+        professional: 'SR5.KnowledgeSkillProfessional',
+        interests: 'SR5.KnowledgeSkillInterests',
+    },
+
+    activeSkills: {
+        // Combat Skills
+        archery: 'SR5.Skill.Archery',
+        automatics: 'SR5.Skill.Automatics',
+        blades: 'SR5.Skill.Blades',
+        clubs: 'SR5.Skill.Clubs',
+        exotic_melee_weapon: 'SR5.Skill.ExoticMeleeWeapon',
+        exotic_ranged_weapon: 'SR5.Skill.ExoticRangedWeapon',
+        heavy_weapons: 'SR5.Skill.HeavyWeapons',
+        longarms: 'SR5.Skill.Longarms',
+        pistols: 'SR5.Skill.Pistols',
+        throwing_weapons: 'SR5.Skill.ThrowingWeapons',
+        unarmed_combat: 'SR5.Skill.UnarmedCombat',
+
+        // Physical Skills
+        disguise: 'SR5.Skill.Disguise',
+        diving: 'SR5.Skill.Diving',
+        escape_artist: 'SR5.Skill.EscapeArtist',
+        flight: 'SR5.Skill.Flight',
+        free_fall: 'SR5.Skill.FreeFall',
+        gymnastics: 'SR5.Skill.Gymnastics',
+        palming: 'SR5.Skill.Palming',
+        perception: 'SR5.Skill.Perception',
+        running: 'SR5.Skill.Running',
+        sneaking: 'SR5.Skill.Sneaking',
+        survival: 'SR5.Skill.Survival',
+        swimming: 'SR5.Skill.Swimming',
+        tracking: 'SR5.Skill.Tracking',
+
+        // Social Skills
+        con: 'SR5.Skill.Con',
+        etiquette: 'SR5.Skill.Etiquette',
+        impersonation: 'SR5.Skill.Impersonation',
+        instruction: 'SR5.Skill.Instruction',
+        intimidation: 'SR5.Skill.Intimidation',
+        leadership: 'SR5.Skill.Leadership',
+        negotiation: 'SR5.Skill.Negotiation',
+        performance: 'SR5.Skill.Performance',
+
+        // Magic Skills
+        alchemy: 'SR5.Skill.Alchemy',
+        arcana: 'SR5.Skill.Arcana',
+        artificing: 'SR5.Skill.Artificing',
+        assensing: 'SR5.Skill.Assensing',
+        astral_combat: 'SR5.Skill.AstralCombat',
+        banishing: 'SR5.Skill.Banishing',
+        binding: 'SR5.Skill.Binding',
+        counterspelling: 'SR5.Skill.Counterspelling',
+        disenchanting: 'SR5.Skill.Disenchanting',
+        ritual_spellcasting: 'SR5.Skill.RitualSpellcasting',
+        spellcasting: 'SR5.Skill.Spellcasting',
+        summoning: 'SR5.Skill.Summoning',
+
+        // Resonance Skills
+        compiling: 'SR5.Skill.Compiling',
+        decompiling: 'SR5.Skill.Decompiling',
+        registering: 'SR5.Skill.Registering',
+
+        // Technical Skills
+        aeronautics_mechanic: 'SR5.Skill.AeronauticsMechanic',
+        automotive_mechanic: 'SR5.Skill.AutomotiveMechanic',
+        industrial_mechanic: 'SR5.Skill.IndustrialMechanic',
+        nautical_mechanic: 'SR5.Skill.NauticalMechanic',
+        animal_handling: 'SR5.Skill.AnimalHandling',
+        armorer: 'SR5.Skill.Armorer',
+        artisan: 'SR5.Skill.Artisan',
+        biotechnology: 'SR5.Skill.Biotechnology',
+        chemistry: 'SR5.Skill.Chemistry',
+        computer: 'SR5.Skill.Computer',
+        cybercombat: 'SR5.Skill.Cybercombat',
+        cybertechnology: 'SR5.Skill.Cybertechnology',
+        demolitions: 'SR5.Skill.Demolitions',
+        electronic_warfare: 'SR5.Skill.ElectronicWarfare',
+        first_aid: 'SR5.Skill.FirstAid',
+        forgery: 'SR5.Skill.Forgery',
+        hacking: 'SR5.Skill.Hacking',
+        hardware: 'SR5.Skill.Hardware',
+        locksmith: 'SR5.Skill.Locksmith',
+        medicine: 'SR5.Skill.Medicine',
+        navigation: 'SR5.Skill.Navigation',
+        software: 'SR5.Skill.Software',
+
+        // Vehicle Skills
+        gunnery: 'SR5.Skill.Gunnery',
+        pilot_aerospace: 'SR5.Skill.PilotAerospace',
+        pilot_aircraft: 'SR5.Skill.PilotAircraft',
+        pilot_walker: 'SR5.Skill.PilotWalker',
+        pilot_ground_craft: 'SR5.Skill.PilotGroundCraft',
+        pilot_watercraft: 'SR5.Skill.PilotWatercraft',
+        pilot_exotic_vehicle: 'SR5.Skill.PilotExoticVehicle',
+    },
+
+    /**
+     * Some skills are created on the fly and don't exist on all actors.
+     * These values are used for those.
+     */
+    activeSkillAttribute: {
+        flight: 'agility'
+    },
+
+    actionTypes: {
+        none: 'SR5.ActionType.None',
+        free: 'SR5.ActionType.Free',
+        simple: 'SR5.ActionType.Simple',
+        complex: 'SR5.ActionType.Complex',
+        interrupt: 'SR5.ActionType.Interrupt',
+        varies: 'SR5.ActionType.Varies',
+    },
+
+    // Use within action damage calculation (base <operator> attribute) => value
+    actionDamageFormulaOperators: {
+        add: '+',
+        subtract: '-',
+        multiply: '*',
+        divide: '/'
+    },
+
+    // Map all Shadowrun.ActionCategories to their matching labels.
+    // For more information around action categories, see type documentation.
+    actionCategories: {
+        'addiction_mental': "SR5.ActionCategory.AddictionMental",
+        'addiction_physical': "SR5.ActionCategory.AddictionPhysical",
+        'addiction': "SR5.ActionCategory.Addiction",
+        'attack_matrix': "SR5.ActionCategory.AttackMatrix",
+        'attack_melee': "SR5.ActionCategory.AttackMelee",
+        'attack_ranged': "SR5.ActionCategory.AttackRanged",
+        'attack_thrown': "SR5.ActionCategory.AttackThrown",
+        'attack': "SR5.ActionCategory.Attack",
+        'brute_force': "SR5.ActionCategory.BruteForce",
+        "climbing": "SR5.ActionCategory.Climbing",
+        'compiling': "SR5.ActionCategory.Compiling",
+        'complex_form': "SR5.ActionCategory.ComplexForm",
+        'defense': "SR5.ActionCategory.Defense",
+        'defense_matrix': "SR5.ActionCategory.DefenseMatrix",
+        'defense_suppression': "SR5.ActionCategory.DefenseSuppression",
+        'drain': "SR5.ActionCategory.Drain",
+        'fade': "SR5.ActionCategory.Fade",
+        'hack_on_the_fly': "SR5.ActionCategory.HackOnTheFly",
+        'magic': "SR5.ActionCategory.Magic",
+        'matrix': 'SR5.ActionCategory.Matrix',
+        'recovery_physical': "SR5.ActionCategory.RecoveryPhysical",
+        'recovery_stun': "SR5.ActionCategory.RecoveryStun",
+        'recovery': "SR5.ActionCategory.Recovery",
+        'resist_biofeedback': "SR5.ActionCategory.ResistBiofeedback",
+        'resist_disease': "SR5.ActionCategory.ResistDisease",
+        'resist_toxin': "SR5.ActionCategory.ResistToxin",
+        'resist_matrix': "SR5.ActionCategory.ResistMatrix",
+        'resist': "SR5.ActionCategory.Resist",
+        'resonance': "SR5.ActionCategory.Resonance",
+        'rigging': "SR5.ActionCategory.Rigging",
+        'social': 'SR5.ActionCategory.Social',
+        'spell_combat': "SR5.ActionCategory.SpellCombat",
+        'spell_detection': "SR5.ActionCategory.SpellDetection",
+        'spell_healing': "SR5.ActionCategory.SpellHealing",
+        'spell_illusion': "SR5.ActionCategory.SpellIllusion",
+        'spell_manipulation': "SR5.ActionCategory.SpellManipulation",
+        'spell_ritual': "SR5.ActionCategory.SpellRitual",
+        'summoning': "SR5.ActionCategory.Summoning",
+    },
+
+    matrixAttributes: {
+        attack: 'SR5.MatrixAttrAttack',
+        sleaze: 'SR5.MatrixAttrSleaze',
+        data_processing: 'SR5.MatrixAttrDataProc',
+        firewall: 'SR5.MatrixAttrFirewall'
+    },
+
+    initiativeCategories: {
+        meatspace: 'SR5.InitCatMeatspace',
+        astral: 'SR5.InitCatAstral',
+        matrix: 'SR5.InitCatMatrix',
+    },
+
+    // Gear modification types. :) Not modifiers.
+    modificationTypes: {
+        weapon: 'SR5.Weapon.Weapon',
+        armor: 'SR5.Armor.label',
+        ware: 'SR5.ModificationTypes.Ware',
+        vehicle: 'SR5.Vehicle.Vehicle',
+        drone: 'SR5.Vehicle.Drone'
+    },
+
+    mountPoints: {
+        barrel: 'SR5.Barrel',
+        under: 'SR5.UnderBarrel',
+        stock: 'SR5.Stock',
+        top: 'SR5.Top',
+        side: 'SR5.Side',
+        internal: 'SR5.Internal',
+    },
+
+    modificationCategories: {
+        body: 'SR5.Vehicle.ModificationCategoryTypes.body',
+        cosmetic: 'SR5.Vehicle.ModificationCategoryTypes.cosmetic',
+        electromagnetic: 'SR5.Vehicle.ModificationCategoryTypes.electromagnetic',
+        powertrain: 'SR5.Vehicle.ModificationCategoryTypes.powertrain',
+        protection: 'SR5.Vehicle.ModificationCategoryTypes.protection',
+        weapons: 'SR5.Vehicle.ModificationCategoryTypes.weapons',
+    },
+
+    lifestyleTypes: {
+        street: 'SR5.LifestyleStreet',
+        squatter: 'SR5.LifestyleSquatter',
+        low: 'SR5.LifestyleLow',
+        medium: 'SR5.LifestyleMiddle',
+        high: 'SR5.LifestyleHigh',
+        luxury: 'SR5.LifestyleLuxury',
+        other: 'SR5.LifestyleOther',
+    },
+
+    /**
+     * Modification types used for actions and general success tests, based on actors.
+     *
+     * These are meant to be used with the Modifiers and SituationModifier classes and SR5Actor.modifiers.totalFor('wounds').
+     *
+     * There are additional item based modifiers that aren't present here.
+     *
+     * NOTE: Adding a modifier type here will directly affect modifiers shown on item actions for user selection.
+     */
+    modifierTypes: {
+        armor: 'SR5.ModifierTypes.Armor',
+        composure: 'SR5.ModifierTypes.Composure',
+        defense: 'SR5.ModifierTypes.Defense',
+        multi_defense: 'SR5.ModifierTypes.DefenseMulti',
+        drain: 'SR5.ModifierTypes.Drain',
+        environmental: 'SR5.ModifierTypes.Environmental',
+        'environmental.light': 'SR5.ModifierTypes.EnvironmentalLight',
+        'environmental.visibility': 'SR5.ModifierTypes.EnvironmentalVisibility',
+        'environmental.wind': 'SR5.ModifierTypes.EnvironmentalWind',
+        'environmental.range': 'SR5.ModifierTypes.EnvironmentalRange',
+        background_count: 'SR5.ModifierTypes.BackgroundCount',
+        noise: 'SR5.ModifierTypes.Noise',
+        fade: 'SR5.ModifierTypes.Fade',
+        global: 'SR5.ModifierTypes.Global',
+        judge_intentions: 'SR5.ModifierTypes.JudgeIntentions',
+        lift_carry: 'SR5.ModifierTypes.LiftCarry',
+        memory: 'SR5.ModifierTypes.Memory',
+        soak: 'SR5.ModifierTypes.Soak',
+        wounds: 'SR5.ModifierTypes.Wounds',
+        recoil: 'SR5.ModifierTypes.Recoil',
+    },
+
+    /**
+     * Define here what kind of active test is to be used for the different weapon categories as a main action test.
+     */
+    weaponCategoryActiveTests: {
+        'range': 'RangedAttackTest',
+        'melee': 'MeleeAttackTest',
+        'thrown': 'ThrownAttackTest'
+    },
+
+    /**
+     * When casting tests from these item types, use these tests as active tests
+     */
+    activeTests: {
+        'spell': 'SpellCastingTest',
+        'ritual': 'RitualSpellcastingTest',
+        'complex_form': 'ComplexFormTest'
+    },
+
+    /**
+     * Using different active test details should result in these opposed tests
+     *
+     * Structure: {
+     *  [item.type]: {[item.system.type]}: 'OpposedTest'
+     * }
+     */
+    opposedTests: {
+        'spell': {
+            'combat': {
+                'direct': 'CombatSpellDefenseTest',
+                'indirect': 'PhysicalDefenseTest'
+            }
+        }
+    },
+
+    /**
+     * Using different resist tests for the opposing depending on active tests details
+     *  Structure: {
+     *  [item.type]: {[item.system.type]}: 'OpposedTest'
+     * }
+     */
+    opposedResistTests: {
+        'spell': {
+            'combat': {
+                'direct': '',
+                'indirect': 'PhysicalResistTest'
+            }
+        }
+    },
+
+    /**
+     * When a test is cast an active test this defines what tests should follow that tests completion
+     */
+    followedTests: {
+        'SpellCastingTest': 'DrainTest'
+    },
+
+    // When a firemode with suppression is used, this test should defend against it.
+    suppressionDefenseTest: 'SuppressionDefenseTest',
+
+    /**
+     * Names of FoundryVTT packs supplied by the system to be used as action sources.
+     */
+    packNames: {
+        // packNames keys should match the name of the FLAG
+        'GeneralActionsPack': 'sr5e-general-actions',
+        'MatrixActionsPack': 'sr5e-matrix-actions',
+        'ICActionsPack': 'sr5e-ic-actions',
+        'SkillsPack': 'sr5e-skills',
+        'SkillGroupsPack': 'sr5e-skill-groups',
+        'SkillSetsPack': 'sr5e-skill-sets',
+    },
+
+    programTypes: {
+        common_program: 'SR5.CommonProgram',
+        hacking_program: 'SR5.HackingProgram',
+        agent: 'SR5.Agent',
+    },
+
+    icTypes: {
+        acid: "SR5.IC.Types.Acid",
+        binder: "SR5.IC.Types.Binder",
+        black_ic: "SR5.IC.Types.BlackIC",
+        blaster: "SR5.IC.Types.Blaster",
+        bloodhound: "SR5.IC.Types.Bloodhound",
+        blue_goo: "SR5.IC.Types.BlueGoo",
+        catapult: "SR5.IC.Types.Catapult",
+        crash: "SR5.IC.Types.Crash",
+        flicker: "SR5.IC.Types.Flicker",
+        jammer: "SR5.IC.Types.Jammer",
+        killer: "SR5.IC.Types.Killer",
+        marker: "SR5.IC.Types.Marker",
+        patrol: "SR5.IC.Types.Patrol",
+        probe: "SR5.IC.Types.Probe",
+        scramble: "SR5.IC.Types.Scramble",
+        shocker: "SR5.IC.Types.Shocker",
+        sleuther: "SR5.IC.Types.Sleuther",
+        sparky: "SR5.IC.Types.Sparky",
+        tar_baby: "SR5.IC.Types.TarBaby",
+        track: "SR5.IC.Types.Track"
+    },
+
+    spiritTypes: {
+        abomination: 'SR5.Spirit.Types.Abomination',
+        air: 'SR5.Spirit.Types.Air',
+        aircraft: 'SR5.Spirit.Types.Aircraft',
+        airwave: 'SR5.Spirit.Types.Airwave',
+        ally: 'SR5.Spirit.Types.Ally',
+        anansi: 'SR5.Spirit.Types.Anansi',
+        anarch: 'SR5.Spirit.Types.Anarch',
+        arboreal: 'SR5.Spirit.Types.Arboreal',
+        automotive: 'SR5.Spirit.Types.Automotive',
+        barren: 'SR5.Spirit.Types.Barren',
+        beasts: 'SR5.Spirit.Types.Beasts',
+        blackjack: 'SR5.Spirit.Types.Blackjack',
+        blade_summoned: 'SR5.Spirit.Types.BladeSummoned',
+        blood: 'SR5.Spirit.Types.Blood',
+        blood_shade: 'SR5.Spirit.Types.BloodShade',
+        boggle: 'SR5.Spirit.Types.Boggle',
+        bone: 'SR5.Spirit.Types.Bone',
+        bugul: 'SR5.Spirit.Types.Bugul',
+        carcass: 'SR5.Spirit.Types.Carcass',
+        caretaker: 'SR5.Spirit.Types.Caretaker',
+        ceramic: 'SR5.Spirit.Types.Ceramic',
+        chindi: 'SR5.Spirit.Types.Chindi',
+        corps_cadavre: 'SR5.Spirit.Types.CorpsCadavre',
+        corpse: 'SR5.Spirit.Types.Corpse',
+        crawler: 'SR5.Spirit.Types.Crawler',
+        croki: 'SR5.Spirit.Types.Croki',
+        detritus: 'SR5.Spirit.Types.Detritus',
+        duende: 'SR5.Spirit.Types.Duende',
+        earth: 'SR5.Spirit.Types.Earth',
+        ejerian: 'SR5.Spirit.Types.Ejerian',
+        elvar: 'SR5.Spirit.Types.Elvar',
+        energy: 'SR5.Spirit.Types.Energy',
+        erinyes: 'SR5.Spirit.Types.Erinyes',
+        fire: 'SR5.Spirit.Types.Fire',
+        ghasts: 'SR5.Spirit.Types.Ghasts',
+        green_man: 'SR5.Spirit.Types.GreenMan',
+        gremlin: 'SR5.Spirit.Types.Gremlin',
+        guardian: 'SR5.Spirit.Types.Guardian',
+        guidance: 'SR5.Spirit.Types.Guidance',
+        gum_toad: 'SR5.Spirit.Types.GumToad',
+        homunculus: 'SR5.Spirit.Types.Homunculus',
+        hopper: 'SR5.Spirit.Types.Hopper',
+        horror_show: 'SR5.Spirit.Types.HorrorShow',
+        imp: 'SR5.Spirit.Types.Imp',
+        jarl: 'SR5.Spirit.Types.Jarl',
+        kappa: 'SR5.Spirit.Types.Kappa',
+        kokopelli: 'SR5.Spirit.Types.Kokopelli',
+        man: 'SR5.Spirit.Types.Man',
+        master_shedim: 'SR5.Spirit.Types.MasterShedim',
+        metal: 'SR5.Spirit.Types.Metal',
+        morbi: 'SR5.Spirit.Types.Morbi',
+        muse: 'SR5.Spirit.Types.Muse',
+        nightmare: 'SR5.Spirit.Types.Nightmare',
+        nocnitsa: 'SR5.Spirit.Types.Nocnitsa',
+        noxious: 'SR5.Spirit.Types.Noxious',
+        nuclear: 'SR5.Spirit.Types.Nuclear',
+        nymph: 'SR5.Spirit.Types.Nymph',
+        palefire: 'SR5.Spirit.Types.Palefire',
+        phantom: 'SR5.Spirit.Types.Phantom',
+        plague: 'SR5.Spirit.Types.Plague',
+        plant: 'SR5.Spirit.Types.Plant',
+        preta: 'SR5.Spirit.Types.Preta',
+        queen: 'SR5.Spirit.Types.Queen',
+        rot: 'SR5.Spirit.Types.Rot',
+        scout: 'SR5.Spirit.Types.Scout',
+        shade: 'SR5.Spirit.Types.Shade',
+        shedim: 'SR5.Spirit.Types.Shedim',
+        ship: 'SR5.Spirit.Types.Ship',
+        sludge: 'SR5.Spirit.Types.Sludge',
+        soldier: 'SR5.Spirit.Types.Soldier',
+        stabber: 'SR5.Spirit.Types.Stabber',
+        succubus: 'SR5.Spirit.Types.Succubus',
+        task: 'SR5.Spirit.Types.Task',
+        train: 'SR5.Spirit.Types.Train',
+        tsuchigumo_warrior: 'SR5.Spirit.Types.TsuchigumoWarrior',
+        tungak: 'SR5.Spirit.Types.Tungak',
+        unbreakable: 'SR5.Spirit.Types.Unbreakable',
+        vrygoths: 'SR5.Spirit.Types.Vrygoths',
+        vucub_caquix: 'SR5.Spirit.Types.VucubCaquix',
+        watcher: 'SR5.Spirit.Types.Watcher',
+        water: 'SR5.Spirit.Types.Water',
+        worker: 'SR5.Spirit.Types.Worker',
+        wraith: 'SR5.Spirit.Types.Wraith',
+    },
+
+    spriteTypes: {
+        companion: 'SR5.Sprite.Types.Companion',
+        courier: 'SR5.Sprite.Types.Courier',
+        crack: 'SR5.Sprite.Types.Crack',
+        data: 'SR5.Sprite.Types.Data',
+        fault: 'SR5.Sprite.Types.Fault',
+        generalist: 'SR5.Sprite.Types.Generalist',
+        machine: 'SR5.Sprite.Types.Machine',
+    },
+
+    /**
+     * Actor types that can be called in using the call in action type and be
+     * set in it's system.action_type property.
+     */
+    callInActorTypes: {
+        'spirit': 'TYPES.Actor.spirit',
+        'sprite': 'TYPES.Actor.sprite'
+    },
+
+    critterPower: {
+        categories: {
+            mundane: 'SR5.CritterPower.Categories.Mundane',
+            paranormal: 'SR5.CritterPower.Categories.Paranormal',
+            free_spirit: 'SR5.CritterPower.Categories.FreeSpirit',
+            emergent: 'SR5.CritterPower.Categories.Emergent',
+            shapeshifter: 'SR5.CritterPower.Categories.Shapeshifter',
+            drake: 'SR5.CritterPower.Categories.Drake',
+            echoes: 'SR5.CritterPower.Categories.Echoes',
+            weakness: 'SR5.CritterPower.Categories.Weakness',
+            paranormal_infected: 'SR5.CritterPower.Categories.ParanormalInfected',
+        },
+        types: {
+            mana: 'SR5.CritterPower.Types.Mana',
+            physical: 'SR5.CritterPower.Types.Physical',
+        },
+        ranges: {
+            los: 'SR5.CritterPower.Ranges.LineOfSight',
+            self: 'SR5.CritterPower.Ranges.Self',
+            touch: 'SR5.CritterPower.Ranges.Touch',
+            los_a: 'SR5.CritterPower.Ranges.LineOfSightArea',
+            special: 'SR5.CritterPower.Ranges.Special',
+        },
+        durations: {
+            always: 'SR5.CritterPower.Durations.Always',
+            instant: 'SR5.CritterPower.Durations.Instant',
+            sustained: 'SR5.CritterPower.Durations.Sustained',
+            permanent: 'SR5.CritterPower.Durations.Permanent',
+            special: 'SR5.CritterPower.Durations.Special',
+        },
+        optional: {
+            standard: 'SR5.CritterPower.Optional.Standard',
+            enabled_option: 'SR5.CritterPower.Optional.EnabledOption',
+            disabled_option: 'SR5.CritterPower.Optional.DisabledOption',
+        },
+    },
+
+    complexForm: {
+        durations: {
+            immediate: 'SR5.ComplexForm.Durations.Immediate',
+            sustained: 'SR5.ComplexForm.Durations.Sustained',
+            permanent: 'SR5.ComplexForm.Durations.Permanent',
+        }
+    },
+
+    spritePower: {
+        durations: {
+            always: 'SR5.SpritePower.Durations.Always',
+            instant: 'SR5.SpritePower.Durations.Instant',
+            sustained: 'SR5.SpritePower.Durations.Sustained',
+            permanent: 'SR5.SpritePower.Durations.Permanent',
+            special: 'SR5.SpritePower.Durations.Special',
+        },
+        optional: {
+            standard: 'SR5.SpritePower.Optional.Standard',
+            enabled_option: 'SR5.SpritePower.Optional.EnabledOption',
+            disabled_option: 'SR5.SpritePower.Optional.DisabledOption',
+        },
+    },
+
+    vehicle: {
+        types: {
+            air: 'SR5.Vehicle.Types.Air',
+            aerospace: 'SR5.Vehicle.Types.Aerospace',
+            ground: 'SR5.Vehicle.Types.Ground',
+            water: 'SR5.Vehicle.Types.Water',
+            walker: 'SR5.Vehicle.Types.Walker',
+            exotic: 'SR5.Vehicle.Types.Exotic',
+        },
+        categories: {
+            micro: 'SR5.Vehicle.Categories.Micro',
+            mini: 'SR5.Vehicle.Categories.Mini',
+            small: 'SR5.Vehicle.Categories.Small',
+            medium: 'SR5.Vehicle.Categories.Medium',
+            large: 'SR5.Vehicle.Categories.Large',
+            huge: 'SR5.Vehicle.Categories.Huge',
+            anthro: 'SR5.Vehicle.Categories.Anthro',
+            missile: 'SR5.Vehicle.Categories.Missile',
+        },
+        stats: {
+            handling: 'SR5.Vehicle.Stats.Handling',
+            off_road_handling: 'SR5.Vehicle.Stats.OffRoadHandling',
+            speed: 'SR5.Vehicle.Stats.Speed',
+            off_road_speed: 'SR5.Vehicle.Stats.OffRoadSpeed',
+            acceleration: 'SR5.Vehicle.Stats.Acceleration',
+            off_road_acceleration: 'SR5.Vehicle.Stats.OffRoadAcceleration',
+            pilot: 'SR5.Vehicle.Stats.Pilot',
+            sensor: 'SR5.Vehicle.Stats.Sensor',
+            seats: 'SR5.Vehicle.Stats.Seats'
+        },
+        control_modes: {
+            manual: 'SR5.Vehicle.ControlModes.Manual',
+            remote: 'SR5.Vehicle.ControlModes.Remote',
+            rigger: 'SR5.Vehicle.ControlModes.Rigger',
+            autopilot: 'SR5.Vehicle.ControlModes.Autopilot',
+        },
+        environments: {
+            speed: 'SR5.Vehicle.Environments.Speed',
+            handling: 'SR5.Vehicle.Environments.Handling',
+        },
+    },
+
+    ic: {
+        types: {
+            acid: "SR5.IC.Types.Acid",
+            binder: "SR5.IC.Types.Binder",
+            black_ic: "SR5.IC.Types.BlackIC",
+            blaster: "SR5.IC.Types.Blaster",
+            bloodhound: "SR5.IC.Types.Bloodhound",
+            blue_goo: "SR5.IC.Types.BlueGoo",
+            catapult: "SR5.IC.Types.Catapult",
+            crash: "SR5.IC.Types.Crash",
+            flicker: "SR5.IC.Types.Flicker",
+            jammer: "SR5.IC.Types.Jammer",
+            killer: "SR5.IC.Types.Killer",
+            marker: "SR5.IC.Types.Marker",
+            patrol: "SR5.IC.Types.Patrol",
+            probe: "SR5.IC.Types.Probe",
+            scramble: "SR5.IC.Types.Scramble",
+            shocker: "SR5.IC.Types.Shocker",
+            sleuther: "SR5.IC.Types.Sleuther",
+            sparky: "SR5.IC.Types.Sparky",
+            tar_baby: "SR5.IC.Types.TarBaby",
+            track: "SR5.IC.Types.Track"
+        }
+    },
+
+    character: {
+        types: {
+            human: 'SR5.Character.Types.Human',
+            elf: 'SR5.Character.Types.Elf',
+            ork: 'SR5.Character.Types.Ork',
+            dwarf: 'SR5.Character.Types.Dwarf',
+            troll: 'SR5.Character.Types.Troll',
+        },
+    },
+
+    /**
+     * The available range weapon modes for to SR5#424
+     *
+     * These are the mode selectors on the weapon. The term 'fire mode'
+     * is only used to describe as the combination of weapon mode and action
+     * used, causing a specific fire mode.
+     *
+     * NOTE: This list is also used for sorting order of ranged weapon mode.
+     *       Alter it with care.
+     */
+    rangeWeaponMode: [
+        'single_shot',
+        'semi_auto',
+        'burst_fire',
+        'full_auto'
+    ],
+
+    rangeWeaponModeLabel: {
+        'single_shot': 'SR5.Weapon.Mode.Short.SingleShot',
+        'semi_auto': 'SR5.Weapon.Mode.Short.SemiAuto',
+        'burst_file': 'SR5.Weapon.Mode.Short.BurstFire',
+        'full_auto': 'SR5.Weapon.Mode.Short.FullAuto'
+    },
+
+    wirelessModes: {
+        'online': 'SR5.WirelessOnline',
+        'silent': 'SR5.RunningSilent',
+        'offline': 'SR5.WirelessOffline',
+        'none': 'SR5.WirelessUnavailable'
+    },
+
+    /**
+     * The preconfigured default Shadowrun firemodes according to SR5#180
+     *
+     * These are separate from ranged weapon modes but depend on the selected
+     * ranged weapon mode.
+     */
+    fireModes: [
+        {
+            label: "SR5.Weapon.Mode.Full.SingleShot",
+            value: 1,
+            recoil: false,
+            defense: 0,
+            suppression: false,
+            action: 'simple',
+            mode: 'single_shot'
+        },
+        {
+            label: "SR5.Weapon.Mode.Full.SemiAutoShort",
+            value: 1,
+            recoil: true,
+            defense: 0,
+            suppression: false,
+            action: 'simple',
+            mode: 'semi_auto'
+        },
+        {
+            label: "SR5.Weapon.Mode.Full.SemiAutoBurst",
+            value: 3,
+            recoil: true,
+            defense: -2,
+            suppression: false,
+            action: 'complex',
+            mode: 'semi_auto'
+        },
+
+        {
+            label: "SR5.Weapon.Mode.Full.BurstFire",
+            value: 3,
+            recoil: true,
+            defense: -2,
+            suppression: false,
+            action: 'simple',
+            mode: 'burst_fire'
+        },
+        {
+            label: "SR5.Weapon.Mode.Full.BurstFireLong",
+            value: 6,
+            recoil: true,
+            defense: -5,
+            suppression: false,
+            action: 'complex',
+            mode: 'burst_fire',
+        },
+        {
+            label: "SR5.Weapon.Mode.Full.FullAutoShort",
+            value: 6,
+            recoil: true,
+            defense: -5,
+            suppression: false,
+            action: 'simple',
+            mode: 'full_auto'
+        },
+        {
+            label: 'SR5.Weapon.Mode.Full.FullAutoLong',
+            value: 10,
+            recoil: true,
+            defense: -9,
+            suppression: false,
+            action: 'complex',
+            mode: 'full_auto'
+        },
+        {
+            label: 'SR5.Weapon.Mode.Full.Suppressing',
+            value: 20,
+            recoil: false,
+            defense: 0,
+            suppression: true,
+            action: 'complex',
+            mode: 'full_auto'
+        }
+    ],
+
+    /**
+     * Active/AdvancedEffect apply To types and their labels.
+     *
+     * actor is the default Foundry apply to type of ActiveEffects and will be affect actor data.
+     */
+    effectApplyTo: {
+        'actor': 'SR5.FOUNDRY.Actor',
+        // 'item': 'SR5.FOUNDRY.Item', // Disabled, as systems nested item approach brings issues.
+        'targeted_actor': 'SR5.ActiveEffect.ApplyTos.TargetedActor',
+        'test_all': 'SR5.Test',
+        'test_item': 'SR5.ActiveEffect.ApplyTos.TestItem',
+        'test_target': 'SR5.ActiveEffect.ApplyTos.TestTargetingThisActor',
+        'modifier': 'SR5.Modifier'
+    },
+
+    effectSelectionModes: {
+        'include': 'SR5.ActiveEffect.SelectionModes.Include',
+        'exclude': 'SR5.ActiveEffect.SelectionModes.Exclude',
+    },
+
+    effectFilterTypes: {
+        'tests': 'SR5.ActiveEffect.FilterTypes.Tests',
+        'categories': 'SR5.ActiveEffect.FilterTypes.Categories',
+        'skills': 'SR5.ActiveEffect.FilterTypes.Skills',
+        'attributes': 'SR5.ActiveEffect.FilterTypes.Attributes',
+        'limits': 'SR5.ActiveEffect.FilterTypes.Limits',
+    },
+
+    // Combat duration expiry trigger choices (maps to native duration.expiry values).
+    effectExpiryTriggers: {
+        'combatStart':      'SR5.ActiveEffect.ExpiryTriggers.CombatStart',
+        'combatEnd':        'SR5.ActiveEffect.ExpiryTriggers.CombatEnd',
+        'roundStart':       'SR5.ActiveEffect.ExpiryTriggers.TurnStart',
+        'roundEnd':         'SR5.ActiveEffect.ExpiryTriggers.TurnEnd',
+        'sr5MyActionStart': 'SR5.ActiveEffect.ExpiryTriggers.MyActionStart',
+        'sr5MyActionEnd':   'SR5.ActiveEffect.ExpiryTriggers.MyActionEnd',
+    },
+
+    itemCategoryIconOverrides: {
+        action: {},
+        adept_power: {},
+        ammo: {
+            'ammo': '',
+            'arrow': '',
+            'bola': '',
+            'bolt': '',
+            'grenade': '',
+            'micro-torpedo': '',
+            'minigrenade': '',
+            'missile': '',
+            'rocket': '',
+            'torpedo-grenade': ''
+        },
+        armor: {
+            'armor': '',
+            'cloaks': '',
+            'clothing': '',
+            'high-fashion-armor-clothing': '',
+            'specialty-armor': ''
+        },
+        bioware: {
+            'basic': 'bioware/bioware',
+            'bio-weapons': '',
+            'biosculpting': '',
+            'chemical-gland-modifications': '',
+            'complimentary-genetics': '',
+            'cosmetic-bioware': '',
+            'cultured': '',
+            'environmental-microadaptation': '',
+            'exotic-metaglands': '',
+            'genetic-restoration': '',
+            'immunization': '',
+            'orthoskin-upgrades': '',
+            'phenotype-adjustment': 'bioware/biosculpting',
+            'symbionts': 'bioware/cultured',
+            'transgenic-alteration': 'bioware/transgenic-alteration',
+            'transgenics': ''
+        },
+        character: {
+            'dracoforms': 'critter/dracoforms',
+            'extraplanar-travelers': 'critter/extraplanar-travelers',
+            'infected': 'critter/infected',
+            'mundane-critters': 'critter/mundane-critters',
+            'mutant-critters': 'critter/mutant-critters',
+            'paranormal-critters': 'critter/paranormal-critters',
+            'protosapients': 'critter/protosapients',
+            'technocritters': 'critter/technocritters',
+            'toxic-critters': 'critter/toxic-critters',
+            'warforms': 'critter/warforms',
+        },
+        complex_form: {},
+        contact: {},
+        critter_power: {
+            'mana': '',
+            'physical': 'critter_power/critter_power'
+        },
+        cyberware: {
+            'auto-injector-mods': '',
+            'bodyware': '',
+            'cosmetic-enhancement': 'bioware/cosmetic-bioware',
+            'cyber-implant-weapon': '',
+            'cyber-implant-weapon-accessory': '',
+            'cyberlimb': '',
+            'cyberlimb-accessory': '',
+            'cyberlimb-enhancement': '',
+            'cybersuite': '',
+            'earware': '',
+            'eyeware': '',
+            'hard-nanoware': '',
+            'headware': 'cyberware/cyberware',
+            'nanocybernetics': 'cyberware/hard-nanoware',
+            'soft-nanoware': 'cyberware/hard-nanoware',
+            'special-biodrone-cyberware': ''
+        },
+        device: {
+            'commlink': 'device',
+            'cyberdeck': '',
+            'rcc': ''
+        },
+        echo: {},
+        equipment: {
+            'alchemical-tools': '',
+            'appearance-modification': '',
+            'armor-enhancements': '',
+            'audio-devices': '',
+            'audio-enhancements': '',
+            'autosofts': 'equipment/software',
+            'biotech': '',
+            'booster-chips': '',
+            'breaking-and-entering-gear': '',
+            'btls': '',
+            'chemicals': '',
+            'commlink-accessories': '',
+            'commlink-apps': 'equipment/software',
+            'commlink-cyberdeck-form-factors': '',
+            'communications-and-countermeasures': 'equipment/pi-tac',
+            'contracts-upkeep': '',
+            'critter-gear': '',
+            'currency': '',
+            'custom-cyberdeck-attributes': '',
+            'cyberdeck-modules': '',
+            'cyberterminals': 'equipment/pi-tac',
+            'disguises': 'equipment/appearance-modification',
+            'drug-grades': '',
+            'drugs': '',
+            'electronic-accessories': '',
+            'electronic-modification': '',
+            'electronic-parts': '',
+            'electronics-accessories': '',
+            'entertainment': '',
+            'explosives': '',
+            'extraction-devices': '',
+            'foci': '',
+            'food': '',
+            'formulae': '',
+            'grapple-gun': '',
+            'hard-nanoware': 'cyberware/hard-nanoware',
+            'housewares': '',
+            'id-credsticks': '',
+            'magical-compounds': '',
+            'magical-supplies': '',
+            'matrix-accessories': '',
+            'metatype-specific': '',
+            'miscellany': '',
+            'musical-instruments': '',
+            'nanogear': 'cyberware/hard-nanoware',
+            'paydata': '',
+            'pi-tac': '',
+            'pi-tac-programs': 'equipment/software',
+            'printing': '',
+            'reporter-gear': '',
+            'rfid-tags': 'equipment/pi-tac',
+            'security-devices': '',
+            'sensor-functions': '',
+            'sensor-housings': '',
+            'sensors': 'equipment/pi-tac',
+            'services': '',
+            'skillsofts': 'equipment/software',
+            'software': '',
+            'software-tweaks': 'equipment/software',
+            'survival-gear': '',
+            'tailored-perfume-cologne': '',
+            'tools': '',
+            'tools-of-the-trade': '',
+            'toxins': '',
+            'vision-devices': '',
+            'vision-enhancements': ''
+        },
+        host: {},
+        lifestyle: {},
+        metamagic: {},
+        modification: {
+            'barrel': '',
+            'other': '',
+            'side': '',
+            'stock': '',
+            'top': '',
+            'under': ''
+        },
+        program: {
+            'common_program': '',
+            'hacking_program': ''
+        },
+        quality: {
+            'negative': '',
+            'positive': ''
+        },
+        ritual: {},
+        sin: {},
+        spell: {
+            'combat': '',
+            'detection': '',
+            'enchantments': '',
+            'health': '',
+            'illusion': '',
+            'manipulation': ''
+        },
+        spirit: {
+            'extraplanar-travelers': 'critter/extraplanar-travelers',
+            'insect-spirits': 'critter/insect-spirits',
+            'necro-spirits': 'critter/necro-spirits',
+            'shadow-spirits': 'critter/shadow-spirits',
+            'shedim': 'critter/shedim',
+            'spirits': 'critter/spirits',
+            'ritual': 'critter/ritual',
+            'toxic-spirits': 'critter/toxic-spirits',
+        },
+        sprite: 'critter/sprites',
+        sprite_power: {},
+        vehicle: {
+            /* Vehicles */
+            'bikes': 'vehicle/bike',
+            'cars': 'vehicle/car',
+            'trucks': 'vehicle/truck',
+            'municipal-construction': 'vehicle/construction',
+            'corpsec-police-military': 'vehicle/military',
+            'boats': 'vehicle/boat',
+            'submarines': 'vehicle/submarine',
+            'fixed-wing-aircraft': 'vehicle/airplane',
+            'ltav': 'vehicle/ltav',
+            'rotorcraft': 'vehicle/rotorcraft',
+            'vtol-vstol': 'vehicle/vtol',
+            'hovercraft': 'vehicle/hovercraft',
+
+            /* Drones */
+            'drones-micro': 'drone/micro',
+            'drones-mini': 'drone/mini',
+            'drones-small': 'drone/small',
+            'drones-medium': 'drone/medium',
+            'drones-anthro': 'drone/anthro',
+            'drones-large': 'drone/large',
+            'drones-huge': 'drone/huge',
+            'drones-missile': 'ammo/missile',
+        },
+        weapon: {
+            // Options before : in name are 'Grenade', 'Minigrenade', 'Rocket', 'Missile', 'Torpedo Grenade', 'Micro-Torpedo'
+            'melee': '',
+            'range': '',
+            'thrown': '',
+            'assault-cannons': '',
+            'assault-rifles': '',
+            'bio-weapon': 'cyberware/cyber-implant-weapon',
+            'blades': '',
+            'bows': '',
+            'carbines': '',
+            'clubs': '',
+            'crossbows': '',
+            'cyberweapon': 'cyberware/cyber-implant-weapon',
+            'exotic-melee-weapons': '',
+            'exotic-ranged-weapons': '',
+            'flamethrowers': '',
+            'gear': 'equipment/equipment',
+            'grenade-launchers': '',
+            'grenade': 'ammo/grenade',
+            'heavy-machine-guns': 'weapon/assault-cannons',
+            'heavy-pistols': '',
+            'holdouts': '',
+            'improvised-weapons': '',
+            'laser-weapons': '',
+            'light-machine-guns': 'weapon/assault-cannons',
+            'light-pistols': '',
+            'machine-pistols': '',
+            'medium-machine-guns': 'weapon/assault-cannons',
+            'micro-drone-weapons': '',
+            'micro-torpedo': 'ammo/micro-torpedo',
+            'minigrenade': 'ammo/minigrenade',
+            'missile': 'ammo/missile',
+            'missile-launchers': '',
+            'quality': 'quality/quality',
+            'rocket': 'ammo/rocket',
+            'shotguns': '',
+            'sniper-rifles': '',
+            'sporting-rifles': 'weapon/carbines',
+            'submachine-guns': '',
+            'tasers': '',
+            'torpedo-grenade': 'ammo/torpedo-grenade',
+            'unarmed': '',
+            'underbarrel-weapons': 'modification/modification'
+        }
+    }
+} as const;

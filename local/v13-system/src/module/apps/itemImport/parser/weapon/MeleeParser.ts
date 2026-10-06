@@ -1,0 +1,12 @@
+import { Weapon } from '../../schema/WeaponsSchema';
+import { WeaponParserBase } from './WeaponParserBase';
+
+export class MeleeParser extends WeaponParserBase {
+    protected override getSystem(jsonData: Weapon) {
+        const system = super.getSystem(jsonData);
+
+        system.melee.reach = Number(jsonData.reach._TEXT);
+
+        return system;
+    }
+}

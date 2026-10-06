@@ -1,0 +1,20 @@
+<div class="compendium-results">
+    <div class="results-header">
+        <h2>Results</h2>
+        <div class="header-source">SOURCE</div>
+    </div>
+    <div class="compendium-list">
+        <div class="loading">
+            <i class="fa-solid fa-spinner fa-spin-pulse"></i>
+        </div>
+        <div class="no-results" hidden>
+            No documents found.
+        </div>
+    </div>
+    {{#if selectionMode}}
+    <div class="selection-actions">
+        <button type="button" class="selection-button cancel" data-action="cancelSelection">Cancel</button>
+        <button type="button" class="selection-button accept" data-action="acceptSelection">Accept</button>
+    </div>
+    {{/if}}
+</div>

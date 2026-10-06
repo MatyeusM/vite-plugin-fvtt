@@ -1,0 +1,7 @@
+node_modules
+dist
+src/packs
+public/assets
+public/icons
+public/templates
+public/tours

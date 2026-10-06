@@ -1,0 +1,24 @@
+# OS
+*.swp
+.vs
+
+# Editor / IDE
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+*.code-workspace
+
+# Node / dependencies / lock files
+node_modules
+shadowrun5e.lock
+
+# Build / distribution
+dist
+
+# Foundry
+foundryconfig.json
+
+# Local secrets
+.env.local

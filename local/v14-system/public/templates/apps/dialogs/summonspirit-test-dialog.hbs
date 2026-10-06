@@ -1,0 +1,31 @@
+<form>
+    <div class="dialog-content-common">
+        {{#if test.actor}}
+            <div class="document">
+                <img src="{{speakerImg test.actor}}"/>
+                <a class="content-link" data-type="Actor" data-link data-id="{{test.actor.id}}" data-uuid="{{test.actor.uuid}}">{{speakerName test.actor}}</a>
+            </div>
+        {{/if}}
+        {{#if test.item}}
+            <div class="document">
+                <img src="{{test.item.img}}"/>
+                <a class="entity-link content-link" data-type="Item"
+                   data-id="{{test.item.id}}" data-uuid="{{test.item.uuid}}">{{localizeContent test.item.name}}</a>
+            </div>
+        {{/if}}
+        <hr />
+        <div>
+            <div class="form-group">
+                <label data-tooltip="SR5.Tooltips.SummoningTest.Force">{{localize "SR5.Force"}}</label>
+                <input name="test.data.force" type="number" class="disabled-for-display" value="{{test.data.force}}" {{#if test.preparedSpiritForceLocked}}disabled data-tooltip="SR5.Tooltips.Item.DisabledForPreparedActor"{{/if}}/>
+            </div>
+            <div class="form-group">
+                <label data-tooltip="SR5.Tooltips.SummoningTest.ReagentDrams">{{localize "SR5.Reagent"}}</label>
+                <input name="test.data.reagent" type="number" class="disabled-for-display" value="{{test.data.reagent}}" />
+            </div>
+        </div>
+    </div>
+    <div>
+        {{> 'systems/shadowrun5e/templates/apps/dialogs/parts/success-test-common.hbs'}}
+    </div>
+</form>

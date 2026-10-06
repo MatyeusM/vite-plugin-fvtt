@@ -1,0 +1,2 @@
+# Frozen Foundry test fixtures: upstream system sources plus build output. Not ours to lint.
+local/

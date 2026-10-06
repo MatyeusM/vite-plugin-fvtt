@@ -1,0 +1,2371 @@
+import { SR5 } from "../config";
+import Template from "../template";
+import { Helpers } from "../helpers";
+import { SR5Die } from "../rolls/SR5Die";
+import { SR5Item } from "../item/SR5Item";
+import { SR5Roll } from "../rolls/SR5Roll";
+import { TestCreator } from "./TestCreator";
+import { SR5Actor } from "../actor/SR5Actor";
+import { TestRules } from "../rules/TestRules";
+import type { ExtendedTestInterval } from '../types/flows/ExtendedTest';
+import { ModifiableValue } from "../mods/ModifiableValue";
+import { DataDefaults } from "../data/DataDefaults";
+import { ActionFlow } from "../item/flows/ActionFlow";
+import { CORE_NAME, FLAGS, SYSTEM_NAME } from "../constants";
+import { SheetFlow } from "../flows/SheetFlow";
+import { DamageApplicationFlow } from '../actor/flows/DamageApplicationFlow';
+import { TestDialog, TestDialogListener } from "../apps/dialogs/TestDialog";
+
+import ModifierTypes = Shadowrun.ModifierTypes;
+
+import { ActionResultFlow } from "../item/flows/ActionResultFlow";
+import { SuccessTestEffectsFlow } from '../effect/flows/SuccessTestEffectsFlow';
+import { SR5ActiveEffect } from '../effect/SR5ActiveEffect';
+import { Translation } from '../utils/strings';
+import { GmOnlyMessageContentFlow } from '../actor/flows/GmOnlyMessageContentFlow';
+import { ActionResultType, ActionRollType, DamageType, MinimalActionType, OpposedTestType, ResultActionType } from '../types/item/Action';
+import { ValueFieldType } from '../types/template/Base';
+import { DeepPartial } from "fvtt-types/utils";
+export interface TestDocuments {
+    // Legacy field that used be the source document.
+    actor?: SR5Actor
+    // The action document the action has been taken from
+    item?: SR5Item
+    // The main document values have been taken from
+    source?: SR5Actor | SR5Item
+    // Rolls already taken for this test.
+    rolls?: SR5Roll[]
+}
+
+export type TestValues = Record<string, ValueFieldType | DamageType>
+export type SuccessTestValues = TestValues & {
+    hits: ValueFieldType
+    netHits: ValueFieldType
+    glitches: ValueFieldType
+    extendedHits: ValueFieldType
+}
+
+export interface SuccessTestCodeTermTrace {
+    valueField: ValueFieldType;
+    tooltipSource: string;
+}
+
+export interface SuccessTestCodeTerm {
+    text: string;
+    tooltipSource?: string;
+}
+
+interface ValueModifierTooltipOptions {
+    card?: boolean;
+}
+
+/**
+ * Contain all data necessary to handle an action based test.
+ */
+export interface TestData {
+    // How to label this test.
+    title?: string
+    // Determine the kind of test; defaults to the class constructor name.
+    type?: string
+
+    // Shadowrun 5 related test values.
+    pool: ValueFieldType
+    threshold: ValueFieldType
+    limit: ValueFieldType
+
+    // Use Shadowrun buy hits rule instead of rolling dice.
+    buyHits: boolean
+
+    autoSuccess?: boolean
+
+    // Internal test values.
+    values: TestValues
+
+    damage: DamageType
+
+    // A list of test categories to be used for this test.
+    // Check typing documentation for more information.
+    categories: Shadowrun.ActionCategories[]
+
+    // Edge related triggers
+    pushTheLimit: boolean
+    secondChance: boolean
+
+    // When true this test is an extended test
+    extended: boolean
+    // When false, this test is on it's first roll. When true, it's on an extended roll.
+    extendedRoll: boolean
+    // The interval between extended test rolls. A value above zero marks this test as extended.
+    extendedInterval: ExtendedTestInterval
+    // The managed extended test record this roll belongs to, if any. See ExtendedTestFlow.
+    extendedManagedId?: string
+
+    // The source action this test is derived from.
+    action: ActionRollType
+
+    // Documents the test might has been derived from.
+    sourceItemUuid?: string
+    sourceActorUuid?: string
+    
+    // The document test values have been taken from. This can be both actor and item.
+    sourceUuid?: string
+    sourceIsActor?: boolean
+
+    // Message the test has been represented with.
+    messageUuid?: string
+
+    // Optional term-level provenance used for formula/code hover tooltips.
+    codeTermTraces?: SuccessTestCodeTermTrace[]
+
+    // Options the test was created with.
+    options: TestOptions
+
+    // Has this test been cast before
+    evaluated: boolean
+}
+
+export interface SuccessTestData extends TestData {
+    opposed: OpposedTestType
+    values: SuccessTestValues
+    // Scene Token Ids marked as targets of this test.
+    targetActorsUuid: string[]
+    targetUuids: string[]
+}
+
+export interface TestOptions {
+    showDialog: boolean
+    showMessage: boolean
+    rollMode: ChatMessage.MessageMode
+}
+
+export interface SuccessTestMessageData {
+    data: SuccessTestData,
+    rolls: ReturnType<SR5Roll['toJSON']>[]
+}
+
+/**
+ * General handling of Shadowrun 5e success tests as well as their FoundryVTT representation.
+ *
+ * SuccessTest implementation will handle
+ * - general flow of a FoundryVTT Shadowrun 5e success test
+ * - shadowrun 5e rules
+ * - FoundryVTT dialog creation for user input
+ * - FoundryVTT chat message creation
+ *
+ * Usage:
+ * > const test = new SuccessTest({pool: 6});
+ * > await test.execute();
+ * 
+ * The user facing point for a success test is the execute() method.
+ * It's up to the caller to decide what parameters to give.
+ * 
+ * Check the TestCreator helper for more convenient ways to create tests from
+ * - actions (data)
+ * - items
+ * - existing chat messages
+ * - ...
+ * 
+ * Create a test from an item:
+ * > const test = await TestCreator.fromItem(item);
+ * > test.execute();
+ * 
+ * Typically the system will create a test from an action. Each action contains a reference
+ * for the active, opposed, resist and follow up test to use. That test will be taken by the
+ * TestCreate._getTestClass() function. Whenever a user trigger test is to be executed, it should 
+ * be an action configuration that is used to retrieve and create the test.
+ * 
+ * The test registry is a simple key value store mapping names to classes underneath
+ * game.shadowrun5e.tests
+ * 
+ * For the default SuccessTest class the registry entry would look like this:
+ * > game.shadowrun5e.tests['SuccessTest'] = SuccessTest;
+ * and it would be retrieved by the TestCreator like this:
+ * > const SuccessTest = TestCreate._getTestClass('SuccessTest');
+ */
+export class SuccessTest<T extends SuccessTestData = SuccessTestData> {
+    public data: T;
+    public actor: SR5Actor | undefined;
+    public item: SR5Item | undefined;
+    public source: SR5Actor | SR5Item | undefined;
+
+    public rolls: SR5Roll[];
+    // Targets can be either actor/item or a token.
+    public targets: (SR5Actor | SR5Item | TokenDocument)[];
+    public dialog: TestDialog | null;
+
+    // Flows to handle different aspects of a Success Test that are not directly related to the test itself.
+    public effects: SuccessTestEffectsFlow<this>;
+
+    public ignoreUserPermission: boolean;
+
+    // Allow this.constructor to not reference Function.
+    declare ['constructor']: typeof SuccessTest;
+
+    static applyStructuralDefaults<T extends DeepPartial<SuccessTestData>>(data: T): T & SuccessTestData {
+        data.buyHits ??= false;
+        data.pushTheLimit ??= false;
+        data.secondChance ??= false;
+
+        data.pool ||= DataDefaults.createData('value_field', { label: 'SR5.DicePool' });
+        data.threshold ||= DataDefaults.createData('value_field', { label: 'SR5.Threshold' });
+        data.limit ||= DataDefaults.createData('value_field', { label: 'SR5.Limit' });
+
+        data.values ||= {};
+        data.opposed ||= {} as OpposedTestType;
+        data.codeTermTraces ??= [];
+
+        data.values.hits ||= DataDefaults.createData('value_field', { label: "SR5.Hits" });
+        data.values.extendedHits ||= DataDefaults.createData('value_field', { label: "SR5.ExtendedHits" });
+        data.values.netHits ||= DataDefaults.createData('value_field', { label: "SR5.NetHits" });
+        data.values.glitches ||= DataDefaults.createData('value_field', { label: "SR5.Glitches" });
+
+        data.action ||= DataDefaults.createData('action_roll');
+        data.damage ||= DataDefaults.createData('damage');
+
+        data.categories ||= [];
+        data.targetActorsUuid ||= [];
+        data.evaluated ??= false;
+        data.extended ??= false;
+        data.extendedRoll ??= false;
+        data.extendedInterval ??= { value: 0, unit: 'minutes' };
+
+        return data as T & SuccessTestData;
+    }
+
+    constructor(data: DeepPartial<T>, documents?: TestDocuments, options: Partial<TestOptions> = {}) {
+        // Store given documents to avoid later fetching.
+        this.actor = documents?.actor;
+        this.item = documents?.item;
+        // If no specific source document is given, fallback to actor.
+        this.source = documents?.source ?? documents?.actor;
+        this.rolls = documents?.rolls || [];
+
+        // User selected targets of this test.
+        this.targets = [];
+
+        this.data = this._prepareData(data, options);
+
+        this.effects = new SuccessTestEffectsFlow<this>(this);
+        this.ignoreUserPermission = false;
+
+        this.calculateBaseValues();
+
+        this.dialog = null;
+
+        console.debug(`Shadowrun 5e | Created ${this.constructor.name} Test`, this);
+    }
+
+    /**
+     * Make sure a test has a complete data structure, even if supplied data doesn't fully provide that.
+     *
+     * Any Test should be usable simply by instantiating it with empty TestData
+     */
+    _prepareData(data: DeepPartial<T>, options: Partial<TestOptions>): T {
+        const prepared = SuccessTest.applyStructuralDefaults(data);
+        prepared.type ??= this.type;
+
+        // Store the current users targeted token ids for later use.
+        prepared.targetUuids ||= Helpers.getUserTargets().map(token => token.actor?.uuid).filter((uuid): uuid is string => !!uuid);
+
+        // Store given document uuids to be fetched during evaluation.
+        prepared.sourceActorUuid ||= this.actor?.uuid ?? undefined;
+        prepared.sourceItemUuid ||= this.item?.uuid ?? undefined;
+        prepared.sourceUuid ||= this.source?.uuid ?? undefined;
+
+        prepared.title ||= this.constructor.label;
+
+        // Options will be used when a test is reused further on.
+        prepared.options = {
+            rollMode: this._prepareRollMode(prepared, options),
+            showDialog: options.showDialog ?? true,
+            showMessage: options.showMessage ?? true,
+        };
+
+        console.debug('Shadowrun 5e | Prepared test data', prepared);
+
+        return prepared as T;
+    }
+
+    /**
+     * The tests roll mode can be given by specific option, action setting or global configuration.
+     * @param options The test options for the whole test
+     */
+    _prepareRollMode(data: DeepPartial<T>, options: Partial<TestOptions>): ChatMessage.MessageMode {
+        if (options.rollMode != null) return options.rollMode;
+        if (data?.action?.roll_mode) return data.action.roll_mode as ChatMessage.MessageMode;
+        else return game.settings.get(CORE_NAME, 'messageMode');
+    }
+
+    /**
+     * Overwrite this method to alter the title of test dialogs and messages.
+     */
+    get title(): string {
+        return `${game.i18n.localize(this.constructor.label)}`;
+    }
+
+    /**
+     * Determine the type of success test for this implementation.
+     * 
+     * By default this will be the class constructor name. 
+     * NOTE: This breaks for a build pipeline using minification. This is due to
+     * , currently, the test registry using the runtime constructor name vs the compile time
+     * class name.
+     */
+    get type(): string {
+        return this.constructor.name;
+    }
+
+    /**
+     * Get the label for this test type used for i18n.
+     */
+    static get label(): Translation {
+        return `SR5.Tests.${this.name}` as Translation;
+    }
+
+    /**
+     * Helper to determine if this test has been fully evaluated at least once.
+     */
+    get evaluated(): boolean {
+        return this.data.evaluated;
+    }
+
+    /**
+     * FoundryVTT serializer method to embed this test into a document (ChatMessage).
+     * 
+     * Foundry expects Roll data to serialize into rolls.
+     * The system expects Test data to serialize into data.
+     */
+    toJSON() {
+        return {
+            data: this.data,
+            // Use Roll.toJSON() to inject 'class' property. Foundry relies on this to build it's classes.
+            rolls: this.rolls.map(roll => roll.toJSON())
+        };
+    }
+
+    /**
+     * Get a possible globally defined default action set for this test class.
+     */
+    static _getDefaultTestAction(): DeepPartial<MinimalActionType> {
+        return {};
+    }
+
+    /**
+     * Get a document defined action set for this test class.
+     *
+     * Subclasses can use this to provide actor or item based action configurations that aren't
+     * directly part of the action template.
+     *
+     * @param item The item holding the action configuration.
+     * @param actor The actor used for value calculation.
+     */
+    static _getDocumentTestAction(item: SR5Item, actor: SR5Actor): DeepPartial<MinimalActionType> {
+        return {};
+    }
+
+    static _prepareActionTestData(action: ActionRollType, document: SR5Actor | SR5Item, data: SuccessTestData, againstData?: SuccessTestData) {
+        return TestCreator._prepareTestDataWithAction(action, document, data, againstData);
+    }
+
+    /**
+     * Create test data from an opposed message action.
+     *
+     * This method is meant to be overridden if this testing class supports
+     * testing against an opposed message action.
+     *
+     * If this test class doesn't support this opposed message actions it will
+     * return undefined.
+     *
+     * @param testData The original test that's opposed.
+     * @param actor The actor for this opposing test.
+     * @param previousMessageId The id this message action is sourced from.
+     */
+    static async _getOpposedActionTestData(testData: DeepPartial<SuccessTestData>, actor: SR5Actor|SR5Item, previousMessageId: string): Promise<SuccessTestData | undefined> {
+        console.error(`Shadowrun 5e | Testing Class ${this.name} doesn't support opposed message actions`);
+        return undefined;
+    }
+
+    static async _getResistActionTestData(testData: DeepPartial<SuccessTestData>, actor: SR5Actor|SR5Item, previousMessageId: string): Promise<SuccessTestData | undefined> {
+        console.error(`Shadowrun 5e | Testing Class ${this.name} doesn't support resist message actions`);
+        return undefined;
+    }
+
+    /**
+     * Create the default formula for this test based on it's pool
+     *
+     * FoundryVTT documentation:
+     * Shadowrun5e: SR5#44
+     */
+    get formula(): string {
+        const pool = ModifiableValue.calcTotal(this.data.pool, { min: 0 });
+        return this.buildFormula(pool, this.hasPushTheLimit);
+    }
+
+    /**
+     * Build a Foundry Roll formula string
+     * 
+     * Dice:       https://foundryvtt.com/article/dice-advanced/
+     * Modifiers:  https://foundryvtt.com/article/dice-modifiers/
+     * 
+     * @param dice Amount of ds to use.
+     * @param explode Should the ds be exploded.
+     * @returns The complete formula string.
+     */
+    buildFormula(dice: number, explode: boolean): string {
+        // Build the dice formula for a Shadowrun 5e test.
+        // - dice: number of ds (custom die) to roll
+        // - explode: whether to explode sixes (Edge rules)
+
+        const explodeModifier = explode ? 'x6' : '';
+        return `${dice}d${SR5Die.DENOMINATION}${explodeModifier}`;
+    }
+
+    /**
+     * Determine if this test can have a human-readable shadowrun test code representation.
+     *
+     * All parts of the test code can be dynamic, any will do.
+     */
+    get hasCode(): boolean {
+        const codeTerms = this.codeTerms;
+        return codeTerms.pool.length > 0 || codeTerms.limit.length > 0 || codeTerms.threshold.length > 0;
+    }
+
+    /**
+     * Resolves the individual components and the human-readable representation of this success test.
+     * Provides the formatted UI terms for the test's pool, limit, and threshold. 
+     * Additionally, generates the common Shadowrun 5 description string (e.g., "Automatics + Agility + 3 (3) [2 + Physical]") 
+     * to provide information about value sources.
+     *
+     * @returns An object containing the term arrays (`pool`, `limit`, `threshold`), the formatted `description` string.
+     */
+    get codeTerms() {
+        return {
+            pool: this._buildCodeTermsForField(this.pool),
+            limit: this._buildCodeTermsForField(this.limit),
+            threshold: this._buildCodeTermsForField(this.threshold),
+        };
+    }
+
+    /**
+     * Constructs UI display terms for a success test field by pairing 
+     * base changes with historical trace tooltips and appending the base value.
+     */
+    private _buildCodeTermsForField(valueField: ValueFieldType): SuccessTestCodeTerm[] {
+        const terms: SuccessTestCodeTerm[] = [];
+        const traces = this.data.codeTermTraces ?? [];
+
+        for (const change of valueField.changes.filter(change => ModifiableValue.isBaseChange(change))) {
+            // Last updated trace with matching name and value for this change.
+            const traceIndex = traces.findLastIndex(trace =>
+                trace.valueField.label === change.name && trace.valueField.value === change.value
+            );
+
+            terms.push({
+                text: `${game.i18n.localize(change.name as Translation)} ${change.value}`,
+                tooltipSource: traceIndex >= 0 ? traces[traceIndex].tooltipSource : undefined,
+            });
+        }
+
+        if (valueField.base)
+            terms.push({ text: String(valueField.base) });
+
+        return terms;
+    }
+
+    /**
+     * Helper method to create the main SR5Roll.
+     */
+    createRoll(): SR5Roll {
+        const roll = new SR5Roll(this.formula);
+        this.rolls.push(roll);
+        return roll;
+    }
+
+    /**
+     * Allow other implementations to override what TestDialog template to use.
+     */
+    get _dialogTemplate(): string {
+        return 'systems/shadowrun5e/templates/apps/dialogs/success-test-dialog.hbs';
+    }
+
+    /**
+     * Allow other implementations to override what ChatMessage template to use.
+     */
+    get _chatMessageTemplate(): string {
+        return 'systems/shadowrun5e/templates/rolls/success-test-message.hbs';
+    }
+
+    /**
+     * What TestDialog class to use for this test type?
+     *
+     * If you only need to display differing data you can also only define a different _dialogTemplate
+     * @override This method if you want to use a different TestDialog.
+     */
+    _createTestDialog() {
+        return new TestDialog(this, this._testDialogListeners());
+    }
+
+    /**
+     * Allow other implementations to add listeners to the TestDialog HTML, changing
+     * it's behavior without the need to sub-class TestDialog.
+     */
+    _testDialogListeners() {
+        return [] as TestDialogListener[]
+    }
+
+    /**
+     * Suppress dialog during execution
+     */
+    hideDialog() {
+        this.data.options.showDialog = false;
+    }
+
+    /**
+     * Show the dialog class for this test type and alter test according to user selection.
+     */
+    async showDialog(): Promise<boolean> {
+        if (!this.data.options.showDialog) return true;
+
+        this.dialog = this._createTestDialog();
+
+        const data = await this.dialog.select();
+        if (this.dialog.canceled) {
+            await this._cleanUpAfterDialogCancel();
+            return false
+        }
+
+        // Overwrite current test state with whatever the dialog gives.
+        this.data = data as unknown as T;
+
+        // Provide entry points with dialog data.
+        await this._cleanUpAfterDialog();
+        await this.saveUserSelectionAfterDialog();
+
+        // Second base value preparation will show changes due to user input.
+        this.prepareBaseValues();
+        this.calculateBaseValues();
+
+        return true;
+    }
+
+    /** 
+     * Override this method if there needs to be some cleanup after a user has canceled a dialog 
+     * but before the tests actual execution.
+     */
+    async _cleanUpAfterDialogCancel() {
+        this.dialog = null;
+    }
+
+    /**
+     * Allow implementations to clean up after a dialog has been shown.
+     */
+    async _cleanUpAfterDialog() { }
+
+    /**
+     * Override this method if you want to save any document data after a user has selected values
+     * during user facing dialog.
+     */
+    async saveUserSelectionAfterDialog() { }
+
+    /**
+     * The general base value preparation. This will be re applied at multiple points before execution.
+     */
+    prepareBaseValues() {
+        // Re-apply document modifiers first, as those might have changed in between calculations.
+        this.prepareDocumentModifiers();
+        this.prepareTestModifiers();
+
+        // Only then apply values and collected modifiers.
+        this.applyPushTheLimit();
+        this.applyPoolModifiers();
+
+        Hooks.call('sr5_testPrepareBaseValues', this);
+    }
+
+    /**
+     * Handle chosen modifier types and apply them to the pool modifiers.
+     * 
+     * NOTE: To keep this.pool.mod and this.modifiers.mod in sync, never remove
+     *       a modifier. Rather set it to zero, causing it to not be shown.
+     */
+    applyPoolModifiers() {
+        const pool = new ModifiableValue(this.pool);
+
+        // Remove override modifier from pool.
+        pool.remove('SR5.Labels.Action.Modifiers');
+    }
+
+    /**
+     * To assure all test values are full integers, round all value parts.
+     * Don't round the total as this will lead to some values shown as decimals and some as 
+     * integers.
+     * 
+     * Instead Shadowrun 5e rules expect all individual values to be rounded before use.
+     * We use the 'Note on Rounding' on SR5#48 as a guideline.
+     */
+    roundBaseValueParts() {
+        const roundAllMods = (value: ValueFieldType) => {
+            value.base = Math.ceil(value.base);
+            for (const change of value.changes)
+                change.value = Math.ceil(change.value);
+        }
+
+        roundAllMods(this.data.pool);
+        roundAllMods(this.data.threshold);
+        roundAllMods(this.data.limit);
+    }
+
+    /**
+     * Calculate only the base test that can be calculated before the test has been evaluated.
+     * 
+     * This will be re applied at multiple points before execution.
+     */
+    calculateBaseValues() {
+        this.roundBaseValueParts();
+
+        ModifiableValue.calcTotal(this.data.pool, { min: 0 });
+        ModifiableValue.calcTotal(this.data.threshold, { min: 0 });
+        ModifiableValue.calcTotal(this.data.limit, { min: 0 });
+
+        // Shows AP on incoming attacks
+        ModifiableValue.calcTotal(this.data.damage.ap);
+
+        console.debug(`Shadowrun 5e | Calculated base values for ${this.constructor.name}`, this.data);
+    }
+
+    /**
+     * Allow implementations to validate values before execution.
+     */
+    validateBaseValues() { }
+
+    /**
+     * Helper method to evaluate the internal SR5Roll and SuccessTest values.
+     */
+    async evaluate(): Promise<this> {
+        if (!this.hasBuyHits) {
+            // Evaluate all rolls.
+            for (const roll of this.rolls) {
+                if (!roll.evaluated())
+                    await roll.evaluate();
+            }
+        }
+
+        this.data.evaluated = true;
+        this.calculateDerivedValues();
+
+        return this;
+    }
+
+    /**
+     * Allow subclasses to populate a test before execution and any other steps.
+     */
+    async populateTests() { }
+
+    /**
+     * Rehydrate this test with Documents, should they be missing.
+     * This can happen when a test is created from a ChatMessage.
+     */
+    async populateDocuments() {
+        // Populate the actor document.
+        if (!this.actor && this.data.sourceActorUuid) {
+            // SR5Actor.uuid will return an actor id for linked actors but its token id for unlinked actors
+            const document = await fromUuid(this.data.sourceActorUuid) || undefined;
+            this.actor = document instanceof TokenDocument ?
+                (document.actor ?? undefined) :
+                (document as SR5Actor);
+        }
+
+        // Populate the item document.
+        if (this.data.sourceItemUuid) {
+            this.item = await fromUuid(this.data.sourceItemUuid) as SR5Item || undefined;
+        }
+
+        // Populate the value source document.
+        if (this.data.sourceUuid) {
+            this.source = await fromUuid(this.data.sourceUuid) as SR5Actor | SR5Item || undefined;
+            this.data.sourceIsActor = this.source instanceof SR5Actor;
+            if (this.data.sourceIsActor) this.actor = this.source as SR5Actor;
+        }
+
+        await this.populateTargetDocuments();
+    }
+
+    /**
+     * Populate all targets connected to this test.
+     */
+    async populateTargetDocuments() {
+        if (this.targets.length === 0 && this.data.targetUuids) {
+            this.targets = [];
+            for (const uuid of this.data.targetUuids) {
+                const document = await fromUuid<SR5Actor|SR5Item|TokenDocument>(uuid);
+                if (!document) continue;
+
+                if (document instanceof SR5Item) {
+                    this.targets.push(document);
+                    continue;
+                }
+
+                // TODO: Why and when are tokens needed? Range calulations? Or was it just the general assumption with Ranged Attack?
+                // Can´t we retrieve the token later always?
+                if (document instanceof SR5Actor) {
+                    const token = document.getToken();
+                    if (!(token instanceof TokenDocument)) continue;
+                    this.targets.push(token);
+                    continue;
+                }
+
+                this.targets.push(document);
+            }
+        }
+    }
+
+    /**
+     * Prepare missing data based on tests Documents before anything else is done.
+     */
+    async prepareDocumentData() {
+        // Calculate damage here to have access to actor AND item used.
+        this.data.damage = ActionFlow.calcDamageData(this.data.damage, this.actor, this.item);
+    }
+
+    /**
+     * What Action Categories should be used for this test by default.
+     * 
+     * NOTE: These categories can be overwritten by the source action used to create a test instance.
+     * Override this method if you test implementation needs to define different default categories.
+     */
+    get testCategories(): Shadowrun.ActionCategories[] {
+        return [];
+    }
+
+    /**
+     * Check if this test includes a specific action category.
+     * @param category The category name
+     * @returns true, when this test includes it. false, if not.
+     */
+    hasTestCategory(category: Shadowrun.ActionCategories): boolean {
+        return this.data.categories.includes(category);
+    }
+
+    /**
+     * What modifiers should be used for this test type by default.
+     *
+     * NOTE: These modifiers are routed through ModifierFlow.totalFor()
+     */
+    get testModifiers(): ModifierTypes[] {
+        return ['global', 'wounds'];
+    }
+
+    /**
+     * Prepare this tests categories.
+     * 
+     * By default categories are taken from the test implementation but can be overwritten by the source action.
+     * 
+     * Test categories must be ready before active effects are applied as they rely on this data to be present.
+     */
+    prepareTestCategories() {
+        this.data.categories = 
+            this.data.action?.categories.length > 0
+            ? this.data.action.categories as Shadowrun.ActionCategories[]
+            : this.testCategories;
+    }
+
+    /**
+     * Prepare modifiers based on connected documents.
+     * 
+     * Documents MUST've been be populated before hand.
+     *
+     * Main purpose is to populate the configured modifiers for this test based on actor / items used.
+     */
+    prepareDocumentModifiers() {
+        this.prepareActorModifiers();
+        this.prepareItemModifiers();
+    }
+
+    /**
+     * Allow implementations to overwrite default modifiers after document modifiers have been applied to influence
+     * pool calculation.
+     */
+    prepareTestModifiers() { }
+
+    /**
+     * Prepare general modifiers based on the actor, as defined within the action or test implementation.
+     */
+    prepareActorModifiers() {
+        if (!this.actor) return;
+        // Don't use default test actions when source action provides modifiers.
+        if (this.data.action.modifiers.length > 0) return;
+
+        for (const type of this.testModifiers) {
+            const { name, value } = this.prepareActorModifier(this.actor, type);
+            ModifiableValue.setUnique(this.data.pool, name, value, { source: "SR5 10" });
+        }
+    }
+
+    /**
+     * Prepare a single modifier.
+     * 
+     * Extend this method should you want to alter a single modifiers application.
+     * 
+     * @param actor The actor to fetch modifier information for.
+     * @param type The modifier type to be prepared.
+     */
+    prepareActorModifier(actor: SR5Actor, type: ModifierTypes): { name: string, value: number } {
+        const options = { test: this, reapply: true };
+        const value = actor.modifiers.totalFor(type, options);
+        const name = this._getModifierTypeLabel(type);
+
+        return { name, value };
+    }
+
+    _getModifierTypeLabel(type: ModifierTypes): string {
+        return SR5.modifierTypes[type];
+    }
+
+    /**
+     * Allow subclasses to alter test modifiers based on the item used for casting.
+     */
+    prepareItemModifiers() { }
+
+    /**
+     * Calculate the total of all values.
+     */
+    calculateDerivedValues() {
+        // Calculate all derived / static values. Order is important.
+        this.data.values.hits = this.calculateHits();
+        this.data.values.extendedHits = this.calculateExtendedHits();
+        this.data.values.netHits = this.calculateNetHits();
+        this.data.values.glitches = this.calculateGlitches();
+
+        console.debug(`Shadowrun 5e | Calculated derived values for ${this.constructor.name}`, this.data);
+    }
+
+    /**
+     * Helper to get the pool value for this success test.
+     */
+    get pool(): ValueFieldType {
+        return this.data.pool;
+    }
+
+    /**
+     * Helper to get the total limit value for this success test.
+     */
+    get limit(): ValueFieldType {
+        return this.data.limit;
+    }
+
+    /**
+     * Helper to determine if this success test uses a limit.
+     *
+     * NOTE: Limits will NEVER apply when the ApplyLimit setting is set accordingly.
+     */
+    get hasLimit(): boolean {
+        const applyLimit = game.settings.get(SYSTEM_NAME, FLAGS.ApplyLimits) as boolean;
+        return applyLimit && !this.hasPushTheLimit && this.limit.value > 0;
+    }
+
+    /**
+     * UI-only render state for the test dialog's limit field.
+     * Shows infinity for ignored limits or an explicit no-limit (`0`) without changing roll rules.
+     */
+    get limitUsage(): { infinity: boolean; disabled: boolean } {
+        const applyLimit = game.settings.get(SYSTEM_NAME, FLAGS.ApplyLimits) as boolean;
+        return {
+            infinity: !this.hasLimit,
+            disabled: this.hasPushTheLimit || !applyLimit,
+        };
+    }
+
+    /**
+     * Helper to determine if the hits have been lowered by the limit.
+     *
+     * This will compare actual roll hits, without applied limit.
+     */
+    get hasReducedHits(): boolean {
+        return this.hits.value > this.limit.value;
+    }
+
+    /**
+     * Helper to get the total threshold value for this success test.
+     */
+    get threshold(): ValueFieldType {
+        return this.data.threshold;
+    }
+
+    /**
+     * UI-only render state for the test dialog's threshold field.
+     * Shows a dash for explicit no-threshold (`0`) without changing roll rules.
+     */
+    get thresholdUsage(): { dash: boolean } {
+        return { dash: this.threshold.value <= 0 };
+    }
+
+    /**
+     * Helper to determine if this success test uses a threshold.
+     */
+    get hasThreshold(): boolean {
+        return this.threshold.value > 0;
+    }
+
+    /**
+     * Helper to determine if this success test has a damage value.
+     */
+    get hasDamage(): boolean {
+        // check that we don't have a damage value of 0 and a damage type that isn't empty
+        return (this.data.action.damage.value !== 0 || this.data.action.damage.attribute !== "")
+                                && this.data.action.damage.type.value !== '';
+    }
+
+    /**
+     * Helper to get the net hits value for this success test with a possible threshold.
+     */
+    calculateNetHits(): ValueFieldType {
+        // An extended test will use summed up extended hit, while a normal test will use its own hits.
+        const hits = this.extended ? this.extendedHits : this.hits;
+
+        // Maybe lower hits by threshold to get the actual net hits.
+        const base = this.hasThreshold ?
+            Math.max(hits.value - this.threshold.value, 0) :
+            hits.value;
+
+        // Calculate a ValueField for standardization.
+        const netHits = DataDefaults.createData('value_field', { label: "SR5.NetHits", base });
+        ModifiableValue.calcTotal(netHits, { min: 0 });
+
+        return netHits;
+    }
+
+    get netHits(): ValueFieldType {
+        return this.data.values.netHits;
+    }
+
+    /**
+     * Helper to get the hits value for this success test with a possible limit.
+     */
+    calculateHits(): ValueFieldType {
+        // Use buy hits, result override or automated roll for hits.
+        const rollHits = this.hasBuyHits ? this.boughtHits
+            : this.rolls.reduce((hits, roll) => hits + roll.hits, 0);
+
+        // Sum of all rolls!
+        this.hits.base = rollHits;
+
+        // First, calculate hits based on roll and modifiers.
+        ModifiableValue.calcTotal(this.hits, { min: 0 });
+        // Second, reduce hits by limit.
+        this.hits.value = this.hasLimit ? Math.min(this.limit.value, this.hits.value) : this.hits.value;
+
+        return this.hits;
+    }
+
+    get hits(): ValueFieldType {
+        return this.data.values.hits;
+    }
+
+    get extendedHits(): ValueFieldType {
+        // Return a default value field, for when no extended hits have been derived yet (or ever).
+        return this.data.values.extendedHits || DataDefaults.createData('value_field', { label: 'SR5.ExtendedHits' });
+    }
+
+    get hasBuyHits(): boolean {
+        return this.data.buyHits;
+    }
+
+    get boughtHits(): number {
+        return TestRules.buyHits(this.data.pool.value);
+    }
+
+    get hitsBreakdown(): string {
+        const modifierHits = this.hits.changes
+            .filter(change => !ModifiableValue.isBaseChange(change))
+            .reduce((total, change) => total + change.value, 0);
+
+        if (modifierHits === 0) return `${this.hits.value}`;
+
+        const baseHits = this.hits.value - modifierHits;
+        return `${baseHits} + ${modifierHits}`;
+    }
+
+    // Hide dice pool and roll results as they are not relevant to the success of the test
+    get autoSuccess(): boolean {
+        return !!this.data.autoSuccess;
+    }
+
+    /**
+     * Helper to get the glitches values for this success test.
+     */
+    calculateGlitches(): ValueFieldType {
+        // Buy hits produces no glitches.
+        const rollGlitches = this.hasBuyHits ? 0
+            : this.rolls.reduce((glitches, roll) => glitches + roll.glitches, 0);
+
+        const glitches = DataDefaults.createData('value_field', {
+            label: "SR5.Glitches",
+            base: rollGlitches
+        });
+ 
+        glitches.value = ModifiableValue.calcTotal(glitches, { min: 0 });
+
+        return glitches;
+    }
+
+    /**
+     * Gather hits across multiple extended test executions.
+     */
+    calculateExtendedHits(): ValueFieldType {
+        if (!this.extended) return DataDefaults.createData('value_field', { label: 'SR5.ExtendedHits' });
+
+        const extendedHits = this.extendedHits;
+        ModifiableValue.addBase(extendedHits, 'SR5.Hits', this.hits.value);
+
+        ModifiableValue.calcTotal(extendedHits, { min: 0 });
+
+        return extendedHits;
+    }
+
+    /**
+     * Check if this test is currently being extended.
+     */
+    get extended(): boolean {
+        if (!this.canBeExtended) return false;
+        // The interval is the source of truth, setting it to zero opts out of extending.
+        if ((this.data.extendedInterval?.value ?? 0) > 0) return true;
+        // Legacy: tests from before extendedInterval existed only carry the extended flag.
+        return this.data.extended && this.data.extendedRoll;
+    }
+
+    /**
+     * Check if this test is on it's first or an extended roll.
+     */
+    get extendedRoll(): boolean {
+        return this.data.extendedRoll;
+    }
+
+    /**
+     * Can this test type be extended or not?
+     *
+     * If false, will hide extended dialog settings.
+     */
+    get canBeExtended(): boolean {
+        return true;
+    }
+
+    get glitches(): ValueFieldType {
+        return this.data.values.glitches;
+    }
+
+    /**
+     * Helper to check if the current test state is glitched.
+     */
+    get glitched(): boolean {
+        return TestRules.glitched(this.glitches.value, this.pool.value);
+    }
+
+    /**
+     * Helper to check if the current test state is critically glitched.
+     */
+    get criticalGlitched(): boolean {
+        return TestRules.criticalGlitched(this.hits.value, this.glitched);
+    }
+
+    /**
+     * Check if the current test state is successful.
+     * 
+     * @returns true on a successful test
+     */
+    get success(): boolean {
+        // Extended tests use the sum of all extended hits.
+        const hits = this.extended ? this.extendedHits : this.hits;
+        return TestRules.success(hits.value, this.threshold.value);
+    }
+
+    /**
+     * Check if the current test state is unsuccessful.
+     * 
+     * @returns true on a failed test
+     */
+    get failure(): boolean {
+        // Allow extended tests without a threshold and avoid 'failure' confusion.
+        if (this.extended && this.threshold.value === 0) return true;
+        // When extendedHits have been collected, check against threshold.
+        if (this.extendedHits.value > 0 && this.threshold.value > 0) return this.extendedHits.value < this.threshold.value;
+        // Otherwise fall back to 'whatever is not a success.
+        return !this.success;
+    }
+
+    /**
+     * Use this method for subclasses which can't reasonably be successful.
+     */
+    get canSucceed(): boolean {
+        // Not extended tests can succeed normally.
+        if (!this.extended) return true;
+
+        // Extended tests can only succeed when a threshold is set.
+        return this.extended && this.hasThreshold;
+    }
+
+    /**
+     * Use this method for subclasses which can't reasonably fail.
+     */
+    get canFail(): boolean {
+        return true;
+    }
+
+    /**
+     * While a test might be successful with a zero threshold, it's
+     * unclear if it's meant to be a success.
+     * 
+     * Tests that don't know their threshold, either by GM secrecy or
+     * following opposed tests not yet thrown, shouldn't show user
+     * their successful.
+     */
+    get showSuccessLabel(): boolean {
+        return this.success && this.hasThreshold;
+    }
+
+    /**
+     * How to call a successful test of this type.
+     */
+    get successLabel(): Translation {
+        return 'SR5.TestResults.Success';
+    }
+
+    /**
+     * How to call a failed test of this type.
+     */
+    get failureLabel(): Translation {
+        if (this.extended) return 'SR5.TestResults.Results';
+        return 'SR5.TestResults.Failure';
+    }
+
+    /**
+     * Helper to check if opposing tests exist for this test.
+     */
+    get opposed(): boolean {
+        return !!this.data.opposed && this.data.opposed.test !== undefined && this.data.opposed.test !== '';
+    }
+
+    /**
+     * Determine if this test is opposing another test.
+     */
+    get opposing(): boolean {
+        return false;
+    }
+
+    /**
+     * Helper to get an items action result information.
+     */
+    get results(): ActionResultType | undefined {
+        return this.item?.getActionResult();
+    }
+
+    /**
+     * Determine if this test has any targets selected using FoundryVTT targeting.
+     */
+    get hasTargets(): boolean {
+        return this.targets.length > 0;
+    }
+
+    get targetRangeOptions(): { value: number, label: string }[] {
+        const data = this.data as T & {
+            targetRanges?: Array<{ name: string, distance: number, unit: string }>
+        };
+
+        if (!Array.isArray(data.targetRanges)) return [];
+
+        return data.targetRanges.map((target, index) => ({
+            value: index,
+            label: `${target.name} (${target.distance} ${target.unit})`
+        }));
+    }
+
+    get rangeOptions(): { value: number, label: string }[] {
+        const data = this.data as T & {
+            ranges?: Record<string, { modifier: number, label: string, distance: number }>
+        };
+
+        if (!data.ranges) return [];
+
+        return Object.values(data.ranges).map(range => ({
+            value: Number(range.modifier),
+            label: `${game.i18n.localize(range.label)} (${range.distance} m)`
+        }));
+    }
+
+    /**
+     * Has this test been derived from an action?
+     *
+     * This can either be from an items action or a pre-configured action.
+     */
+    get hasAction(): boolean {
+        return !foundry.utils.isEmpty(this.data.action);
+    }
+
+    /**
+     * TODO: This method results in an ugly description.
+     */
+    get description(): string {
+        const poolPart = this.pool.value;
+        const thresholdPart = this.hasThreshold ? `(${this.threshold.value})` : '';
+        const limitPart = this.hasLimit ? `[${this.limit.value}]` : '';
+        return `${poolPart} ${thresholdPart} ${limitPart}`
+    }
+
+    get hasPushTheLimit(): boolean {
+        return this.data.pushTheLimit;
+    }
+
+    get hasSecondChance(): boolean {
+        return this.data.secondChance;
+    }
+
+    /**
+     * Determine if this test can use second chance rules.
+     * 
+     * Use this property to check if a existing test can use this edge rule.
+     * 
+     * SR5#56.
+     */
+    get canSecondChance(): boolean {
+        if (this.hasBuyHits) {
+            ui.notifications?.warn('SR5.Warnings.CantCombineBuyHitsWithEdge', { localize: true });
+            return false;
+        }
+
+        if (!this.evaluated) {
+            console.error('Shadowrun5e | Second chance edge rules should not be applicable on initial cast');
+            return false;
+        }
+        // According to rules, second chance can't be used on glitched tests.
+        if (this.glitched) {
+            ui.notifications?.warn('SR5.Warnings.CantSecondChanceAGlitch', { localize: true });
+            return false;
+        }
+
+        if (this.hasPushTheLimit || this.hasSecondChance) {
+            ui.notifications?.warn('SR5.Warnings.CantSpendMulitplePointsOfEdge', { localize: true });
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Determine if this test can use push the limit rules
+     * 
+     * Use this property to check if a existing test can use this edge rule.
+     * 
+     * SR5#56.
+     */
+    get canPushTheLimit(): boolean {
+        if (this.hasPushTheLimit || this.hasSecondChance) {
+            ui.notifications?.warn('SR5.Warnings.CantSpendMulitplePointsOfEdge', { localize: true });
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Handle Edge rule 'push the limit', either adding edge before or after casting
+     * and exploding sixes for either all dice or only edge dice.
+     * 
+     * Check edge rules on SR5#56.
+     * 
+     * If called without push the limit, all modifiers for it will be removed.
+     */
+    applyPushTheLimit() {
+        if (!this.actor) return;
+
+        const parts = new ModifiableValue(this.pool);
+
+        // During the lifetime of a test (dialog/recasting) the user might want to remove push the limit again.
+        if (!this.hasPushTheLimit) {
+            parts.remove('SR5.PushTheLimit');
+            return;
+        }
+
+        // Edge will be applied differently for when the test has been already been cast or not.
+        // Exploding dice will be handled during normal roll creation.
+        const edge = this.actor.getEdge().value;
+        parts.addUnique('SR5.PushTheLimit', edge);
+
+        // Before casting edge will be part of the whole dice pool and that pool will explode.
+        if (!this.evaluated) return;
+
+        // After casting use a separate roll, as only those will be rolled again and explode.
+        const explodeDice = true;
+        const formula = this.buildFormula(edge, explodeDice);
+        const roll = new SR5Roll(formula);
+        this.rolls.push(roll);
+    }
+
+    /**
+     * Handle Edge rules for 'second chance'.
+     * 
+     * If called without second chance, all modifiers for it will be removed.
+     */
+    applySecondChance() {
+        if (!this.actor) return;
+
+        const parts = new ModifiableValue(this.pool);
+
+        if (this.hasBuyHits) {
+            this.data.secondChance = false;
+            parts.remove('SR5.SecondChance');
+            return;
+        }
+
+        // During test lifetime (dialog/recasting) the user might want to remove second chance again.
+        if (!this.hasSecondChance) {
+            parts.remove('SR5.SecondChance');
+            return;
+        }
+
+        // Since only ONE edge can be spent on a test, last roll will either be a
+        // - the original dice pool
+        // - an extending dice pool
+        const lastRoll = this.rolls[this.rolls.length - 1];
+        const dice = lastRoll.poolThrown - lastRoll.hits;
+        if (dice <= 0) {
+            ui.notifications?.warn('SR5.Warnings.CantSecondChanceWithoutNoneHits', { localize: true });
+            return this;
+        }
+
+        // Apply second chance modifiers.
+        // Overwrite existing, as only ONE edge per test is allowed, therefore stacking is not possible.
+        parts.addUniqueBase('SR5.SecondChance', dice);
+
+        // Add new dice as fully separate Roll.
+        const formula = `${dice}ds`;
+        const roll = new SR5Roll(formula);
+        this.rolls.push(roll);
+    }
+
+    /**
+     * Make sure ALL resources needed are available.
+     * 
+     * This is checked before any resources are consumed.
+     * 
+     * @returns true when enough resources are available to consume
+     */
+    canConsumeDocumentResources(): boolean {
+        // No actor present? Nothing to consume...
+        if (!this.actor) return true;
+
+        // Edge consumption.
+        if (this.hasPushTheLimit || this.hasSecondChance) {
+            if (this.actor.getEdge().uses <= 0) {
+                ui.notifications?.error(game.i18n.localize('SR5.MissingRessource.Edge'));
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Handle resulting resource consumption caused by this test.
+     * 
+     * @return true when the resources could be consumed in appropriate amounts.
+     */
+    async consumeDocumentRessources(): Promise<boolean> {
+        if (!this.actor) return true;
+
+        // Edge consumption.
+        if (this.hasPushTheLimit || this.hasSecondChance) {
+            await this.actor.useEdge();
+        }
+
+        return true;
+    }
+
+    /**
+    * Consume resources according to whats configured for this world.
+    * @returns true when the test can process
+    */
+    async consumeDocumentRessoucesWhenNeeded(): Promise<boolean> {
+        const mustHaveRessouces = game.settings.get(SYSTEM_NAME, FLAGS.MustHaveRessourcesOnTest);
+        // Make sure to nest canConsume to avoid unnecessary warnings.
+        if (mustHaveRessouces) {
+            if (!this.canConsumeDocumentResources()) return false;
+        }
+
+        return this.consumeDocumentRessources();
+    }
+
+    /**
+     * Allow users to execute this test, even when they don't have permissions to execute the source document.
+     * 
+     * This should be used per test instance to ignore user permissions between test instanciation and execution.
+     */
+    allowUserExecute() {
+        this.ignoreUserPermission = true;
+    }
+    
+    /**
+     * Can a user execute this test? This is used to check if the user has permissions to execute this test at all, before any preparation is done.
+     * 
+     * By default 'OBSERVER' is used as that allows users to see document ratings.
+     * 
+     * @returns true if the current user is allowed to execute this test, otherwise false.
+     */
+    userCanExecute() {
+        if (this.ignoreUserPermission) return true;
+        if (!this.source) return true;
+        if (!this.source.testUserPermission(game.user, 'OBSERVER')) return false;
+
+        return true;
+    }
+
+    /**
+     * Prepare everything needed for test execution.
+     * 
+     * This is both necessary before a first execution or when re-calculation a test when execution has already
+     * been prepared.
+     */
+    async _prepareExecution() {
+        await this.populateTests();
+        await this.populateDocuments();
+
+        this.prepareTestCategories();
+
+        // Effects need to be applied before any values are calculated.
+        this.effects.applyAllEffects();
+
+        await this.prepareDocumentData();
+
+        // Initial base value preparation will show default result without any user input.
+        this.prepareBaseValues();
+        this.calculateBaseValues();
+        this.validateBaseValues();
+    }
+
+    /**
+     * Executing a test will start all behaviors necessary to:
+     * - Calculate its values
+     * - Show and handle a user facing test dialog
+     * - Render and show a resulting test message
+     * - Evaluate all it's roles and consumption of items used
+     * - Trigger resulting methods for all results, including success and failure
+     *
+     * Implementing classes should seek to change out methods used here, or within those methods, to alter test
+     * behavior to their needs.
+     *
+     * When execute methods promise resolves this test and its chain is completed.
+     *
+     * NOTE: Currently none of these methods trigger Foundry hooks.
+     */
+    async execute(): Promise<this> {
+        await this._prepareExecution();
+
+        if (!this.userCanExecute()) {
+            ui.notifications?.error(game.i18n.localize('SR5.Errors.CantExecuteTest'));
+            return this;
+        }
+
+        // Allow user to change details.
+        const userConsented = await this.showDialog();
+        if (!userConsented) return this;
+
+        // Check if actor has all needed resources to even test.
+        const actorConsumedResources = await this.consumeDocumentRessoucesWhenNeeded();
+        if (!actorConsumedResources) return this;
+
+        this.createRoll();
+
+        await this.evaluate();
+        await this.processResults();
+        await this.toMessage();
+        await this.afterTestComplete();
+
+        return this;
+    }
+
+    /**
+     * Handle Edge rule 'second chance' within this test according to SR5#56
+     * 
+     * This is a execute method alternative.
+     */
+    async executeWithSecondChance(): Promise<this> {
+        console.debug(`Shadowrun 5e | ${this.constructor.name} will apply second chance rules`);
+
+        if (!this.canSecondChance) return this;
+
+        // Fetch documents.
+        await this.populateDocuments();
+
+        if (!this.userCanExecute()) {
+            ui.notifications?.error(game.i18n.localize('SR5.Errors.CantExecuteTest'));
+            return this;
+        }
+
+        if (!this.actor) {
+            ui.notifications?.warn('SR5.Warnings.EdgeRulesCantBeAppliedOnTestsWithoutAnActor', { localize: true });
+            return this;
+        }
+
+        //  Trigger edge consumption.
+        this.data.secondChance = true;
+        this.applySecondChance();
+
+        // Can't use normal #execute as not all general testing flow are needed.        
+        this.calculateBaseValues();
+        this.validateBaseValues();
+
+        const actorConsumedResources = await this.consumeDocumentRessoucesWhenNeeded();
+        if (!actorConsumedResources) return this;
+
+        // Remove second chance to avoid edge consumption on any kind of re-rolls.
+        this.data.secondChance = false;
+
+        await this.evaluate();
+        await this.processResults();
+        await this.toMessage();
+        await this.afterTestComplete();
+
+        return this;
+    }
+
+    /**
+     * A execute method alternative to handle Edge rule 'push the limit' within this test.
+     */
+    async executeWithPushTheLimit(): Promise<this> {
+        console.debug(`Shadowrun 5e | ${this.constructor.name} will push the limit rules`);
+
+        if (!this.canPushTheLimit) return this;
+
+        // Fetch documents.
+        await this.populateDocuments();
+
+        if (!this.userCanExecute()) {
+            ui.notifications?.error(game.i18n.localize('SR5.Errors.CantExecuteTest'));
+            return this;
+        }
+
+        if (!this.actor) {
+            ui.notifications?.warn('SR5.Warnings.EdgeRulesCantBeAppliedOnTestsWithoutAnActor', { localize: true });
+            return this;
+        }
+
+        this.data.pushTheLimit = true;
+        this.applyPushTheLimit();
+
+        // Can't use normal #execute as not all general testing flow are needed.        
+        this.calculateBaseValues();
+        this.validateBaseValues();
+
+        const actorConsumedResources = await this.consumeDocumentRessoucesWhenNeeded();
+        if (!actorConsumedResources) return this;
+
+        // Keep push the limit active, to have remove limit during derived value calculation.
+        await this.evaluate();
+        await this.processResults();
+
+        // Remove push the limit to avoid edge consumption on any kind of re-rolls.
+        this.data.pushTheLimit = false;
+
+        await this.toMessage();
+        await this.afterTestComplete();
+
+        return this;
+    }
+
+
+    /**
+     * Allow subclasses to override behavior after a test has finished.
+     *
+     * This can be used to alter values after a test is over.
+     */
+    async processResults() {
+        if (this.success) {
+            await this.processSuccess();
+        } else {
+            await this.processFailure();
+        }
+
+        Hooks.call('sr5_testProcessResults', this);
+    }
+
+    /**
+     * Allow subclasses to override behavior after a successful test result.
+     *
+     * This can be used to alter values after a test succeeded.
+     * @override
+     */
+    async processSuccess() { }
+
+    /**
+     * Allow subclasses to override behavior after a failure test result
+     *
+     * This can be used to alter values after a test failed.
+     * @override
+     */
+    async processFailure() { }
+
+    /**
+     * Allow subclasses to override behavior after a test is fully done. This will be called after processResults
+     * and allows for additional processes to be triggered that don't affect this test itself.
+     *
+     * This can be used to trigger other processes like followup tests or saving values.
+     */
+    async afterTestComplete() {
+        console.debug(`Shadowrun5e | Test ${this.constructor.name} completed.`, this);
+
+        if (this.success) {
+            await this.afterSuccess();
+        } else {
+            await this.afterFailure();
+        }
+
+        if (this.autoExecuteFollowupTest) {
+            await this.executeFollowUpTest();
+        }
+
+        // Managed tests are continued by their record. Preserve auto-chaining for in-progress
+        // tests restored from pre-manager chat messages, which have no managed record to update.
+        if (this.extended && this.extendedRoll && !this.data.extendedManagedId) {
+            await this.executeAsExtended();
+        }
+
+        Hooks.call('sr5_afterTestComplete', this);
+    }
+
+    /**
+     * Allow subclasses to override followup behavior after a successful test result
+     * @override
+     */
+    async afterSuccess() {
+        
+        // When an unopposed test succeeds, the test documents targeted effects can be applied
+        if (this.opposing) return;
+        if (this.opposed) return;
+
+        // taM check this
+        for (const target of this.targets as TokenDocument[]) {
+            if (target.actor === null) continue;
+            await this.effects.createTargetActorEffects(target.actor);
+        }
+    }
+
+    /**
+     * Allow subclasses to override followup behavior after a failed test result
+     * @override
+     */
+    async afterFailure() { }
+
+    /**
+     * Allow a test to determine if it's follow up tests should auto cast after test completion.
+     * 
+     * This could be set to false to allow for tests to NOT have an immediate auto cast, due to 
+     * current user casting and the user casting the follow differing.
+     */
+    get autoExecuteFollowupTest() {
+        return true;
+    }
+
+    /**
+     * Depending on the action configuration execute a followup test.
+     */
+    async executeFollowUpTest() {
+        const test = await TestCreator.fromFollowupTest(this, this.data.options);
+        if (!test) return;
+        await test.execute();
+    }
+
+    /**
+     * Should this test be an extended test, re-execute it until it can't be anymore.
+     * 
+     * The first roll of extended test will use normal #execute, while the extended rolls
+     * will pass through this, both for the action and chat message extension flow.
+     */
+    async executeAsExtended() {
+        if (!this.canBeExtended) return;
+
+        const data = foundry.utils.deepClone(this.data);
+
+        // No extension possible, if test type / class is unknown.
+        if (!data.type) return;
+
+        // Apply the extended modifier according the current iteration
+        const pool = new ModifiableValue(data.pool);
+
+        const currentModifierValue = pool.get('SR5.ExtendedTest') || 0;
+        const nextModifierValue = TestRules.calcNextExtendedModifier(currentModifierValue);
+
+        // A situational modifier, not part of the pool itself, so it stays among the changes.
+        pool.setUnique('SR5.ExtendedTest', nextModifierValue);
+
+        ModifiableValue.calcTotal(data.pool, { min: 0 });
+
+        if (!TestRules.canExtendTest(this.threshold.value, this.extendedHits.value)) {
+            ui.notifications?.warn('SR5.Warnings.CantExtendTestFurther', { localize: true });
+            return this;
+        }
+
+        // Fetch original tests documents.
+        await this.populateDocuments();
+
+        if (!this.userCanExecute()) {
+            ui.notifications?.error(game.i18n.localize('SR5.Errors.CantExecuteTest'));
+            return this;
+        }
+
+        // Create a new test instance of the same type.
+        const testCls = TestCreator._getTestClass(data.type);
+        if (!testCls) return;
+        // The new test will be incomplete.
+        data.evaluated = false;
+        const test = new testCls(data as DeepPartial<T>, { actor: this.actor, item: this.item }, this.data.options);
+
+        // Remove previous edge usage.
+        test.data.pushTheLimit = false;
+        test.applyPushTheLimit();
+        test.data.secondChance = false;
+        test.applySecondChance();
+
+        // Mark test as extended to get iterative execution.
+        if (!test.extended) {
+            test.data.extended = true;
+            test.data.values.extendedHits = test.calculateExtendedHits();
+        }
+
+        // Mark this roll as an extended roll.
+        // This allows execution to determine if data needs to be prepared for the first roll or not.
+        test.data.extendedRoll = true;
+
+        await test.execute();
+
+        return test;
+    }
+
+    /**
+     * DiceSoNice must be implemented locally to avoid showing dice on gmOnlyContent throws while also using
+     * FoundryVTT ChatMessage of type roll for their content visibility behavior.
+     * 
+     * https://gitlab.com/riccisi/foundryvtt-dice-so-nice/-/wikis/Integration
+     */
+    rollDiceSoNice() {
+        const dice3d = game.dice3d;
+        if (!dice3d) return;
+
+        // Only roll the last dice rolled.
+        // This necessary when a test has been recast with second chance,
+        // and should only the re-rolled dice instead of all.
+        const roll = this.rolls[this.rolls.length - 1];
+
+        // Limit users to show dice to...
+        let whisper: User[] | null = null;
+
+        // ...for gmOnlyContent check permissions
+        if (this.actor && GmOnlyMessageContentFlow.applyGmOnlyContent(this.actor)) {
+            whisper = game.users.filter(user => this.actor?.testUserPermission(user, 'OWNER') === true);
+        }
+
+        const rollMode = this.data.options?.rollMode;
+
+        // ...for rollMode include GM when GM roll
+        if (rollMode === 'gm' || rollMode === "blind") {
+            whisper = [...game.users.filter(user => user.isGM), ...(whisper || [])];
+        }
+
+        // Don't show dice to a user casting blind.
+        const blind = rollMode === 'blind';
+        const synchronize = rollMode === 'public' || rollMode === 'ic';
+
+        void dice3d.showForRoll(roll, game.user, synchronize, whisper, blind, this.data.messageUuid);
+    }
+
+    /**
+     * Post this success test as a message to the chat log.
+     */
+    async toMessage(): Promise<ChatMessage | undefined> {
+        if (!this.data.options?.showMessage) return;
+
+        // Prepare message content.
+        const templateData = await this._prepareMessageTemplateData();
+        const content = await renderTemplate(this._chatMessageTemplate, templateData);
+        // Prepare the actual message.
+        const messageData = await this._prepareMessageData(content);
+        const options = { rollMode: this._rollMode };
+
+        //@ts-expect-error // TODO: foundry-vtt-types v10
+        const message = await ChatMessage.create(messageData, options);
+
+        if (!message) return;
+
+        // Store message id for future use.
+        this.data.messageUuid = message.uuid;
+        await this.saveToMessage();
+
+        this.rollDiceSoNice();
+
+        return message;
+    }
+
+    /**
+     * Prepare chat message content data for this success test card.
+     *
+     * @returns Chat Message template data.
+     *
+     * TODO: Add template data typing.
+     */
+    async _prepareMessageTemplateData() {
+        // Either get the linked token by collection or synthetic actor.
+        // Unlinked collection actors will return multiple tokens and can't be resolved to a token.
+        const linkedTokens = this.actor?.getActiveTokens(true) || [];
+        const token = linkedTokens.length >= 1 ? linkedTokens[0] : undefined;
+
+        return {
+            title: this.data.title,
+            test: this,
+            // Note: While ChatData uses ids, this uses full documents.
+            speaker: {
+                token,
+                source: this.source,
+                // TODO: Check if speaker.actor is needed still or if speaker.source suffices
+                actor: this.actor
+            },
+            item: this.item,
+            opposedActions: this._prepareOpposedActionsTemplateData(),
+            followupActions: this._prepareFollowupActionsTemplateData(),
+            resistActions: this._prepareResistActionsTemplateData(),
+            resultActions: this._prepareResultActionsTemplateData(),
+            previewTemplate: this._canPlaceBlastTemplate,
+            showDescription: this._canShowDescription,
+            description: await this.item?.getChatData() || '',
+            // Some message segments are only meant for the gm, when the gm is the one creating the message.
+            // When this test doesn't use an actor, don't worry about hiding anything.
+            applyGmOnlyContent: GmOnlyMessageContentFlow.applyGmOnlyContent(this.actor),
+            
+            // Effects that should be shown in this tests message for manual drag & drop application.
+            effects: [] as SR5ActiveEffect[]
+        }
+    }
+
+    /**
+     * Indicate if this test can be used to show the item description.
+     */
+    get _canShowDescription(): boolean {
+        return true;
+    }
+
+    /**
+     * Indicate if this test can be used to place a blast template using the shown chat message.
+     *
+     * This is indicated by the source items ability to cause an area of effect blast and which kind
+     * of test is used.
+     */
+    get _canPlaceBlastTemplate(): boolean {
+        return this.item?.hasBlastTemplate || false;
+    }
+
+    /**
+     * This class should be used for the opposing test implementation.
+     */
+    get _opposedTestClass() {
+        if (!this.data?.opposed?.test) return;
+        return TestCreator._getTestClass(this.data.opposed.test);
+    }
+
+    /**
+     * Prepare opposed test action buttons.
+     *
+     * Currently, one opposed action is supported, however the template
+     * is prepared to support multiple action buttons.
+     */
+    _prepareOpposedActionsTemplateData() {
+        const testCls = this._opposedTestClass;
+        // No opposing test configured. Nothing to build.
+        if (!testCls) return [];
+
+        const action = {
+            // Store the test implementation registration name.
+            test: testCls.name,
+            label: testCls.label
+        };
+
+        return [action]
+    }
+
+    /**
+     * Prepare followup actions a test allows. These are actions
+     * meant to be taken following completion of this test.
+     */
+    _prepareFollowupActionsTemplateData() {
+        const testCls = TestCreator._getTestClass(this.data.action.followed.test);
+        if (!testCls) return [];
+        return [{ label: testCls.label }]
+    }
+
+    get _resistTestClass(): any | undefined {
+        return undefined; // by default we don't want to show any resist test in a success test
+    }
+
+    /**
+     * Prepare Resist actions a test allows. These are actions
+     * meant to be taken following completion of an opposed test
+     * or as a way to resist direct damage of a test
+     */
+    _prepareResistActionsTemplateData() {
+        const testCls = this._resistTestClass;
+        // No resist test configured. Nothing to build.
+        if (!testCls) return [];
+
+        const action = {
+            // Store the test implementation registration name.
+            test: testCls.name,
+            label: testCls.label
+        };
+
+        return [action]
+    }
+
+    /**
+     * Prepare result action buttons
+     */
+    _prepareResultActionsTemplateData(): ResultActionType[] {
+        const actions: ResultActionType[] = [];
+
+        // Interrupt/Varies actions carry an initiative modifier that can be applied to the combatant.
+        const actionType = this.data.action?.type;
+        const initiativeMod = this.data.action?.initiative_mod;
+        if (initiativeMod && (actionType === 'interrupt' || actionType === 'varies')) {
+            actions.push({
+                action: 'modifyCombatantInit',
+                label: 'SR5.InitiativeMod',
+                value: String(initiativeMod)
+            });
+        }
+
+        const actionResultData = this.results;
+        if (!actionResultData) return actions;
+
+        return actions;
+    }
+
+    /**
+     * What ChatMessage rollMode is this test supposed to use?
+     */
+    get _rollMode() {
+        return this.data.options?.rollMode ?? game.settings.get('core', 'messageMode');
+    }
+
+    /**
+     * Prepare chat message data for this success test card.
+     *
+     * @param content Pre rendered template content.
+     */
+    async _prepareMessageData(content: string) {
+        // Either get the linked token by collection or synthetic actor.
+        // Unlinked collection actors will return multiple tokens and can't be resolved to a token.
+        const linkedTokens = this.actor?.getActiveTokens(true) || [];
+        const token = linkedTokens.length === 1 ? linkedTokens[0].id : undefined;
+
+        const actor = this.actor?.id;
+        const alias = game.user?.name;
+
+        const formula = `0ds`;
+        const roll = new SR5Roll(formula);
+        // evaluation is necessary for Roll DataModel validation.
+        await roll.evaluate();
+
+        const messageData = {
+            user: game.user?.id,
+            // Use type roll, for Foundry built in content visibility.
+            speaker: {
+                actor,
+                alias,
+                token
+            },
+            roll,
+            content,
+            // Manually build flag data to give renderChatMessage hook flag access.
+            // This test data is needed for all subsequent testing based on this chat messages.
+            flags: {
+                // Add test data to message to allow ChatMessage hooks to access it.
+                [SYSTEM_NAME]: {[FLAGS.Test]: this.toJSON()},
+                'core.canPopout': true
+            },
+            sound: CONFIG.sounds.dice,
+        }
+
+        // Instead of manually applying whisper ids, let Foundry do it.
+        ChatMessage.applyMode(messageData, this._rollMode);
+
+        return messageData;
+    }
+
+    /**
+     * Save this test to the given message uuid
+     */
+    async saveToMessage(uuid: string | undefined = this.data.messageUuid) {
+        if (!uuid) return;
+
+        const message = await fromUuid(uuid) as ChatMessage;
+
+        await message?.setFlag(SYSTEM_NAME, FLAGS.Test, this.toJSON());
+    }
+
+    /**
+     * Register listeners for ChatMessage html created by a SuccessTest.
+     *
+     * This listener needs to be registered to the 'renderChatMessage' FoundryVTT hook.
+     */
+    static async chatMessageListeners(message: ChatMessage, html, data) {
+        await this._hydrateValueModifierTooltips(message, html);
+
+        $(html).find('.show-roll').on('click', this._chatToggleCardRolls.bind(this));
+        $(html).find('.show-description').on('click', this._chatToggleCardDescription.bind(this));
+        $(html).find('.chat-document-link').on('click', Helpers.renderEntityLinkSheet.bind(Helpers));
+        $(html).find('.place-template').on('click', this._placeItemBlastZoneTemplate.bind(this));
+        $(html).find('.result-action').on('click', this._castResultAction.bind(this));
+        $(html).find('.chat-select-link').on('click', this._selectSceneToken.bind(this));
+        $(html).find('.test-action').on('click', this._castTestAction.bind(this));
+
+        DamageApplicationFlow.handleRenderChatMessage(message, html, data);
+
+        await GmOnlyMessageContentFlow.chatMessageListeners(message, html, data);
+    }
+
+    static async _hydrateValueModifierTooltips(message: ChatMessage, html: HTMLElement | JQuery) {
+        if (!message.id) return;
+
+        const test = await TestCreator.fromMessage(message.id);
+        if (!test) return;
+
+        await this.hydrateValueModifierTooltipsForTest(test, html, { card: true });
+    }
+
+    static async hydrateValueModifierTooltipsForTest(
+        test: SuccessTest,
+        html: HTMLElement | JQuery,
+        options: ValueModifierTooltipOptions = {}
+    ) {
+        const tooltipsBySource = await this._buildValueModifierTooltipsBySource(test, options);
+
+        const valueModifiers = $(html).find<HTMLElement>('[data-tooltip-source]').toArray();
+
+        for (const valueMod of valueModifiers) {
+            const source = valueMod.dataset.tooltipSource;
+            if (!source) continue;
+
+            const tooltipHtml = tooltipsBySource[source];
+            if (!tooltipHtml) continue;
+
+            valueMod.dataset.tooltipHtml = tooltipHtml;
+            valueMod.dataset.tooltipClass = 'sr5v2';
+        }
+    }
+
+    private static async _buildValueModifierTooltipsBySource(
+        test: SuccessTest,
+        options: ValueModifierTooltipOptions = {}
+    ): Promise<Record<string, string | undefined>> {
+        const tooltipValues: Record<string, ValueFieldType | undefined> = {
+            pool: test.pool,
+            limit: test.hasLimit ? test.limit : undefined,
+            threshold: test.hasThreshold ? test.threshold : undefined,
+        };
+
+        const traces = test.data.codeTermTraces ?? [];
+        for (const trace of traces)
+            tooltipValues[trace.tooltipSource] = trace.valueField;
+
+        const entries = await Promise.all(Object.entries(tooltipValues).map(async ([source, value]) => {
+            return [source, value ? await this._buildValueModifierTooltipHtml(value, options) : undefined] as const;
+        }));
+
+        return Object.fromEntries(entries);
+    }
+
+    static async _buildValueModifierTooltipHtml(
+        value: ValueFieldType,
+        options: ValueModifierTooltipOptions = {}
+    ): Promise<string | undefined> {
+        const tooltipHtml = await foundry.applications.handlebars.renderTemplate(
+            SheetFlow.templateBase('common/modifiers-tooltip'),
+            { value, card: options.card }
+        );
+
+        const content = tooltipHtml.trim();
+        if (!content.length) return undefined;
+        if (!content.includes('value-modifier-name')) return undefined;
+
+        return content;
+    }
+
+
+    /** 
+     * Select a Token on the current scene based on the link id.
+     * @params event Any user PointerEvent
+    */
+    static _selectSceneToken(event: Event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!game?.ready || !canvas?.ready) return;
+
+        const selectLink = $(event.currentTarget as HTMLElement);
+        const tokenId = selectLink.data('tokenId');
+        const token = canvas.tokens?.get(tokenId);
+
+        if (token instanceof foundry.canvas.placeables.Token) {
+            token.control();
+        } else {
+            ui.notifications?.warn(game.i18n.localize('SR5.NoSelectableToken'))
+        }
+    }
+
+    /**
+     * Cast a item action from a chat message.
+     * 
+     * @param event Any pointer event
+     */
+    static async _castTestAction(event: Event) {
+        event.preventDefault();
+
+        const element = $(event.currentTarget as HTMLElement);
+        // Grab item uuid or fallback to empty string for foundry
+        const uuid = element.data('uuid') ?? '';
+        const item = await fromUuid(uuid) as SR5Item | undefined;
+
+        if (!item) return console.error("Shadowrun 5e | Item doesn't exist for uuid", uuid);
+
+        void item.castAction(event);
+    }
+
+    static async chatLogListeners(chatLog: ChatLog, html: HTMLElement | JQuery, data: unknown) {
+        // setup chat listener messages for each message as some need the message context instead of ChatLog context.
+        const elements = $(html).find('.chat-message').toArray();
+
+        for (const element of elements) {
+            const id = $(element).data('messageId');
+            const message = game.messages?.get(id);
+            if (!message) continue;
+            await this.chatMessageListeners(message, element, message.toObject());
+        }
+    }
+
+    /**
+     * Items with an area of effect will allow users to place a measuring template matching the items blast values.
+     *
+     * @param event A PointerEvent triggered from anywhere within the chat-card
+     */
+    static async _placeItemBlastZoneTemplate(event: Event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Get test data from message.
+        const element = $(event.currentTarget as HTMLElement);
+        const card = element.closest<HTMLElement>('.chat-message');
+        const messageId = card.data('messageId');
+        const test = await TestCreator.fromMessage(messageId);
+        if (!test) return;
+
+        // Get item used in test
+        await test.populateDocuments();
+
+        // Place template based on last used spell force for the item.
+        if (!test.item) return;
+        const template = Template.fromItem(test.item);
+        if (!template) return;
+        await template.drawPreview();
+    }
+
+    /**
+     * Foundry ChatMessage context options (right click) used for all test types.
+     * @param app The ChatLog application. 
+     * @param options The list of options to be shown in the context menu.
+     */
+    static chatMessageContextOptions(app, options) {
+        const pushTheLimit = async (li) => {
+            const messageId = $(li).data().messageId;
+            const test = await TestCreator.fromMessage(messageId);
+            if (!test) return console.error('Shadowrun 5e | Could not restore test from message');
+
+            await test.executeWithPushTheLimit();
+        }
+
+        const secondChance = async (li) => {
+            const messageId = $(li).data().messageId;
+            const test = await TestCreator.fromMessage(messageId);
+            if (!test) return console.error('Shadowrun 5e | Could not restore test from message');
+
+            await test.executeWithSecondChance();
+        };
+
+        const extendTest = async (li) => {
+            const messageId = $(li).data().messageId;
+            const test = await TestCreator.fromMessage(messageId);
+            if (!test) return console.error('Shadowrun 5e | Could not restore test from message');
+
+            if (!test.canBeExtended) {
+                return ui.notifications?.warn('SR5.Warnings.CantExtendTest', { localize: true });
+            }
+
+            // Managed extended tests roll through their record, keeping its state current.
+            if (test.data.extendedManagedId) {
+                // Avoid a module cycle: ExtendedTestFlow already imports SuccessTest.
+                const { ExtendedTestFlow } = await import('../flows/ExtendedTestFlow');
+                await ExtendedTestFlow.roll(test.data.extendedManagedId);
+                return;
+            }
+
+            // Keep legacy auto-chain behavior for extended tests from before managed records.
+            await test.executeAsExtended();
+        };
+
+        // Keep Foundry delete option at the context menus bottom.
+        const deleteOption = options.pop();
+
+        options.push({
+            name: game.i18n.localize('SR5.PushTheLimit'),
+            callback: pushTheLimit,
+            condition: true,
+            icon: '<i class="fas fa-meteor"></i>'
+        })
+
+        options.push({
+            name: game.i18n.localize('SR5.SecondChance'),
+            callback: secondChance,
+            condition: true,
+            icon: '<i class="fas fa-meteor"></i>'
+        });
+
+        options.push({
+            name: game.i18n.localize('SR5.Extend'),
+            callback: extendTest,
+            condition: true,
+            icon: '<i class="fas fa-clock"></i>'
+        })
+
+        // Reinsert Foundry delete option last.
+        options.push(deleteOption);
+
+        return options;
+    }
+
+    /**
+     * By default, roll results are hidden in a chat card.
+     *
+     * This will hide / show them, when called with a card event.
+     *
+     * @param event Called from within a card html element.
+     */
+    static async _chatToggleCardRolls(event: Event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const currentTarget = event.currentTarget as HTMLElement;
+        const card = $(currentTarget).closest('.chat-card');
+        const cardRolls = card.find('.card-rolls').first();
+
+        if (cardRolls.length > 0) {
+            const hasRollContent = cardRolls.find('.dice-rolls, .dice-roll-content').length > 0;
+            if (!hasRollContent) return;
+
+            if (cardRolls.is(':visible')) {
+                cardRolls.slideUp(200);
+            } else {
+                const diceRolls = cardRolls.find('.dice-rolls');
+                if (diceRolls.length > 0) {
+                    diceRolls.css('display', 'flex');
+                }
+                cardRolls.stop(true, true).hide().css('display', 'block').slideDown(200);
+            }
+
+            return;
+        }
+
+        const legacyRolls = card.find('.dice-rolls');
+        if (legacyRolls.is(':visible')) legacyRolls.slideUp(200);
+        else legacyRolls.css('display', 'flex').hide().slideDown(200);
+    }
+
+    /**
+     * By default, item descriptions are hidden in a chat card.
+     *
+     * This will hide / show them, when called with a card event.
+     * @param event A PointerEvent triggered anywhere from within a chat-card
+     */
+    static _chatToggleCardDescription(event: Event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const currentTarget = event.currentTarget as HTMLElement;
+        const card = $(currentTarget).closest('.chat-card');
+        const element = card.find('.card-description');
+        if (element.is(':visible')) element.slideUp(200);
+        else element.slideDown(200);
+    }
+
+    /**
+     * A test message initiated an action for a test result, extract information from message and execute action.
+     *
+     * @param event A PointerEvent by user-interaction
+     */
+    static async _castResultAction(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const element = $(event.currentTarget)
+        const messageId = element.closest('.chat-message').data('messageId');
+        const resultAction = element.data('action');
+
+        await ActionResultFlow.executeResult(resultAction, {event, element, messageId});
+    }
+
+    /**
+     * Execute actions triggered by a tests chat message.
+     * 
+     * This can be used to trigger opposing tests.
+     */
+    static async executeMessageAction(againstData: SuccessTestData, messageId: string, options: Partial<TestOptions>) {
+        // Determine actors to roll test with.
+        // build documents based on the category, matrix can target individual icons
+        let documents = await Helpers.getOpposedTestTargets(againstData);
+        // if the test had matrix data, push in the matrix test targets to the front
+        if (againstData.categories.includes('matrix')) {
+            documents.unshift(...await Helpers.getMatrixTestTargetDocuments(againstData as any));
+        }
+
+        // Inform user about tokens with deleted sidebar actors.
+        // This can both happen for linked tokens immediately and unlinked tokens after reloading.
+        // TODO: Check when this error is relevant.
+        if (documents.filter(document => !document).length > 0) {
+            ui.notifications?.warn('TOKEN.WarningNoActor', {localize: true});
+            return;
+        }
+
+        // Fallback to player character.
+        if (documents.length === 0 && game.user?.character) {
+            documents.push(game.user.character);
+        }
+
+        console.log('Shadowrun 5e | Casting an opposed test using these actors', documents, againstData);
+
+        for (const document of documents) {
+            const source = document instanceof TokenDocument ? document.actor! : document;
+
+            const data = await this._getOpposedActionTestData(againstData, source, messageId);
+            if (!data) return;
+
+            const test = new this(data, { source }, options);
+
+            // Await test chain resolution for each actor, to avoid dialog spam.
+            await test.execute();
+        }
+    }
+
+    /**
+     * Add an additional test target after test initialization
+     * 
+     * @param document Any targetable FoundryVTT document
+     */
+    async addTarget(document: SR5Actor|SR5Item) {
+        if (!document.uuid) return;
+        if (this.data.targetUuids.includes(document.uuid)) return;
+        this.data.targetUuids.push(document.uuid);
+        await this.populateTargetDocuments();
+    }
+}

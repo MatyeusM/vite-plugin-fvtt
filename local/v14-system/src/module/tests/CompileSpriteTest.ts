@@ -1,0 +1,173 @@
+import { DeepPartial } from "fvtt-types/utils";
+import { DataDefaults } from "../data/DataDefaults";
+import { ModifiableValue } from "../mods/ModifiableValue";
+import { CompilationRules } from "../rules/CompilationRules";
+import { DamageType, MinimalActionType } from "../types/item/Action";
+import { SuccessTest, SuccessTestData, TestOptions } from "./SuccessTest";
+import { SR5Actor } from "../actor/SR5Actor";
+
+const { fromUuidSync } = foundry.utils;
+
+
+interface CompileSpriteTestData extends SuccessTestData {
+    // Testing values as described on SR5#254
+    level: number
+    fade: number
+    fadeDamage: DamageType
+
+    // Determine if compilation concluded and fade will apply
+    fadeReady: boolean
+
+    // Reference to prepared sprite actor
+    preparedSpriteUuid: string
+}
+/**
+ * Implement testing workflow for technomancers sprite compilation within FoundryVTT.
+ * 
+ * This test is designed to work together with the compilation item type as it's
+ * defined within
+ */
+export class CompileSpriteTest extends SuccessTest<CompileSpriteTestData> {
+
+    override _prepareData(data: DeepPartial<CompileSpriteTestData>, options: Partial<TestOptions>): CompileSpriteTestData {
+        const prepared = super._prepareData(data, options);
+
+        this._prepareCompilationData(prepared);
+
+        prepared.fade ||= 0;
+        prepared.fadeDamage ||= DataDefaults.createData('damage');
+
+        return prepared as CompileSpriteTestData;
+    }
+
+    _prepareCompilationData(data) {
+        if (!this.item) return;
+        const compilation = this.item.asType('call_in_action');
+        if (!compilation || !this.item.isCompilation) return;
+
+        // Choose the most explicit value given, making sure it's still usable.
+        data.level = Math.max(data.level || compilation.system.sprite.level || 1, 1);
+
+        data.preparedSpriteUuid = data.preparedSpriteUuid || compilation.system.sprite.uuid;
+    }
+
+    override get _dialogTemplate() {
+        return 'systems/shadowrun5e/templates/apps/dialogs/compilation-test-dialog.hbs';
+    }
+
+    override get canBeExtended() {
+        return false;
+    }
+
+    /**
+     * Fade test is configured here but will be executed only manually after the opposed test finished.
+     */
+    override get autoExecuteFollowupTest() {
+        return false;
+    }
+
+    override get testCategories(): Shadowrun.ActionCategories[] {
+        return ['compiling'];
+    }
+
+    /**
+     * Skill + Attribute [Limit] as defined in SR5#254 'Compiling a Sprite'
+     * 
+     * Limit 'level' is a dynamic test value, so it's missing here as it can't be taken from actor values
+     * but will be injected during test dialog preparations.
+     */
+    static override _getDefaultTestAction(): DeepPartial<MinimalActionType> {
+        return { skill: 'compiling', attribute: 'resonance' };
+    }
+
+    /**
+     * Inject level as limit value into test.
+     */
+    override prepareBaseValues() {
+        super.prepareBaseValues();
+        this.prepareLimitValue();
+    }
+
+    /**
+     * Level value only depends on user selection and doesn't deviate according to SR5#254.
+     */
+    prepareLimitValue() {
+        const level = Number(this.data.level);
+
+        ModifiableValue.addUniqueBase(this.data.limit, 'SR5.Level', level);
+    }
+
+    /**
+     * Inject into user dialog level value selection changes.
+     */
+    override validateBaseValues() {
+        this.warnAboutInvalidLevel();
+    }
+
+    /**
+     * Notify mancers about incomplete compilation. To avoid pre mature fade tests.
+     */
+    override async executeFollowUpTest() {
+        if (!this.data.fadeReady) ui.notifications?.warn('SR5.Warnings.CompilationNotConcluded', {localize: true});
+        await super.executeFollowUpTest();
+    }
+
+    /**
+     * Let user know about invalid level selection.
+     */
+    warnAboutInvalidLevel() {
+        const level = Number(this.data.level);
+        const resonance = (this.actor?.getAttribute('resonance')?.value ?? 0);
+
+        if (CompilationRules.validLevel(level, resonance)) return;
+
+        ui.notifications?.warn('SR5.Warnings.InvalidCompilationLevel', {localize: true});
+    }
+
+    /**
+     * Derive the actual fade damage from compilation values.
+     * NOTE: This will be called by the opposing test via a follow up test action.
+     * 
+     * @param opposingHits Amount of hits from the opposing test (sprite).
+     */
+    calcFade(opposingHits: number) {
+        this.data.fadeReady = true;
+        this.data.fade = CompilationRules.compilationFadeValue(opposingHits);
+        this.data.fadeDamage = this.calcFadeDamage(opposingHits);
+    }
+
+    calcFadeDamage(opposingHits: number): DamageType {
+        if (!this.actor) return DataDefaults.createData('damage');
+
+        const resonance = this.actor.getAttribute('resonance').value;
+        const level = this.data.level;
+
+        return CompilationRules.calcFadeDamage(opposingHits, level, resonance);
+    }
+
+    /**
+     * Indicate the use of a prepared actor.
+     */
+    get preparedActorUsed(): boolean {
+        return this.data.preparedSpriteUuid !== '';
+    }
+
+    get preparedSpriteIsCompendium(): boolean {
+        return this.data.preparedSpriteUuid?.startsWith('Compendium.') ?? false;
+    }
+
+    get preparedSpriteIsEditable(): boolean {
+        if (!this.preparedActorUsed) return false;
+        if (this.preparedSpriteIsCompendium) return true;
+
+        const preparedSprite = this.preparedSprite;
+        if (!preparedSprite || !game.user) return false;
+
+        return preparedSprite.testUserPermission(game.user, 'OWNER');
+    }
+
+    get preparedSprite(): SR5Actor | null {
+        if (!this.preparedActorUsed) return null;
+        return fromUuidSync(this.data.preparedSpriteUuid) as SR5Actor | null;
+    }
+}

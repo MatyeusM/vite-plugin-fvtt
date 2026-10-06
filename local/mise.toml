@@ -1,0 +1,27 @@
+# Local Foundry VTT test instances (gitignored by the parent repo; this dir is its own repo).
+# Run from this directory: mise run start-v12 | start-v13 | start-v14
+# WARNING: single Foundry license key — run only ONE instance at a time.
+# The v12/v13/v14 data dirs are mutually incompatible, hence separate folders/ports.
+# Node versions pinned per Foundry engines field:
+#   v12 (build 343) wants node >=18.15 <22 -> use 20
+#   v13 (build 351) wants node >=20.18 <23 -> use 22
+#   v14 (build 368) wants node >=24.13.1 <25 -> use 24
+#
+# The v13-system/ and v14-system/ trees and the test worlds are committed here as frozen fixtures.
+# Foundry rewrites LevelDB on every boot, so reset them with `mise run reset-data`.
+
+[tasks.start-v12]
+description = "Start Foundry VTT v12 (build 343) with data-v12 on port 30012"
+run = 'mise x node@20 -- node "foundry-v12/resources/app/main.js" --dataPath="data-v12" --port=30012'
+
+[tasks.start-v13]
+description = "Start Foundry VTT v13 (build 351) with data-v13 on port 30013"
+run = 'mise x node@22 -- node "foundry-v13/main.js" --dataPath="data-v13" --port=30013 --world=testv13'
+
+[tasks.start-v14]
+description = "Start Foundry VTT v14 (build 368) with data-v14 on port 30014"
+run = 'mise x node@24 -- node "foundry-v14/main.js" --dataPath="data-v14" --port=30014 --world=testv14'
+
+[tasks.reset-data]
+description = "Restore the frozen test worlds to their committed baseline (stop Foundry first)"
+run = 'git restore data-v12 data-v13 data-v14 && git clean -fdq data-v12 data-v13 data-v14'

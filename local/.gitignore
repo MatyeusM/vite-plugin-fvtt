@@ -1,0 +1,21 @@
+# Local Foundry test fixtures (gitignored by the parent repo; this directory is its own repo).
+#
+# EXCLUDED - must never enter this repository:
+#   * foundry-v*        Commercial, license-keyed Foundry VTT binaries.
+#   * data-v*/Config    Contains the Foundry license key (Config/license.json).
+#   * data-v*/Logs      Runtime log output, rewritten on every boot.
+#   * */node_modules    Restored by `pnpm install` / `npm ci` in each system.
+#   * */dist            Build output, restored by `npm run build` in each system.
+
+foundry-v*/
+data-v*/Config/
+data-v*/Logs/
+data-v*/Data/modules/
+data-v*/Data/assets/
+*/node_modules/
+*/dist/
+*.swp
+.idea
+.vs
+.vscode
+.DS_Store

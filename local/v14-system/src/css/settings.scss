@@ -1,0 +1,17 @@
+/**
+ * SCSS for any settings related styles found in the FoundryVTT settings UI for the system.
+ */
+@use "config/variables";
+
+#sr5-compendia-settings .settings-separator {
+    margin: 1.5em 0 1em 0;
+    border: none;
+    border-top: 2px solid var(--color-border-light-primary, variables.$dark);
+}
+
+#sr5-compendia-settings .settings-section-header {
+    margin: 0.5em 0 1em 0;
+    color: var(--color-text-primary, variables.$dark2);
+    font-weight: bold;
+    font-size: 1.1em;
+}
