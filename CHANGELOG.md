@@ -17,6 +17,9 @@
 - Refreshed README (requirements, env files, language/pack/template behavior, `buildPacks` option,
   minification, dev scripts).
 - Updated dependencies (TypeScript 7, Vitest 5, Vite 8.3, tsdown 0.23, oxfmt 0.68, and minors).
+- Refreshed dependencies again: oxlint 1.87, rolldown 1.2.12, socket.io 4.8.4, Vite 8.3.2, Vitest
+  5.0.3, lint-staged 17.6.0, and @types/node 26.6.4. Done directly rather than via the grouped
+  Dependabot PR, which was raised against a stale manifest still listing the removed ESLint tooling.
 - Migrated linter and formatter from ESLint and Prettier to `oxlint` and `oxfmt`. TypeScript 7.1 is
   not due until the end of November, meaning TypeScript cannot update without hacks to make ESLint
   work.
