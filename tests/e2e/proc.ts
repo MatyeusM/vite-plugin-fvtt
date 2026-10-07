@@ -66,10 +66,20 @@ export function startFoundry(id: string): ChildProcess {
  * restore the frozen seed. Scoped to this version's worlds dir, unlike the `reset-data` mise task
  * which covers every version: safe to run unattended before and after a suite's own instance.
  */
-export async function restoreWorldData(id: string, root: string = repoRoot): Promise<void> {
+export type GitRunner = (args: Array<string>, options: { cwd: string }) => Promise<void>
+
+async function execGit(args: Array<string>, options: { cwd: string }): Promise<void> {
+  await execFileAsync('git', args, options)
+}
+
+export async function restoreWorldData(
+  id: string,
+  root: string = repoRoot,
+  git: GitRunner = execGit,
+): Promise<void> {
   const worlds = `local/data-${id}/Data/worlds`
-  await execFileAsync('git', ['restore', worlds], { cwd: root })
-  await execFileAsync('git', ['clean', '-fdq', worlds], { cwd: root })
+  await git(['restore', worlds], { cwd: root })
+  await git(['clean', '-fdq', worlds], { cwd: root })
 }
 
 /**
@@ -81,6 +91,7 @@ export async function stopFoundry(
   child: ChildProcess | undefined,
   id: string,
   root: string = repoRoot,
+  git: GitRunner = execGit,
 ): Promise<void> {
   if (!child?.pid) return
   if (child.exitCode === null) {
@@ -93,7 +104,7 @@ export async function stopFoundry(
     ])
     if (!exited) return
   }
-  await restoreWorldData(id, root)
+  await restoreWorldData(id, root, git)
 }
 
 export function startDevServer(systemDir: string): Promise<ChildProcess> {
