@@ -23,8 +23,8 @@ data-v*/*
 data-v*/Data/modules/
 data-v*/Data/assets/
 
-# Runtime output in Logs. The world is excluded from this: Foundry v13 keeps its world under
-# Logs/worlds, while v14 uses Data/worlds, so both layouts have to stay tracked.
+# Runtime output in Logs. Safety net only: worlds live in Data/worlds (Foundry reads no other
+# path), but if a version ever drops one in here it still gets tracked rather than lost.
 data-v*/Logs/*
 !data-v*/Logs/worlds/
 

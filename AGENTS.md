@@ -61,11 +61,12 @@
 - Single license key: **never run more than one instance at a time**.
 - `local/.gitignore` keeps out `foundry-v*`, `data-v*/Config` (holds the license key), runtime logs
   under `data-v*/Logs`, `Data/modules`, `Data/assets`, `node_modules`, `dist`. Never commit those.
-- World locations differ by version: **v13 keeps its world under `data-v13/Logs/worlds/testv13`**,
-  v14 under `data-v14/Data/worlds/testv14`. Both are tracked; that is why the ignore file re-opens
-  `Logs/` just to re-exclude everything in it except `worlds/`.
+- Worlds live in `data-v*/Data/worlds/` for every version. Foundry reads that path and nothing else,
+  so a world anywhere else (e.g. under `Logs/`) is inert and will not auto-launch. The ignore file
+  re-opens `Logs/worlds/` only as a safety net for a version that does that.
 - Foundry rewrites world LevelDB on every boot; `mise run -C local reset-data` restores the frozen
-  worlds (run it with Foundry stopped).
+  worlds (run it with Foundry stopped). It uses `git clean`, so anything under `local/` that is not
+  committed is destroyed - commit fixtures before running it.
 
 ## E2E tests (`tests/e2e/`, runs with the rest)
 
