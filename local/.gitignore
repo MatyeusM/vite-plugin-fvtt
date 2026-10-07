@@ -1,19 +1,36 @@
-# Local Foundry test fixtures (gitignored by the parent repo; this directory is its own repo).
+# Local Foundry test fixtures. Tracked by the parent repo; this directory is not its own repo.
 #
 # EXCLUDED - must never enter this repository:
-#   * foundry-v*        Commercial, license-keyed Foundry VTT binaries.
-#   * data-v*/Config    Contains the Foundry license key (Config/license.json).
-#   * data-v*/Logs      Runtime log output, rewritten on every boot.
-#   * */node_modules    Restored by `pnpm install` / `npm ci` in each system.
-#   * */dist            Build output, restored by `npm run build` in each system.
+#   * foundry-v*     Commercial, license-keyed Foundry VTT binaries.
+#   * data-v*/Config Holds the Foundry licence key (license.json) and the admin secret.
+#   * Logs/*.log etc Runtime log output, rewritten on every boot.
+#   * Data/modules   Third-party modules the user installs, not fixtures.
+#   * Data/assets    User-uploaded files.
+#   * node_modules, dist
 
 foundry-v*/
-data-v*/Config/
-data-v*/Logs/
-data-v*/Data/modules/
-data-v*/Data/assets/
 */node_modules/
 */dist/
+
+# Everything inside a data dir is machine-local unless re-opened below. This matches the
+# *contents* rather than the data dir itself: git cannot re-include anything beneath an
+# excluded directory, so excluding `data-v*/` would make every negation below unreachable.
+data-v*/*
+!data-v*/Data/
+!data-v*/Logs/
+
+# User downloads inside Data are not fixtures.
+data-v*/Data/modules/
+data-v*/Data/assets/
+
+# Runtime output in Logs. The world is excluded from this: Foundry v13 keeps its world under
+# Logs/worlds, while v14 uses Data/worlds, so both layouts have to stay tracked.
+data-v*/Logs/*
+!data-v*/Logs/worlds/
+
+# The fixtures themselves - the installed-system links and the frozen test worlds - are
+# included by default once the directories above are re-opened.
+
 *.swp
 .idea
 .vs

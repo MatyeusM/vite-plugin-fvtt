@@ -1,0 +1,15 @@
+{
+  "title": "Test World",
+  "id": "testv13",
+  "system": "shadowrun5e",
+  "coreVersion": "13.351",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "systemVersion": "0.30.3",
+  "lastPlayed": "Tue Oct 06 2026 12:25:53 GMT+0200 (Central European Summer Time)",
+  "playtime": 431,
+  "description": "",
+  "flags": {}
+}

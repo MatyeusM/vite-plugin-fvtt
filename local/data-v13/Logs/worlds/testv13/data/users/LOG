@@ -1,0 +1,5 @@
+2026/10/06-12:25:52.995211 7fbb9dffc6c0 Recovering log #8
+2026/10/06-12:25:52.995234 7fbb9dffc6c0 Level-0 table #10: started
+2026/10/06-12:25:52.996000 7fbb9dffc6c0 Level-0 table #10: 877 bytes OK
+2026/10/06-12:25:52.998228 7fbb9dffc6c0 Delete type=0 #8
+2026/10/06-12:25:52.998255 7fbb9dffc6c0 Delete type=3 #7

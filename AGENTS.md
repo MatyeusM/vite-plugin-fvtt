@@ -59,8 +59,11 @@
 - Start one via `mise run -C local start-v12|start-v13|start-v14`. v13/v14 boot `testv13`/`testv14`.
 - Each `data-v*/Data/systems/shadowrun5e` symlinks to `v*-system/dist`, so build the system first.
 - Single license key: **never run more than one instance at a time**.
-- `local/.gitignore` keeps out `foundry-v*`, `data-v*/Config` (holds the license key),
-  `data-v*/Logs`, `node_modules`, `dist`. Never commit those.
+- `local/.gitignore` keeps out `foundry-v*`, `data-v*/Config` (holds the license key), runtime logs
+  under `data-v*/Logs`, `Data/modules`, `Data/assets`, `node_modules`, `dist`. Never commit those.
+- World locations differ by version: **v13 keeps its world under `data-v13/Logs/worlds/testv13`**,
+  v14 under `data-v14/Data/worlds/testv14`. Both are tracked; that is why the ignore file re-opens
+  `Logs/` just to re-exclude everything in it except `worlds/`.
 - Foundry rewrites world LevelDB on every boot; `mise run -C local reset-data` restores the frozen
   worlds (run it with Foundry stopped).
 
