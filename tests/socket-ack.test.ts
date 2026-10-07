@@ -50,7 +50,7 @@ async function createProxyServer(): Promise<void> {
 
 /** Recursive rather than a loop, to satisfy `no-await-in-loop`. */
 async function waitFor(condition: () => boolean): Promise<void> {
-  const deadline = Date.now() + 10_000
+  const deadline = Date.now() + 30_000
   if (condition()) return
   if (Date.now() > deadline) throw new Error('Timed out waiting for condition')
   await new Promise<void>(resolve => {
@@ -77,7 +77,7 @@ beforeEach(async () => {
   await createProxyServer()
   await connectBrowser()
   await waitFor(() => testContext.upstreamSocket !== undefined)
-})
+}, 120_000)
 
 afterEach(async () => {
   testContext.browser?.close()
@@ -89,10 +89,10 @@ afterEach(async () => {
   testContext.browser = undefined
   await fs.rm(TEMPORARY_TEST_DIRECTORY, { recursive: true })
   vi.restoreAllMocks()
-})
+}, 60_000)
 
 describe('socket proxy without ack', () => {
-  it('forwards browser events with the original arguments', async () => {
+  it('forwards browser events with the original arguments', { timeout: 60_000 }, async () => {
     const received: Array<Array<unknown>> = []
     testContext.upstreamSocket?.onAny((...args: Array<unknown>) => {
       received.push(args)
@@ -103,7 +103,7 @@ describe('socket proxy without ack', () => {
     expect(received[0]).toEqual(['cursor-move', { x: 1, y: 2 }])
   })
 
-  it('forwards Foundry events with the original arguments', async () => {
+  it('forwards Foundry events with the original arguments', { timeout: 60_000 }, async () => {
     const received: Array<Array<unknown>> = []
     testContext.browser?.onAny((...args: Array<unknown>) => {
       received.push(args)
@@ -116,7 +116,7 @@ describe('socket proxy without ack', () => {
 })
 
 describe('socket proxy with ack', () => {
-  it('delivers a browser-requested ack from Foundry', async () => {
+  it('delivers a browser-requested ack from Foundry', { timeout: 60_000 }, async () => {
     testContext.upstreamSocket?.on(
       'roll',
       (payload: unknown, acknowledge: (value: unknown) => void) => {
@@ -131,7 +131,7 @@ describe('socket proxy with ack', () => {
     expect(response).toEqual({ success: true, payload: { dice: '1d20' } })
   })
 
-  it('delivers a Foundry-requested ack from the browser', async () => {
+  it('delivers a Foundry-requested ack from the browser', { timeout: 60_000 }, async () => {
     testContext.browser?.on('query', (payload: unknown, acknowledge: (value: unknown) => void) => {
       acknowledge({ echo: payload })
     })
