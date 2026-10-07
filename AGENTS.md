@@ -70,11 +70,24 @@
 
 ## E2E tests (`tests/e2e/`, runs with the rest)
 
-- Part of `pnpm run test -- --run`; skips itself when no instance is listening, so CI never runs it.
-- Targets whichever version is up, or `FVTT_E2E_VERSION=v13`/`v14` to force one.
-- Drives real Foundry through the dev server: log in, render a sheet, assert hbs HMR.
-- v13 joins via `select[name=userid]`, v14 via `input#join-username`; sheet templates differ
-  (`actor/character.hbs` vs `v2/actor/header.hbs`). Both are table-driven in the test file.
+- Part of `pnpm run test -- --run`; each suite skips itself when its version is not provisioned, so
+  CI never runs it. The skip reason names the missing path.
+- A suite is eligible when `local/foundry-v<n>`, `local/v<n>-system/dist`,
+  `local/data-v<n>/Config/license.json` and `mise` are all present. It then starts its own instance
+  (`mise run start-v<n>`) and stops it in teardown, so no manual step is needed. An instance that is
+  already running is borrowed instead, and then left running.
+- v13 and v14 never run at the same time: one licence key. `vitest.config.ts` gives the e2e project
+  `fileParallelism: false`.
+- `FVTT_E2E_VERSION=v13`/`v14` forces one version; the other skips.
+- `foundry-v<version>.test.ts` holds only what differs per version - login widget, sheet template,
+  i18n key. Everything shared lives in `support.ts` (precheck + suite), `session.ts` (the driver)
+  and `proc.ts` (process/polling). Add new per-version differences to the version's own file.
+- Each suite drives real Foundry through the dev server: log in, render a sheet, assert hbs HMR,
+  then overwrite one locale key with `hmr`, assert the sheet shows it, and roll the file back.
+- Joining retries until it sticks: Foundry listens before its startup IP discovery settles, and a
+  join in that window authenticates then dies in `getInvitationLinks`, so `game.ready` never flips.
+- The fixtures are restored on teardown, but Foundry still rewrites the world's LevelDB. Run
+  `mise run -C local reset-data` when you want a clean tree.
 
 ## Changelog
 

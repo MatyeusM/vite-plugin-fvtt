@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### Changed
+
+- The end-to-end suite is split per Foundry version (`tests/e2e/foundry-v13.test.ts`,
+  `foundry-v14.test.ts`) instead of one table-driven file, so differences between Foundry releases
+  have somewhere to go. Each version's file now holds only its own login widget, sheet template and
+  i18n key; the shared precheck and driver live in `support.ts`, `session.ts` and `proc.ts`.
+- The e2e suites check whether they can run before doing anything, and skip with the reason (the
+  missing path, or `mise is not installed`) rather than failing. When eligible they start Foundry
+  themselves with `mise run start-v<n>` and stop it afterwards, so no instance needs to be running
+  beforehand. An already-running instance is reused and left alone.
+- `vitest.config.ts` splits the suite into `unit` and `e2e` projects, and runs the e2e files with
+  `fileParallelism: false`: one Foundry licence key means only one instance may boot at a time.
+
+### Added
+
+- End-to-end coverage for i18n hot reloading: the test overwrites the one locale key the actor sheet
+  renders, asserts the sheet updates over the socket without a page reload, then rolls the file back
+  and asserts the original text returns.
+
 ## [0.3.2] - 2026-10-06
 
 ### Fixed
