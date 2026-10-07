@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- The socket proxy no longer appends an acknowledgement callback when forwarding events that had
+  none. Unacked broadcast events previously piled callbacks up on the sender for the whole dev
+  session, and handed handlers an argument they never sent.
+
 ## [0.3.2] - 2026-10-06
 
 ### Fixed

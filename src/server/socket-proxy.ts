@@ -68,18 +68,27 @@ export default function socketProxy(server: ViteDevServer) {
 
       if (event === 'template' && (await tryServeLocalTemplate(parameters[0], maybeAck))) return
 
-      upstream.emit(event, ...parameters, (response: unknown) => {
-        if (maybeAck) maybeAck(response)
-      })
+      // An ack callback with no timeout lives on the sender until the other side acks. Broadcast
+      // events are never acked, so always passing one piles callbacks up over a long dev session
+      // (and hands handlers an argument they never sent).
+      if (maybeAck) {
+        const acknowledge = maybeAck as Acknowledge
+        upstream.emit(event, ...parameters, (response: unknown) => acknowledge(response))
+      } else {
+        upstream.emit(event, ...parameters)
+      }
     })
 
     // Foundry >>> Browser [just forward]
     upstream.onAny((event, ...parameters) => {
       const lastArgument = parameters.at(-1)
       const maybeAck = typeof lastArgument === 'function' ? parameters.pop() : undefined
-      socket.emit(event, ...parameters, (response: unknown) => {
-        if (maybeAck) maybeAck(response)
-      })
+      if (maybeAck) {
+        const acknowledge = maybeAck as Acknowledge
+        socket.emit(event, ...parameters, (response: unknown) => acknowledge(response))
+      } else {
+        socket.emit(event, ...parameters)
+      }
     })
 
     // Clean up the upstream connection to avoid potential leak
