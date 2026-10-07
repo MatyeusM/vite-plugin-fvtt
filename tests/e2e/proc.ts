@@ -2,10 +2,16 @@
  * Process and polling helpers for the Foundry e2e suites: booting an instance through `mise`,
  * starting the Vite dev server, and waiting for a URL to answer.
  */
-import { spawn, type ChildProcess } from 'node:child_process'
+import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { setTimeout as delay } from 'node:timers/promises'
+import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
 
 import { LOCAL_DIR } from './support'
+
+const execFileAsync = promisify(execFile)
+/** The parent repo tracks `local/`, so git commands run from its root, not from `local/`. */
+const repoRoot = fileURLToPath(new URL('../../', import.meta.url))
 
 export async function isUp(url: string): Promise<boolean> {
   try {
@@ -53,6 +59,41 @@ export function startFoundry(id: string): ChildProcess {
     detached: true,
     stdio: ['ignore', 'inherit', 'inherit'],
   })
+}
+
+/**
+ * Foundry rewrites the world's LevelDB (and `lastPlayed` in `world.json`) on every boot, so
+ * restore the frozen seed. Scoped to this version's worlds dir, unlike the `reset-data` mise task
+ * which covers every version: safe to run unattended before and after a suite's own instance.
+ */
+export async function restoreWorldData(id: string, root: string = repoRoot): Promise<void> {
+  const worlds = `local/data-${id}/Data/worlds`
+  await execFileAsync('git', ['restore', worlds], { cwd: root })
+  await execFileAsync('git', ['clean', '-fdq', worlds], { cwd: root })
+}
+
+/**
+ * Stop an instance this suite started and restore the seed it rewrote. Waits for the process to
+ * exit first: restoring LevelDB files Foundry still holds open would corrupt them. Skips the
+ * restore when the process refuses to die within 30s — a dirty tree beats a corrupt one.
+ */
+export async function stopFoundry(
+  child: ChildProcess | undefined,
+  id: string,
+  root: string = repoRoot,
+): Promise<void> {
+  if (!child?.pid) return
+  if (child.exitCode === null) {
+    kill(child)
+    const exited = await Promise.race([
+      new Promise<boolean>(resolve => {
+        child.once('exit', () => resolve(true))
+      }),
+      delay(30_000).then(() => false),
+    ])
+    if (!exited) return
+  }
+  await restoreWorldData(id, root)
 }
 
 export function startDevServer(systemDir: string): Promise<ChildProcess> {

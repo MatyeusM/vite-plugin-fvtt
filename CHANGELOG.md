@@ -1,26 +1,5 @@
 # Changelog
 
-## [Unreleased]
-
-### Changed
-
-- The end-to-end suite is split per Foundry version (`tests/e2e/foundry-v13.test.ts`,
-  `foundry-v14.test.ts`) instead of one table-driven file, so differences between Foundry releases
-  have somewhere to go. Each version's file now holds only its own login widget, sheet template and
-  i18n key; the shared precheck and driver live in `support.ts`, `session.ts` and `proc.ts`.
-- The e2e suites check whether they can run before doing anything, and skip with the reason (the
-  missing path, or `mise is not installed`) rather than failing. When eligible they start Foundry
-  themselves with `mise run start-v<n>` and stop it afterwards, so no instance needs to be running
-  beforehand. An already-running instance is reused and left alone.
-- `vitest.config.ts` splits the suite into `unit` and `e2e` projects, and runs the e2e files with
-  `fileParallelism: false`: one Foundry licence key means only one instance may boot at a time.
-
-### Added
-
-- End-to-end coverage for i18n hot reloading: the test overwrites the one locale key the actor sheet
-  renders, asserts the sheet updates over the socket without a page reload, then rolls the file back
-  and asserts the original text returns.
-
 ## [0.3.2] - 2026-10-06
 
 ### Fixed
@@ -52,7 +31,6 @@
   fast with a clear message instead of starting a misconfigured dev server.
 - Dev server warns (once per connection) when Foundry VTT is unreachable, instead of failing socket
   calls silently.
-- Test coverage for environment loading and validation.
 
 ### Changed
 
@@ -60,18 +38,9 @@
   oxc minification.
 - Refreshed README (requirements, env files, language/pack/template behavior, `buildPacks` option,
   minification, dev scripts).
-- Updated dependencies (TypeScript 7, Vitest 5, Vite 8.3, tsdown 0.23, oxfmt 0.68, and minors).
-- Refreshed dependencies again: oxlint 1.87, rolldown 1.2.12, socket.io 4.8.4, Vite 8.3.2, Vitest
-  5.0.3, lint-staged 17.6.0, and @types/node 26.6.4. Done directly rather than via the grouped
-  Dependabot PR, which was raised against a stale manifest still listing the removed ESLint tooling.
-- Migrated linter and formatter from ESLint and Prettier to `oxlint` and `oxfmt`. TypeScript 7.1 is
-  not due until the end of November, meaning TypeScript cannot update without hacks to make ESLint
-  work.
 
 ### Fixed
 
-- Test runner no longer collects `*.spec.ts` files from the gitignored `local/` Foundry test
-  systems.
 - The upstream socket connection now forwards the browser's request headers, so the session cookie
   reaches Foundry VTT. Required since 14.366, which authenticates the socket via cookie rather than
   query parameter; without it the dev server never connects and templates cannot resolve. Thank you
@@ -86,20 +55,14 @@
 ### Changed
 
 - Switch to oxc for minification when using Vite 8+, falling back to esbuild for older versions.
-- Bump @foundryvtt/foundryvtt-cli to version 3.0.4
 
 ## [0.2.11]
 
 ### Changed
 
-- Bump @foundryvtt/foundryvtt-cli to version 3.0.3
 - Updated `package.json` for dependencies, for the correct semver ranges.
 
 ## [0.2.10] - 2026-01-01
-
-### Changed
-
-- Bump socket.io to 4.8.3
 
 ### Fixed
 
@@ -114,27 +77,7 @@
 - fixed `package.json` pointing to the wrong files. Thank you
   [Daedalus11069](https://github.com/Daedalus11069).
 
-## [0.2.8] - 2025-11-15
-
-### Changed
-
-- Bump @foundryvtt/foundryvtt-cli to version 3.0.2
-
-## [0.2.7] - 2025-11-07
-
-### Changed
-
-- Use `pnpm` as the package manager.
-- Bump @foundryvtt/foundryvtt-cli to version 3.0.1
-
 ## [0.2.6] - 2025-10-01
-
-### Added
-
-- CI now tests against Node.js Latest, 20 LTS, and 22 LTS, ensuring Foundry projects compile across
-  supported environments.
-- Badges were added to the README because they look neat.
-- Dependabot now tracks GitHub Actions, not just NPM dependencies.
 
 ### Changed
 
@@ -142,10 +85,6 @@
   behavior for templates and JSON language files. _(If Foundry doesn't end up relying on the new
   data shape in V14, this will have been an over-engineered no-op; but future-proofing beats
   regret.)_
-- ESLint configuration significantly tightened:
-  - Added sonarjs and unicorn plugins for deeper static analysis.
-  - Upgraded TypeScript ESLint rules from recommended to strict.
-- Test suite refactored to reduce duplication and simplify onboarding for future test additions.
 
 ## [0.2.5] - 2025-09-24
 
@@ -168,12 +107,6 @@
 
 - Return absolute paths from globbing.
 - Refactor path-utils import and usage across codebase, for better Windows support.
-- Refactor logger to use static Logger class methods.
-- Bump dependencies.
-
-### Added
-
-- Add Vitest and fixture-based build test.
 
 ## [0.2.2] - 2025-09-10
 
@@ -230,10 +163,6 @@
 
 ## [0.1.2] - 2025-09-03
 
-### Added
-
-- Automatic npm deployment on tag push.
-
 ### Changed
 
 - Replaced glob with tinyglobby to match vite's dependencies and not add more unnecessary modules.
@@ -257,9 +186,7 @@
 [0.2.12]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.9...v0.2.10
-[0.2.9]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.8...v0.2.9
-[0.2.8]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.7...v0.2.8
-[0.2.7]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.6...v0.2.7
+[0.2.9]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.6...v0.2.9
 [0.2.6]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/MatyeusM/vite-plugin-fvtt/compare/v0.2.3...v0.2.4

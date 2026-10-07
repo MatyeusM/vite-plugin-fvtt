@@ -1,4 +1,4 @@
-# Local Foundry VTT test instances (gitignored by the parent repo; this dir is its own repo).
+# Local Foundry VTT test instances (tracked by the parent repo).
 # Run from this directory: mise run start-v12 | start-v13 | start-v14
 # WARNING: single Foundry license key — run only ONE instance at a time.
 # The v12/v13/v14 data dirs are mutually incompatible, hence separate folders/ports.

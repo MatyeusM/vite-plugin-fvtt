@@ -12,7 +12,16 @@ import fs from 'node:fs/promises'
 
 import { chromium, type Browser, type ConsoleMessage, type Page } from 'playwright'
 
-import { isUp, isWorldReady, kill, startDevServer, startFoundry, waitUntil } from './proc'
+import {
+  isUp,
+  isWorldReady,
+  kill,
+  restoreWorldData,
+  startDevServer,
+  startFoundry,
+  stopFoundry,
+  waitUntil,
+} from './proc'
 import { LANGUAGE_FILE, LOCAL_DIR } from './support'
 
 /** Foundry refuses to run below 1366x768. */
@@ -71,9 +80,13 @@ export class FoundrySession {
     this.#originalLanguage = language
     this.#originalLanguageValue = this.#languageWith()
 
-    // Reuse a developer-started instance instead of fighting it for the port.
+    // Reuse a developer-started instance instead of fighting it for the port. Only restore the
+    // seed for an instance this suite boots itself: touching a running one's files would corrupt it.
     this.#borrowed = await isWorldReady(this.foundryUrl)
-    if (!this.#borrowed) this.#foundry = startFoundry(this.spec.id)
+    if (!this.#borrowed) {
+      await restoreWorldData(this.spec.id)
+      this.#foundry = startFoundry(this.spec.id)
+    }
     await waitUntil(
       async () => await isWorldReady(this.foundryUrl),
       'Foundry to finish launching the world',
@@ -97,7 +110,7 @@ export class FoundrySession {
     ])
     await this.#browser?.close()
     kill(this.#devServer)
-    if (!this.#borrowed) kill(this.#foundry)
+    if (!this.#borrowed) await stopFoundry(this.#foundry, this.spec.id)
   }
 
   /**

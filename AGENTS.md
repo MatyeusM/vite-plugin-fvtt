@@ -50,9 +50,9 @@
   implement. (This applies to additions, not to changes of existing behavior.)
 - `pnpm run test -- --run` must stay green; CI runs Node 22/24/26.
 
-## Local Foundry instances (`local/`, gitignored by this repo)
+## Local Foundry instances (`local/`, tracked by this repo)
 
-`local/` is its own git repo holding the frozen v13/v14 systems and test worlds.
+`local/` holds the frozen v13/v14 systems and test worlds.
 
 - `foundry-v12`/`data-v12` (port 30012, node 20), `v13` (30013, node 22), `v14` (30014, node 24).
   v12 entry is `resources/app/main.js` (Electron layout), v13/v14 use `main.js`.
@@ -64,9 +64,12 @@
 - Worlds live in `data-v*/Data/worlds/` for every version. Foundry reads that path and nothing else,
   so a world anywhere else (e.g. under `Logs/`) is inert and will not auto-launch. The ignore file
   re-opens `Logs/worlds/` only as a safety net for a version that does that.
-- Foundry rewrites world LevelDB on every boot; `mise run -C local reset-data` restores the frozen
-  worlds (run it with Foundry stopped). It uses `git clean`, so anything under `local/` that is not
-  committed is destroyed - commit fixtures before running it.
+- Foundry rewrites world LevelDB on every boot. The e2e harness restores the frozen worlds before
+  launching and after stopping its own instance (`restoreWorldData`/`stopFoundry` in
+  `tests/e2e/proc.ts`, scoped to that version's worlds dir), so the tree stays clean without manual
+  steps. `mise run -C local reset-data` remains the manual escape hatch covering every version (run
+  it with Foundry stopped). It uses `git clean`, so anything under `local/` that is not committed is
+  destroyed - commit fixtures before running it.
 
 ## E2E tests (`tests/e2e/`, runs with the rest)
 
@@ -86,10 +89,14 @@
   then overwrite one locale key with `hmr`, assert the sheet shows it, and roll the file back.
 - Joining retries until it sticks: Foundry listens before its startup IP discovery settles, and a
   join in that window authenticates then dies in `getInvitationLinks`, so `game.ready` never flips.
-- The fixtures are restored on teardown, but Foundry still rewrites the world's LevelDB. Run
-  `mise run -C local reset-data` when you want a clean tree.
+- The harness restores the world seed before boot and after teardown of its own instance, so no
+  manual step is needed. `mise run -C local reset-data` covers all versions at once when needed.
 
 ## Changelog
 
 - `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com) (`Unreleased` section with
   `Added`/`Changed`/`Fixed` subsections). Update it with user-facing changes.
+- Only end-user changes get entries: behavior, API, peer ranges, install/publish fixes, user docs.
+  Never dev-only work: devDependency bumps, test/e2e harness internals, lint/tooling, CI, or
+  version-number-only dependency bumps with no behavior change. Drop a release section left empty by
+  this rule.
