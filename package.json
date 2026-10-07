@@ -34,7 +34,7 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "typecheck": "tsc",
-    "test": "vitest",
+    "test": "vitest run",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "simple-git-hooks"
   },

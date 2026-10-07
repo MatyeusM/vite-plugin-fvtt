@@ -7,8 +7,7 @@
 ## Commands
 
 - `pnpm run build` (tsdown), `pnpm run lint` (oxlint), `pnpm run fmt` / `fmt:check` (oxfmt),
-  `pnpm run typecheck` (tsc), `pnpm run test -- --run` (vitest).
-- Bare `pnpm run test` starts watch mode — always pass `-- --run` for verification.
+  `pnpm run typecheck` (tsc), `pnpm run test` (vitest, single run). `pnpm vitest` starts watch mode.
 - Pre-commit hook runs `lint-staged` + `typecheck`; every commit is checked.
 - Pushes to `main` may be rejected (Dependabot moves fast) — `git pull --rebase origin main` first.
 
@@ -48,7 +47,7 @@
   Dev-server fetch helper hardcodes port `30001` (mirrors `foundryPort + 1`).
 - Additions come test-first: write a failing test comprehensively covering the new behavior, then
   implement. (This applies to additions, not to changes of existing behavior.)
-- `pnpm run test -- --run` must stay green; CI runs Node 22/24/26.
+- `pnpm run test` must stay green; CI runs Node 22/24/26.
 
 ## Local Foundry instances (`local/`, tracked by this repo)
 
@@ -73,8 +72,8 @@
 
 ## E2E tests (`tests/e2e/`, runs with the rest)
 
-- Part of `pnpm run test -- --run`; each suite skips itself when its version is not provisioned, so
-  CI never runs it. The skip reason names the missing path.
+- Part of `pnpm run test`; each suite skips itself when its version is not provisioned, so CI never
+  runs it. The skip reason names the missing path.
 - A suite is eligible when `local/foundry-v<n>`, `local/v<n>-system/dist`,
   `local/data-v<n>/Config/license.json` and `mise` are all present. It then starts its own instance
   (`mise run start-v<n>`) and stops it in teardown, so no manual step is needed. An instance that is
