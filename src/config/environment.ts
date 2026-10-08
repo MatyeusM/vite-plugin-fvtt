@@ -10,9 +10,14 @@ function parseEnvironment(content: string): Record<string, string> {
     const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith('#')) continue
     const [key, ...rest] = trimmed.split('=')
-    result[key.trim()] = rest.join('=').trim()
+    result[key.trim()] = unquote(rest.join('=').trim())
   }
   return result
+}
+
+function unquote(value: string): string {
+  const match = value.match(/^(['"])(.*)\1$/su)
+  return match ? (match[2] ?? value) : value
 }
 
 function normalizeFoundryUrl(raw: string): string {
@@ -22,6 +27,16 @@ function normalizeFoundryUrl(raw: string): string {
     .split('/')[0]
     .trim()
   if (!host) Logger.fail(`Invalid FOUNDRY_URL "${raw}": expected a hostname such as "localhost".`)
+  const ipv6 = host.match(/^\[([^\]]*)\](?::(.*))?$/u)
+  if (ipv6) {
+    if (ipv6[2] !== undefined || !ipv6[1])
+      Logger.fail(
+        `Invalid FOUNDRY_URL "${raw}": expected a hostname such as "localhost", put the port in FOUNDRY_PORT instead.`,
+      )
+    return host
+  }
+  if (host.includes(':'))
+    Logger.fail(`Invalid FOUNDRY_URL "${raw}": put the port in FOUNDRY_PORT instead of the URL.`)
   return host
 }
 

@@ -12,6 +12,12 @@
 
 ### Fixed
 
+- `FOUNDRY_URL` with a port (e.g. `https://host:30000`) now fails fast and points at `FOUNDRY_PORT`,
+  instead of silently building a double-port proxy target. Surrounding quotes in `.env.foundryvtt*`
+  values are stripped.
+- Language files with `__proto__` keys no longer corrupt the merged output; the key is skipped with
+  a warning.
+- Template HMR errors from the dev server are logged instead of dropped.
 - Watch mode (`vite build --watch`) now rebuilds when language files or templates change. Complete
   language files in `public/` and public templates were copied on the initial build but never
   watched, so editing them left a stale `dist/` behind; both are now registered with the watcher.

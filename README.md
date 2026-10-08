@@ -73,6 +73,9 @@ FOUNDRY_URL=localhost
 FOUNDRY_PORT=30000
 ```
 
+`FOUNDRY_URL` takes a hostname only (no port — a port in the URL fails fast and points at
+`FOUNDRY_PORT`); surrounding single or double quotes are stripped.
+
 The Vite dev server runs on `FOUNDRY_PORT + 1` and proxies everything outside your module/system
 base path to Foundry, so open your browser at the dev-server port manually.
 

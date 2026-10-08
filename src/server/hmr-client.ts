@@ -12,7 +12,7 @@ if (import.meta.hot) {
 
   import.meta.hot.on('foundryvtt-template-update', ({ path }) => {
     game.socket.emit('template', path, response => {
-      if (response.error) new Error(response.error)
+      if (response?.error) return console.error(response.error)
       let template = undefined
       try {
         template = Handlebars.compile(response.html)

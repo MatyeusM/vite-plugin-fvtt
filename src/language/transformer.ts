@@ -24,8 +24,12 @@ export function expandDotNotationKeys(
   }
 
   for (const [key, value] of Object.entries(source)) {
-    let current = target
     const parts = key.split('.')
+    if (parts.includes('__proto__')) {
+      console.warn(`Warning: Skipping unsafe key "${key}" during transformation.`)
+      continue
+    }
+    let current = target
     const lastKey = parts.pop() as string
 
     for (const part of parts) {

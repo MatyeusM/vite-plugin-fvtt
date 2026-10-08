@@ -47,4 +47,20 @@ describe('loadEnvironment', () => {
     await writeEnv('FOUNDRY_URL=   ')
     await expect(loadEnvironment()).rejects.toThrow(/FOUNDRY_URL/u)
   })
+
+  it.each(['https://foundry.example.com:30000', 'localhost:30000'])(
+    'rejects FOUNDRY_URL with a port "%s"',
+    async url => {
+      await writeEnv(`FOUNDRY_URL=${url}`)
+      await expect(loadEnvironment()).rejects.toThrow(/FOUNDRY_PORT/u)
+    },
+  )
+
+  it.each([`"localhost"`, `'localhost'`])('strips quotes from FOUNDRY_URL %s', async url => {
+    await writeEnv(`FOUNDRY_URL=${url}`)
+    await expect(loadEnvironment()).resolves.toEqual({
+      foundryUrl: 'localhost',
+      foundryPort: 30000,
+    })
+  })
 })
