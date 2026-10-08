@@ -1,18 +1,33 @@
-import path from 'node:path'
+import { type OutputBundle } from 'rolldown'
+import { Plugin, ResolvedConfig, UserConfig } from 'vite'
 
-import { LibraryOptions, Plugin, ResolvedConfig, UserConfig } from 'vite'
-
-import { generateBundle, type PluginContext } from '@/bundle'
-import { createPartialViteConfig, loadEnvironment, loadManifest } from '@/config'
-import { context } from '@/context'
+import {
+  generateBundle,
+  collapseLoneOutputs,
+  assertOverwriteManifest,
+  type PluginContext,
+} from '@/bundle'
+import {
+  createPartialViteConfig,
+  loadEnvironment,
+  loadManifest,
+  normalizeOverwrite,
+} from '@/config'
+import { context, type OverwriteKind } from '@/context'
 import validateI18nBuild from '@/language/validator'
 import { compileManifestPacks } from '@/packs/compile-packs'
-import setupDevelopmentServer from '@/server'
-import jsToInject from '@/server/hmr-client'
+import setupDevelopmentServer, { devEntryImport } from '@/server'
 
-export default async function foundryVTTPlugin({ buildPacks = true } = {}): Promise<Plugin> {
+export default async function foundryVTTPlugin({
+  buildPacks = true,
+  overwrite = [],
+}: { buildPacks?: boolean; overwrite?: OverwriteKind | OverwriteKind[] } = {}): Promise<Plugin> {
   context.env = await loadEnvironment()
+  context.overwrite = normalizeOverwrite(overwrite)
+  return createPluginInstance(buildPacks)
+}
 
+function createPluginInstance(buildPacks: boolean): Plugin {
   class FoundryVTTPluginInstance implements Plugin {
     name = 'vite-plugin-fvtt'
 
@@ -25,13 +40,19 @@ export default async function foundryVTTPlugin({ buildPacks = true } = {}): Prom
 
     configResolved(config: ResolvedConfig) {
       context.config = config
+      if (config.command === 'build') return assertOverwriteManifest()
     }
 
-    async generateBundle(this: PluginContext) {
-      await generateBundle(this)
+    // Post-order: only then are Vite's own emissions (css) visible in the bundle.
+    generateBundle = {
+      order: 'post' as const,
+      handler: async function (this: PluginContext, _options: unknown, bundle: OutputBundle) {
+        await generateBundle(this, bundle)
+      },
     }
 
-    async writeBundle() {
+    async writeBundle(_options: unknown, bundle: OutputBundle) {
+      await collapseLoneOutputs(bundle)
       if (buildPacks) await compileManifestPacks()
     }
 
@@ -44,17 +65,7 @@ export default async function foundryVTTPlugin({ buildPacks = true } = {}): Prom
 
     // all server behaviour
     load(id: string) {
-      const config = context.config as ResolvedConfig
-      const output = config.build.rollupOptions?.output
-      let jsFileName: string | undefined
-      if (Array.isArray(output)) jsFileName = String(output[0].entryFileNames)
-      else if (output) jsFileName = String(output.entryFileNames)
-
-      if (id === jsFileName || id === `/${jsFileName}`) {
-        const entryPath = path.resolve((config.build.lib as LibraryOptions).entry as string)
-        const viteId = `/@fs/${entryPath}`
-        return `import '${viteId}';\n${jsToInject}`
-      }
+      return devEntryImport(id)
     }
   }
 

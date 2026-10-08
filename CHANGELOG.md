@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- New `overwrite` plugin option (`'css' | 'js'`, or a list of both): competing build outputs take
+  Vite names instead of every file being forced onto the manifest-declared name, and the manifest is
+  rewritten to match. A lone output keeps its manifest name. Only entry chunks and the entry's css
+  are listed; dynamically imported children (and their css) load themselves and are emitted but not
+  listed. Requires the manifest in the project root.
+
 ### Fixed
 
 - Watch mode (`vite build --watch`) now rebuilds when language files or templates change. Complete

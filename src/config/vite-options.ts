@@ -1,8 +1,20 @@
 import { type PreRenderedAsset } from 'rolldown'
 import { LibraryFormats, UserConfig, version, mergeConfig } from 'vite'
 
-import { context } from '@/context'
+import { context, type OverwriteKind } from '@/context'
 import * as Logger from '@/utils/logger'
+import { forcedCssFileName, forcedEntryFileName } from '@/utils/path-utilities'
+
+export function normalizeOverwrite(
+  overwrite: OverwriteKind | OverwriteKind[] | undefined,
+): Set<OverwriteKind> {
+  const list = overwrite === undefined ? [] : Array.isArray(overwrite) ? overwrite : [overwrite]
+  for (const value of list) {
+    if (value !== 'css' && value !== 'js')
+      Logger.fail(`Invalid "overwrite" option ${JSON.stringify(value)}: expected "css" or "js".`)
+  }
+  return new Set(list)
+}
 
 function getViteMajorVersion() {
   try {
@@ -33,16 +45,14 @@ const esbuildMinifyOptions = (config: UserConfig): Partial<UserConfig> => ({
 })
 
 function resolveOutputFiles(isUseEsModules: boolean) {
-  const fileName =
-    (isUseEsModules ? context.manifest?.esmodules[0] : context.manifest?.scripts?.[0]) ??
-    'scripts/bundle.js'
+  const fileName = forcedEntryFileName()
   if (!(isUseEsModules || context.manifest?.scripts?.[0]))
     Logger.warn(
       'No output file specified in manifest, using default "bundle" in the "scripts/" folder',
     )
 
   if (!context.manifest?.styles?.length) Logger.warn('No CSS file found in manifest')
-  const cssFileName = context.manifest?.styles[0] ?? 'styles/bundle.css'
+  const cssFileName = forcedCssFileName()
   if (!context.manifest?.styles[0])
     Logger.warn(
       'No output css file specified in manifest, using default "bundle" in the "styles/" folder',
@@ -67,6 +77,8 @@ function getLibraryEntry(config: UserConfig): string {
 function resolveAssetFileName(assetInfo: PreRenderedAsset, cssFileName: string): string {
   const names: string[] = assetInfo.names ?? []
   if (names.some(n => n.endsWith('.css'))) {
+    // With overwrite, Vite names competing css files itself; a lone file is renamed back later.
+    if (context.overwrite?.has('css')) return 'assets/[name]-[hash][extname]'
     return cssFileName
   }
   return '[name][extname]'
@@ -94,7 +106,7 @@ export default function createPartialViteConfig(config: UserConfig): UserConfig 
         lib: { entry, formats, name: context.manifest?.id ?? 'bundle', cssFileName: 'bundle' },
         rollupOptions: {
           output: {
-            entryFileNames: fileName,
+            entryFileNames: context.overwrite?.has('js') ? '[name]-[hash].js' : fileName,
             assetFileNames: (assetInfo: PreRenderedAsset) =>
               resolveAssetFileName(assetInfo, cssFileName),
           },

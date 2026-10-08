@@ -76,6 +76,21 @@ FOUNDRY_PORT=30000
 The Vite dev server runs on `FOUNDRY_PORT + 1` and proxies everything outside your module/system
 base path to Foundry, so open your browser at the dev-server port manually.
 
+Pass `overwrite` to let Vite name competing outputs instead of forcing every file onto the
+manifest-declared name. A lone output keeps its manifest name; only when several are emitted do they
+take Vite names, and the manifest is rewritten to match:
+
+```js
+foundryVTT({ overwrite: ['css', 'js'] }) // or a single 'css' | 'js'
+```
+
+- `css`: competing stylesheets take Vite names and `styles` lists the entry's css. Css pulled in by
+  dynamically imported chunks loads itself, so it is emitted but not listed.
+- `js`: competing chunks take Vite names and `esmodules`/`scripts` lists the entry chunk.
+  Dynamically imported chunks load themselves, so they are emitted but not listed.
+- The manifest must live in the project **root** (a `public/` manifest is copied verbatim and fails
+  the build when `overwrite` is set).
+
 ### **2. Manifest & Asset Resolution**
 
 The plugin automatically detects your manifest file (`module.json` or `system.json`) in the project

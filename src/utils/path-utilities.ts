@@ -118,6 +118,16 @@ export function localToFoundryVTTUrl(p: string): string {
   return path.join(decodedBase, pathToTransform)
 }
 
+export function forcedEntryFileName(): string {
+  const manifest = context.manifest
+  const isUseEsModules = manifest?.esmodules.length === 1
+  return (isUseEsModules ? manifest?.esmodules[0] : manifest?.scripts?.[0]) ?? 'scripts/bundle.js'
+}
+
+export function forcedCssFileName(): string {
+  return context.manifest?.styles[0] ?? 'styles/bundle.css'
+}
+
 export function getLanguageSourcePath(p: string, lang: string): string {
   const directory = path.parse(p).dir
   const lastDirectoryName = path.basename(directory)

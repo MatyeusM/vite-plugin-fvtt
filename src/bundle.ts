@@ -1,11 +1,15 @@
+import fs from 'node:fs/promises'
 import path from 'node:path'
 
+import { type OutputAsset, type OutputBundle, type OutputChunk } from 'rolldown'
 import { glob } from 'tinyglobby'
 
-import { context } from '@/context'
+import { context, type OverwriteKind } from '@/context'
 import loadLanguage, { getLocalLanguageFiles } from '@/language/loader'
 import { transform } from '@/language/transformer'
 import * as FsUtilities from '@/utils/fs-utilities'
+import * as Logger from '@/utils/logger'
+import { forcedCssFileName, forcedEntryFileName } from '@/utils/path-utilities'
 import * as PathUtilities from '@/utils/path-utilities'
 
 export interface PluginContext {
@@ -13,7 +17,7 @@ export interface PluginContext {
   addWatchFile: (id: string) => void
 }
 
-async function emitManifestAssets(pluginContext: PluginContext) {
+async function emitManifestAssets(pluginContext: PluginContext, bundle: OutputBundle) {
   const manifestCandidates = ['system.json', 'module.json']
 
   await Promise.all(
@@ -22,7 +26,9 @@ async function emitManifestAssets(pluginContext: PluginContext) {
       const isPublic = await PathUtilities.getPublicDirectoryFile(file)
       if (!isPublic && (await FsUtilities.fileExists(source))) {
         pluginContext.addWatchFile(source)
-        const manifest = await FsUtilities.readJson(source)
+        const manifest = await FsUtilities.readJson<Record<string, unknown>>(source)
+        if (!manifest) return
+        if (context.overwrite?.size) rewriteManifestLists(bundle, manifest)
         pluginContext.emitFile({
           type: 'asset',
           fileName: file,
@@ -31,6 +37,54 @@ async function emitManifestAssets(pluginContext: PluginContext) {
       }
     }),
   )
+}
+
+/** Point the manifest at the final emissions; the lone-file renames land on disk in writeBundle. */
+function rewriteManifestLists(bundle: OutputBundle, manifest: Record<string, unknown>): void {
+  const overwrite = context.overwrite ?? new Set<OverwriteKind>()
+  if (overwrite.has('js')) {
+    const chunks = Object.values(bundle).filter(
+      (output): output is OutputChunk => output.type === 'chunk',
+    )
+    const jsKey =
+      Array.isArray(manifest.esmodules) && manifest.esmodules.length > 0 ? 'esmodules' : 'scripts'
+    manifest[jsKey] = chunks.length === 1 ? [forcedEntryFileName()] : entryFileNames(bundle)
+  }
+  if (overwrite.has('css')) {
+    const cssFiles = Object.values(bundle)
+      .filter((output): output is OutputAsset => output.type === 'asset')
+      .map(asset => asset.fileName)
+      .filter(file => file.endsWith('.css'))
+    if (cssFiles.length === 1) return
+    if (cssFiles.length > 1) {
+      const dynamicCss = collectImportedCss(bundle)
+      manifest.styles = cssFiles.filter(file => !dynamicCss.has(file)).toSorted()
+    }
+  }
+}
+
+/**
+ * Collapse lone Vite-named outputs back to their manifest names on disk; the manifest already
+ * lists those names. Multi-file outputs keep their Vite names and are listed as emitted.
+ */
+export async function collapseLoneOutputs(bundle: OutputBundle): Promise<void> {
+  const overwrite = context.overwrite ?? new Set<OverwriteKind>()
+  if (overwrite.size === 0) return
+  const chunks = Object.values(bundle).filter(
+    (output): output is OutputChunk => output.type === 'chunk',
+  )
+  const outDir = PathUtilities.getOutDirectory()
+  if (overwrite.has('js') && chunks.length === 1) {
+    const entry = chunks.find(chunk => chunk.isEntry && !chunk.isDynamicEntry)
+    if (entry) await renameDistFile(outDir, entry.fileName, forcedEntryFileName())
+  }
+  if (overwrite.has('css')) {
+    const cssFiles = Object.values(bundle)
+      .filter((output): output is OutputAsset => output.type === 'asset')
+      .map(asset => asset.fileName)
+      .filter(file => file.endsWith('.css'))
+    if (cssFiles.length === 1) await renameDistFile(outDir, cssFiles[0], forcedCssFileName())
+  }
 }
 
 async function emitLanguageAssets(pluginContext: PluginContext) {
@@ -60,12 +114,85 @@ async function emitLanguageAssets(pluginContext: PluginContext) {
   )
 }
 
-export async function generateBundle(pluginContext: PluginContext) {
+export async function generateBundle(pluginContext: PluginContext, bundle: OutputBundle) {
   await Promise.all([
-    emitManifestAssets(pluginContext),
+    emitManifestAssets(pluginContext, bundle),
     emitLanguageAssets(pluginContext),
     watchPublicTemplates(pluginContext),
   ])
+}
+
+/** The manifest lives in "public/" (copied verbatim) when overwrite needs the project root. */
+export async function assertOverwriteManifest(): Promise<void> {
+  if (!context.overwrite?.size) return
+  const name = context.manifest?.manifestType === 'module' ? 'module.json' : 'system.json'
+  const rootExists = await FsUtilities.fileExists(path.resolve(name))
+  const publicTwin = await PathUtilities.getPublicDirectoryFile(name)
+  if (!rootExists || publicTwin)
+    Logger.fail(
+      `The "overwrite" option requires ${name} in the project root, so the plugin can rewrite it; manifests in "public/" are copied verbatim and cannot be rewritten.`,
+    )
+}
+
+/**
+ * Only entry chunks are listed; dynamically imported children load themselves, as does their css.
+ * Reads viteMetadata, which Vite populates during generateBundle but strips afterwards.
+ */
+export function entryFileNames(bundle: OutputBundle): string[] {
+  const entries = Object.values(bundle)
+    .filter((output): output is OutputChunk => output.type === 'chunk')
+    .filter(chunk => chunk.isEntry && !chunk.isDynamicEntry)
+  if (entries.length === 0)
+    Logger.fail('The "overwrite" option found no entry chunk to list in the manifest.')
+  return entries.map(chunk => chunk.fileName)
+}
+
+/** CSS pulled in by dynamically imported chunks loads itself; it must not be listed. */
+function collectImportedCss(bundle: OutputBundle): Set<string> {
+  const css = new Set<string>()
+  const seen = new Set<string>()
+  const stack = Object.values(bundle)
+    .filter((output): output is OutputChunk => output.type === 'chunk')
+    .filter(chunk => chunk.isDynamicEntry)
+    .map(chunk => chunk.fileName)
+  while (stack.length > 0) {
+    const key = stack.pop() as string
+    if (seen.has(key)) continue
+    seen.add(key)
+    const output = bundle[key]
+    if (!output || output.type !== 'chunk') continue
+    for (const file of importedCssOf(output)) css.add(file)
+    stack.push(...output.imports)
+  }
+  return css
+}
+
+function importedCssOf(chunk: OutputChunk): Set<string> {
+  const metadata = chunk as { viteMetadata?: { importedCss?: Set<string> } }
+  return metadata.viteMetadata?.importedCss ?? new Set()
+}
+
+async function renameDistFile(outDir: string, from: string, to: string): Promise<void> {
+  if (from === to) return
+  const fromPath = path.join(outDir, from)
+  const toPath = path.join(outDir, to)
+  await fs.mkdir(path.dirname(toPath), { recursive: true })
+  await fs.rename(fromPath, toPath)
+  const text = await fs.readFile(toPath, 'utf8')
+  await fs.writeFile(
+    toPath,
+    text.replaceAll(
+      `sourceMappingURL=${path.basename(from)}.map`,
+      `sourceMappingURL=${path.basename(to)}.map`,
+    ),
+  )
+  const fromMap = `${fromPath}.map`
+  const toMap = `${toPath}.map`
+  if (!(await FsUtilities.fileExists(fromMap))) return
+  await fs.rename(fromMap, toMap)
+  const mapJson = JSON.parse(await fs.readFile(toMap, 'utf8')) as { file?: string }
+  mapJson.file = to
+  await fs.writeFile(toMap, JSON.stringify(mapJson))
 }
 
 /**

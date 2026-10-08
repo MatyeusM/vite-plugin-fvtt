@@ -10,7 +10,13 @@ export type FoundryVTTManifest = {
   packs: { path: string }[]
 }
 
+export type OverwriteKind = 'css' | 'js'
+
 export type ENVOptions = { foundryUrl: string; foundryPort: number }
 
-export const context: { env?: ENVOptions; manifest?: FoundryVTTManifest; config?: ResolvedConfig } =
-  {}
+export const context: {
+  env?: ENVOptions
+  manifest?: FoundryVTTManifest
+  config?: ResolvedConfig
+  overwrite?: Set<OverwriteKind>
+} = {}
