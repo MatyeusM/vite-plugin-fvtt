@@ -12,10 +12,6 @@ const colors: Record<LogLevel, string> = {
 }
 const reset = '\u{1B}[0m'
 
-export function initialize(namespace = 'vite-plugin-fvtt') {
-  config.loggerNamespace = namespace
-}
-
 function format(level: LogLevel, message: unknown): string {
   const color = colors[level] ?? ''
   return `${color}[${config.loggerNamespace}] [${level.toUpperCase()}]${reset} ${message}`
