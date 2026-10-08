@@ -166,7 +166,7 @@ my-module/
 
 ## 🛠️ Local Foundry Test Instances (maintainers)
 
-Gitignored `local/` holds version-specific Foundry installs with separate data dirs:
+`local/` (tracked by this repo) holds version-specific Foundry installs with separate data dirs:
 
 ```
 local/foundry-v12/ + local/data-v12/ (port 30012, node 20)
@@ -174,28 +174,37 @@ local/foundry-v13/ + local/data-v13/ (port 30013, node 22)
 local/foundry-v14/ + local/data-v14/ (port 30014, node 24)
 ```
 
-Start one via `mise run -C local start-v12|start-v13|start-v14`. The v13/v14 tasks boot their test
-world (`testv13` / `testv14`) directly.
+The v13/v14 data dirs symlink their system (`data-v*/Data/systems/shadowrun5e`) to the compiled
+output in `local/v13-system/dist` and `local/v14-system/dist`. Build the system before starting
+Foundry or running e2e tests, e.g. `npm run build` in `local/v13-system` (they are standalone npm
+projects). Without `dist`, the e2e precheck skips with `missing local/v13-system/dist`.
 
-Each data dir symlinks its system to the compiled output, so run `npm run build` in
-`local/v13-system` or `local/v14-system` once before starting Foundry.
+Start one manually via `mise run -C local start-v12|start-v13|start-v14`. The v13/v14 tasks boot
+their test world (`testv13` / `testv14`) directly.
 
 > ⚠️ Single Foundry license key: run only **one** instance at a time. Never run v12/v13/v14
 > concurrently.
 
 ### End-to-end tests
 
-`vitest run` includes an end-to-end suite that drives a real instance through the dev server. It
-skips itself unless a usable instance is already up, so the same command works locally and in CI:
+`pnpm run test` includes end-to-end suites (`tests/e2e/foundry-v13.test.ts`, `foundry-v14.test.ts`)
+that drive a real instance (booted with `--hotReload`) through the dev server: log in, render a
+sheet, assert hbs HMR, then overwrite one locale key with `hmr` and roll the file back. The same run
+then covers watch mode against the same instance: `vite build --watch` must keep `dist/` contents, a
+rebuilt language file must land in `dist/`, and a rebuilt template must reach the open sheet through
+Foundry's own hot reload. Each suite checks its preconditions first and skips naming what is
+missing, so the same command works locally and in CI:
 
-```sh
-mise run -C local start-v14   # or start-v13
-pnpm run test -- --run
-```
+- `local/foundry-v<n>`, `local/v<n>-system/dist`, `local/data-v<n>/Config/license.json`, and `mise`
+  must all be present.
+- When eligible, the suite starts its own instance (`mise run start-v<n>`) and stops it in teardown.
+  An already-running instance is borrowed instead, and then left running.
+- Force one version with `FVTT_E2E_VERSION=v13` (or `v14`); the other skips. Only one version runs
+  at a time (single license key).
 
-The suite targets whichever version is listening (only one instance may run at a time); force one
-with `FVTT_E2E_VERSION=v13`. Foundry rewrites world data on every boot, so restore the frozen
-fixtures afterwards with `mise run -C local reset-data`.
+The harness restores the frozen world seed before booting and after stopping its own instance, so no
+manual step is needed. `mise run -C local reset-data` (with Foundry stopped) remains the manual
+escape hatch covering every version.
 
 ## 📄 License
 

@@ -12,15 +12,15 @@
 
 [tasks.start-v12]
 description = "Start Foundry VTT v12 (build 343) with data-v12 on port 30012"
-run = 'mise x node@20 -- node "foundry-v12/resources/app/main.js" --dataPath="data-v12" --port=30012'
+run = 'mise x node@20 -- node "foundry-v12/resources/app/main.js" --dataPath="data-v12" --port=30012 --hotReload'
 
 [tasks.start-v13]
 description = "Start Foundry VTT v13 (build 351) with data-v13 on port 30013"
-run = 'mise x node@22 -- node "foundry-v13/main.js" --dataPath="data-v13" --port=30013 --world=testv13'
+run = 'mise x node@22 -- node "foundry-v13/main.js" --dataPath="data-v13" --port=30013 --world=testv13 --hotReload'
 
 [tasks.start-v14]
 description = "Start Foundry VTT v14 (build 368) with data-v14 on port 30014"
-run = 'mise x node@24 -- node "foundry-v14/main.js" --dataPath="data-v14" --port=30014 --world=testv14'
+run = 'mise x node@24 -- node "foundry-v14/main.js" --dataPath="data-v14" --port=30014 --world=testv14 --hotReload'
 
 [tasks.reset-data]
 description = "Restore the frozen test worlds to their committed baseline (stop Foundry first)"

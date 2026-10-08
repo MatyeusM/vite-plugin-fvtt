@@ -156,6 +156,12 @@
             "path": "locale/ko/config.json"
         }
     ],
+    "flags": {
+        "hotReload": {
+            "extensions": ["hbs", "json", "css"],
+            "paths": ["templates", "locale"]
+        }
+    },
     "packs": [
         {
             "name": "sr5e-matrix-actions",

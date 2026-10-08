@@ -8,7 +8,8 @@
  *
  * A single Foundry licence key means only one instance may run at a time, so `vitest.config.ts`
  * runs this directory with `fileParallelism: false`. Each suite starts its own instance through
- * `mise` and stops it again in teardown.
+ * `mise` (booted with `--hotReload`) and stops it again in teardown. The dev-server tests run
+ * first; the watch tests then reuse the same instance instead of rebooting Foundry.
  */
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -18,7 +19,7 @@ import { promisify } from 'node:util'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { FoundrySession } from './session'
-import type { VersionSpec } from './session'
+import type { VersionSpec } from './watch'
 
 const execFileAsync = promisify(execFile)
 
@@ -92,5 +93,23 @@ export async function foundrySuite(spec: VersionSpec): Promise<void> {
       expect(await session.title()).toBe('i18n-probe')
       expect(session.consoleErrors).toEqual([])
     }, 120_000)
+
+    it('keeps dist contents when rebuilding in watch mode', async () => {
+      await session.watch.start()
+      expect(await session.watch.sentinelExists()).toBe(true)
+    }, 180_000)
+
+    it('rebuilds language files into dist in watch mode', async () => {
+      await session.rebuildLanguageViaWatch()
+      expect(await session.watch.sentinelExists()).toBe(true)
+    }, 180_000)
+
+    it('hot-reloads rebuilt templates through Foundry hot reload', async () => {
+      const actorName = await session.openSheet(session.foundryUrl)
+      expect(await session.sheetTitle()).toContain(actorName)
+      await session.swapTemplate()
+      expect(await session.title()).toBe('hmr-probe')
+      expect(session.consoleErrors).toEqual([])
+    }, 180_000)
   })
 }

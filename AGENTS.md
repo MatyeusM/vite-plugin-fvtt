@@ -76,8 +76,8 @@
   runs it. The skip reason names the missing path.
 - A suite is eligible when `local/foundry-v<n>`, `local/v<n>-system/dist`,
   `local/data-v<n>/Config/license.json` and `mise` are all present. It then starts its own instance
-  (`mise run start-v<n>`) and stops it in teardown, so no manual step is needed. An instance that is
-  already running is borrowed instead, and then left running.
+  (`mise run start-v<n>`, booted with `--hotReload`) and stops it in teardown, so no manual step is
+  needed. An instance that is already running is borrowed instead, and then left running.
 - v13 and v14 never run at the same time: one licence key. `vitest.config.ts` gives the e2e project
   `fileParallelism: false`.
 - `FVTT_E2E_VERSION=v13`/`v14` forces one version; the other skips.
@@ -85,7 +85,13 @@
   i18n key. Everything shared lives in `support.ts` (precheck + suite), `session.ts` (the driver)
   and `proc.ts` (process/polling). Add new per-version differences to the version's own file.
 - Each suite drives real Foundry through the dev server: log in, render a sheet, assert hbs HMR,
-  then overwrite one locale key with `hmr`, assert the sheet shows it, and roll the file back.
+  then overwrite one locale key with `hmr`, assert the sheet shows it, and roll the file back. It
+  then reuses the same instance for watch mode: start `vite build --watch`, assert a sentinel file
+  in `dist/` survives the rebuilds, assert a rebuilt language file lands in `dist/`, and assert a
+  rebuilt template reaches the open sheet through Foundry's own hot reload.
+- Native language hot reload is not asserted on the sheet: Foundry's server prefixes the event path
+  with the package dir while the client compares it against the manifest path, so package language
+  events never match. Templates apply by content, so they prove the native round-trip.
 - Joining retries until it sticks: Foundry listens before its startup IP discovery settles, and a
   join in that window authenticates then dies in `getInvitationLinks`, so `game.ready` never flips.
 - The harness restores the world seed before boot and after teardown of its own instance, so no

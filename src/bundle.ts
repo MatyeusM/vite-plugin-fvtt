@@ -1,5 +1,7 @@
 import path from 'node:path'
 
+import { glob } from 'tinyglobby'
+
 import { context } from '@/context'
 import loadLanguage, { getLocalLanguageFiles } from '@/language/loader'
 import { transform } from '@/language/transformer'
@@ -37,7 +39,12 @@ async function emitLanguageAssets(pluginContext: PluginContext) {
 
   await Promise.all(
     languages.map(async language => {
-      if (await PathUtilities.getPublicDirectoryFile(language.path)) return
+      const publicFile = await PathUtilities.getPublicDirectoryFile(language.path)
+      if (publicFile) {
+        // Complete files are copied by Vite itself; watch them so `build --watch` rebuilds too.
+        pluginContext.addWatchFile(publicFile)
+        return
+      }
       const langFiles = await getLocalLanguageFiles(language.lang)
       for (const file of langFiles) {
         pluginContext.addWatchFile(file)
@@ -54,5 +61,21 @@ async function emitLanguageAssets(pluginContext: PluginContext) {
 }
 
 export async function generateBundle(pluginContext: PluginContext) {
-  await Promise.all([emitManifestAssets(pluginContext), emitLanguageAssets(pluginContext)])
+  await Promise.all([
+    emitManifestAssets(pluginContext),
+    emitLanguageAssets(pluginContext),
+    watchPublicTemplates(pluginContext),
+  ])
+}
+
+/**
+ * Templates are copied by Vite itself, so there is nothing to emit; watch them so
+ * `build --watch` re-copies them into `dist/`, where Foundry's own hot reload picks them up.
+ */
+async function watchPublicTemplates(pluginContext: PluginContext) {
+  const templates = await glob('**/*.hbs', {
+    cwd: PathUtilities.getPublicDirectory(),
+    absolute: true,
+  })
+  for (const file of templates) pluginContext.addWatchFile(file)
 }

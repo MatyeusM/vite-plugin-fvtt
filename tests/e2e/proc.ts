@@ -126,3 +126,21 @@ export function startDevServer(systemDir: string): Promise<ChildProcess> {
   })
   return ready.then(() => child)
 }
+
+/** `vite build --watch` rebuilds `dist/`, which Foundry (booted with --hotReload) picks up itself. */
+export function startWatch(systemDir: string): Promise<ChildProcess> {
+  const child = spawn('npx', ['vite', 'build', '--watch'], { cwd: systemDir, detached: true })
+  const ready = new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('watch build did not report ready')), 180_000)
+    const onData = (chunk: Buffer): void => {
+      const text = String(chunk)
+      process.stderr.write(text)
+      if (!/built in|error/iu.test(text)) return
+      clearTimeout(timer)
+      resolve()
+    }
+    child.stdout?.on('data', onData)
+    child.stderr?.on('data', onData)
+  })
+  return ready.then(() => child)
+}

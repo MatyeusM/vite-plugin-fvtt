@@ -1,17 +1,14 @@
 /**
- * Drives one Foundry version through the Vite dev server: boots the instance, starts the dev
- * server, logs in, opens a sheet, then mutates a template and a locale file to prove both arrive
- * over the socket without reloading the page.
- *
- * Every version-specific detail comes from `VersionSpec`; nothing here knows which Foundry version
- * it is driving. Anything that genuinely differs between versions belongs in that version's own
- * test file.
+ * Browser driver for one Foundry version: boots the instance (with `--hotReload`), starts the dev
+ * server, logs in, and opens sheets. File mutations go through `language.ts` and the watch build
+ * through `WatchPhase`; anything version-specific comes from `VersionSpec`.
  */
 import type { ChildProcess } from 'node:child_process'
 import fs from 'node:fs/promises'
 
 import { chromium, type Browser, type ConsoleMessage, type Page } from 'playwright'
 
+import { languageValue, languageWith } from './language'
 import {
   isUp,
   isWorldReady,
@@ -23,30 +20,17 @@ import {
   waitUntil,
 } from './proc'
 import { LANGUAGE_FILE, LOCAL_DIR } from './support'
+import { WatchPhase, type VersionSpec } from './watch'
 
 /** Foundry refuses to run below 1366x768. */
 const VIEWPORT = { width: 1600, height: 1000 }
-
-export interface VersionSpec {
-  id: 'v13' | 'v14'
-  /** Foundry install dir under local/. */
-  foundryDir: string
-  port: number
-  /** Sheet template mutated by the hbs HMR test; always rendered on sheet open. */
-  template: string
-  /** i18n key whose value the actor sheet renders, mutated by the i18n HMR test. */
-  languageKey: string
-  /** Scoped to the open actor sheet so tab labels elsewhere on the page cannot match. */
-  languageSelector: string
-  /** v13 offers a <select> of users, v14 an <input>. */
-  selectUser: (page: Page) => Promise<void>
-}
 
 export class FoundrySession {
   readonly devUrl: string
   readonly foundryUrl: string
   readonly systemDir: string
   readonly consoleErrors: string[] = []
+  readonly watch: WatchPhase
 
   readonly #templatePath: string
   readonly #languagePath: string
@@ -68,6 +52,7 @@ export class FoundrySession {
     this.devUrl = `http://localhost:${spec.port + 1}`
     this.#templatePath = `${systemDir}${spec.template}`
     this.#languagePath = `${systemDir}${LANGUAGE_FILE}`
+    this.watch = new WatchPhase(systemDir, spec.languageKey, LANGUAGE_FILE)
     this.systemDir = systemDir
   }
 
@@ -78,7 +63,7 @@ export class FoundrySession {
     ])
     this.#originalTemplate = template
     this.#originalLanguage = language
-    this.#originalLanguageValue = this.#languageWith()
+    this.#originalLanguageValue = languageValue(language, this.spec.languageKey)
 
     // Reuse a developer-started instance instead of fighting it for the port. Only restore the
     // seed for an instance this suite boots itself: touching a running one's files would corrupt it.
@@ -104,6 +89,7 @@ export class FoundrySession {
   }
 
   async stop(): Promise<void> {
+    await this.watch.stop()
     await Promise.all([
       fs.writeFile(this.#templatePath, this.#originalTemplate),
       fs.writeFile(this.#languagePath, this.#originalLanguage),
@@ -143,12 +129,12 @@ export class FoundrySession {
   }
 
   /**
-   * Reload the already-authenticated session through the dev server and open a sheet. Templates can
-   * only resolve if the dev server's socket proxy authenticated upstream and intercepted the
-   * `template` events with files from `public/templates`.
+   * Reload the already-authenticated session and open a sheet. Through the dev server (`base` =
+   * devUrl) templates resolve via the socket proxy; through Foundry itself (`base` = foundryUrl)
+   * the system is served from watch-built `dist/`, which requires Foundry's `--hotReload`.
    */
-  async openSheet(): Promise<string> {
-    await this.#page.goto(`${this.devUrl}/game`, { waitUntil: 'domcontentloaded' })
+  async openSheet(base: string = this.devUrl): Promise<string> {
+    await this.#page.goto(`${base}/game`, { waitUntil: 'domcontentloaded' })
     await this.#waitForGame()
 
     const actorName = await this.#page.evaluate(async () => {
@@ -236,6 +222,19 @@ export class FoundrySession {
   }
 
   /**
+   * Round-trip one i18n value through source -> watch rebuild -> `dist/`. No sheet assertion:
+   * Foundry applies native language events only when the event path equals the manifest path, but
+   * the server always prefixes the package dir, so package language events never match.
+   */
+  async rebuildLanguageViaWatch(): Promise<void> {
+    await this.#writeLanguage('hmr-watch')
+    await this.watch.waitForValue('hmr-watch')
+
+    await fs.writeFile(this.#languagePath, this.#originalLanguage)
+    await this.watch.waitForValue(this.#originalLanguageValue)
+  }
+
+  /**
    * Pull the entry graph and the locale through the dev server before the browser does, so Vite has
    * discovered and optimized the system's bare imports and the language file is registered with the
    * language tracker. Otherwise the first page load triggers a mid-test reload ("Outdated Optimize
@@ -266,23 +265,11 @@ export class FoundrySession {
       this.consoleErrors.push(message.text())
   }
 
-  /**
-   * Return the locale with `key` set to `value`, leaving every other translation untouched. The
-   * committed file is the source, so repeated calls never compound each other's edits.
-   */
-  #languageWith(value?: string): string {
-    const json = JSON.parse(this.#originalLanguage) as Record<string, unknown>
-    const parts = this.spec.languageKey.split('.')
-    const last = parts.pop() as string
-    let node = json
-    for (const part of parts) node = (node[part] ?? {}) as Record<string, unknown>
-    if (value === undefined) return String(node[last] ?? '')
-    node[last] = value
-    return JSON.stringify(json, undefined, 4)
-  }
-
   async #writeLanguage(value: string): Promise<void> {
-    await fs.writeFile(this.#languagePath, this.#languageWith(value))
+    await fs.writeFile(
+      this.#languagePath,
+      languageWith(this.#originalLanguage, this.spec.languageKey, value),
+    )
   }
 
   async #waitForLanguage(value: string): Promise<void> {

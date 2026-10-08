@@ -4,6 +4,9 @@
 
 ### Fixed
 
+- Watch mode (`vite build --watch`) now rebuilds when language files or templates change. Complete
+  language files in `public/` and public templates were copied on the initial build but never
+  watched, so editing them left a stale `dist/` behind; both are now registered with the watcher.
 - The socket proxy no longer appends an acknowledgement callback when forwarding events that had
   none. Unacked broadcast events previously piled callbacks up on the sender for the whole dev
   session, and handed handlers an argument they never sent.
