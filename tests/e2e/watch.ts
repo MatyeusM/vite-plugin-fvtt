@@ -5,8 +5,13 @@
  */
 import type { ChildProcess } from 'node:child_process'
 import fs from 'node:fs/promises'
+import path from 'node:path'
 
 import type { Page } from 'playwright'
+import { glob } from 'tinyglobby'
+
+import { minimalRoots, syncHotReloadFlags } from '@/bundle'
+import { fileExists } from '@/utils/fs-utilities'
 
 import { languageValue } from './language'
 import { kill, startWatch, waitUntil } from './proc'
@@ -80,4 +85,29 @@ export class WatchPhase {
       return ''
     }
   }
+
+  /**
+   * Foundry only starts watching when the world launches, so seed the dist manifest flags
+   * beforehand (production builds strip them): the same computation watch builds apply, without
+   * running a build that would contend with the dev-server tests.
+   */
+  async seedDistFlags(): Promise<void> {
+    const manifestPath = (await fileExists(`${this.systemDir}dist/system.json`))
+      ? `${this.systemDir}dist/system.json`
+      : `${this.systemDir}dist/module.json`
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8')) as Record<string, unknown>
+    const languages = (manifest.languages ?? []) as Array<{ path?: unknown }>
+    const templates = await glob('**/*.hbs', { cwd: `${this.systemDir}public` })
+    const dirs = [
+      ...templates.map(file => dirOf(file)),
+      ...languages.map(lang => (typeof lang.path === 'string' ? dirOf(lang.path) : '')),
+    ]
+    syncHotReloadFlags(manifest, true, minimalRoots(dirs))
+    await fs.writeFile(manifestPath, JSON.stringify(manifest, undefined, 2))
+  }
+}
+
+function dirOf(file: string): string {
+  const dir = path.dirname(file)
+  return dir === '.' ? '' : dir
 }

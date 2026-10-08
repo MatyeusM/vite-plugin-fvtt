@@ -128,6 +128,10 @@ export function forcedCssFileName(): string {
   return context.manifest?.styles[0] ?? 'styles/bundle.css'
 }
 
+export function isWatchBuild(): boolean {
+  return process.argv.includes('--watch') || Boolean(context.config?.build?.watch)
+}
+
 export function getLanguageSourcePath(p: string, lang: string): string {
   const directory = path.parse(p).dir
   const lastDirectoryName = path.basename(directory)

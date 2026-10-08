@@ -97,7 +97,10 @@ foundryVTT({ overwrite: ['css', 'js'] }) // or a single 'css' | 'js'
 ### **2. Manifest & Asset Resolution**
 
 The plugin automatically detects your manifest file (`module.json` or `system.json`) in the project
-**root** or `public/` folder.
+**root** or `public/` folder. A root manifest is emitted into the build with dev-only adjustments: a
+plain `vite build` removes `flags.hotReload` when present, while `vite build --watch` adds it when
+the author set none — watching the detected template and language directories, so a `--hotReload`
+Foundry follows the rebuilt files. A `public/` manifest is copied verbatim and never adjusted.
 
 This plugin shapes the output depending on your manifest; it tries to automatically discover the
 relevant files in the `root`, `source`, and `public` folders to build the output files. The `public`

@@ -67,6 +67,9 @@ export class FoundrySession {
 
     // Reuse a developer-started instance instead of fighting it for the port. Only restore the
     // seed for an instance this suite boots itself: touching a running one's files would corrupt it.
+    // Foundry only starts watching when the world launches, so seed the dist manifest flags
+    // beforehand (production builds strip them).
+    await this.watch.seedDistFlags()
     this.#borrowed = await isWorldReady(this.foundryUrl)
     if (!this.#borrowed) {
       await restoreWorldData(this.spec.id)

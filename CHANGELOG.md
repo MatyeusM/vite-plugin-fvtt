@@ -10,6 +10,12 @@
   are listed; dynamically imported children (and their css) load themselves and are emitted but not
   listed. Requires the manifest in the project root.
 
+### Changed
+
+- A plain `vite build` now removes `flags.hotReload` from the emitted manifest; `vite build --watch`
+  adds flags watching the detected template and language directories when the manifest has none, so
+  dev-only watching never ships.
+
 ### Fixed
 
 - `FOUNDRY_URL` with a port (e.g. `https://host:30000`) now fails fast and points at `FOUNDRY_PORT`,

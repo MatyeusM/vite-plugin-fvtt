@@ -280,8 +280,7 @@
     },
     "flags": {
         "hotReload": {
-            "extensions": ["css", "hbs", "html", "json"],
-            "paths": ["templates", "locale"]
+            "extensions": ["css", "hbs", "html", "json"]
         }
     },
     "socket": true,

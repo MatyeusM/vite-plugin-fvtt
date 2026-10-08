@@ -86,9 +86,13 @@
   and `proc.ts` (process/polling). Add new per-version differences to the version's own file.
 - Each suite drives real Foundry through the dev server: log in, render a sheet, assert hbs HMR,
   then overwrite one locale key with `hmr`, assert the sheet shows it, and roll the file back. It
-  then reuses the same instance for watch mode: start `vite build --watch`, assert a sentinel file
-  in `dist/` survives the rebuilds, assert a rebuilt language file lands in `dist/`, and assert a
-  rebuilt template reaches the open sheet through Foundry's own hot reload.
+  then starts `vite build --watch`, asserting a sentinel file in `dist/` survives the rebuilds, a
+  rebuilt language file lands in `dist/`, and a rebuilt template reaches the open sheet through
+  Foundry's own hot reload. Foundry only starts watching when the world launches, so the session
+  seeds the dist manifest flags beforehand (same computation watch builds apply — a running watch
+  build alongside the dev tests starves their assertions). The v13 fixture carries no flags at all
+  (auto-add); v14 carries upstream flags in source, stripped by provisioning builds and re-seeded
+  (preservation itself is unit-covered).
 - Native language hot reload is not asserted on the sheet: Foundry's server prefixes the event path
   with the package dir while the client compares it against the manifest path, so package language
   events never match. Templates apply by content, so they prove the native round-trip.

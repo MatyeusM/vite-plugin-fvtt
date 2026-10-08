@@ -28,6 +28,12 @@ async function emitManifestAssets(pluginContext: PluginContext, bundle: OutputBu
         pluginContext.addWatchFile(source)
         const manifest = await FsUtilities.readJson<Record<string, unknown>>(source)
         if (!manifest) return
+        const watch = PathUtilities.isWatchBuild()
+        syncHotReloadFlags(
+          manifest,
+          watch,
+          watch ? [...(await listPublicTemplateDirs()), ...localeDirs()] : [],
+        )
         if (context.overwrite?.size) rewriteManifestLists(bundle, manifest)
         pluginContext.emitFile({
           type: 'asset',
@@ -120,6 +126,54 @@ export async function generateBundle(pluginContext: PluginContext, bundle: Outpu
     emitLanguageAssets(pluginContext),
     watchPublicTemplates(pluginContext),
   ])
+}
+
+/** Build output ships without dev flags; watch builds gain them when the author set none. */
+export function syncHotReloadFlags(
+  manifest: Record<string, unknown>,
+  watch: boolean,
+  contentDirs: string[] = [],
+): void {
+  const rawFlags = manifest.flags
+  const flags =
+    typeof rawFlags === 'object' && rawFlags !== null ? (rawFlags as Record<string, unknown>) : {}
+  if (watch) {
+    if (flags.hotReload) return
+    manifest.flags = {
+      ...flags,
+      hotReload: { extensions: ['css', 'hbs', 'html', 'json'], paths: minimalRoots(contentDirs) },
+    }
+  } else if (flags.hotReload) {
+    delete flags.hotReload
+    manifest.flags = flags
+  }
+}
+
+/** Language directories come straight from the manifest. */
+function localeDirs(): string[] {
+  return (context.manifest?.languages ?? []).map(language =>
+    normalizeDir(path.dirname(language.path)),
+  )
+}
+
+/** Template directories come from the public files that land in dist unchanged. */
+async function listPublicTemplateDirs(): Promise<string[]> {
+  const publicDir = PathUtilities.getPublicDirectory()
+  const templates = await glob('**/*.hbs', { cwd: publicDir })
+  return templates.map(file => normalizeDir(path.dirname(file)))
+}
+
+function normalizeDir(dir: string): string {
+  return dir === '.' ? '' : dir
+}
+
+/** Drop directories already covered by another; chokidar watches recursively. */
+export function minimalRoots(dirs: string[]): string[] {
+  const unique = [...new Set(dirs)]
+  if (unique.includes('')) return ['']
+  return unique
+    .filter(dir => !unique.some(other => other !== dir && dir.startsWith(`${other}/`)))
+    .toSorted()
 }
 
 /** The manifest lives in "public/" (copied verbatim) when overwrite needs the project root. */
