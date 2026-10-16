@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-fvtt",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "A Vite plugin for module and system development for Foundry VTT",
   "keywords": [
     "foundryvtt",
@@ -39,7 +39,7 @@
     "postinstall": "simple-git-hooks"
   },
   "dependencies": {
-    "@foundryvtt/foundryvtt-cli": "^3.0.4",
+    "@foundryvtt/foundryvtt-cli": "^3.0.5",
     "socket.io": "^4.8.4",
     "socket.io-client": "^4.8.4",
     "tinyglobby": "^0.2.17"

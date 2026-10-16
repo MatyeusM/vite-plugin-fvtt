@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@foundryvtt/foundryvtt-cli':
-        specifier: ^3.0.4
+        specifier: ^3.0.5
         version: 3.0.5
       socket.io:
         specifier: ^4.8.4
