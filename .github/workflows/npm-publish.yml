@@ -32,6 +32,25 @@ jobs:
       - name: Build package
         run: pnpm run build
 
+      # Fail before publishing an immutable npm version when the changelog lacks a release section.
+      - name: Generate release notes
+        run: |
+          body="$(awk '
+            /^## \[/ {
+              if (tolower($2) == "[unreleased]") next
+              if (found) exit
+              found = 1
+              next
+            }
+            found && NF { started = 1 }
+            started { print }
+          ' CHANGELOG.md)"
+          if [ -z "$body" ]; then
+            echo "release-notes: no ## [x.y.z] section in CHANGELOG.md" >&2
+            exit 1
+          fi
+          printf '%s\n' "$body" > release-notes.md
+
       # npm runs a published package's install hooks in the *consumer's* project, and it reads them
       # from the registry metadata rather than the tarball's manifest. So package.json must stay
       # reduced for the whole publish, not just while the tarball is built - hence the explicit
@@ -55,5 +74,4 @@ jobs:
           name: Release ${{ github.ref_name }}
           files: |
             ./vite-plugin-fvtt*.tgz
-          body: |
-            Please refer to **[CHANGELOG.md](https://github.com/MatyeusM/vite-plugin-fvtt/blob/${{ github.ref_name }}/CHANGELOG.md)** for full details.
+          body_path: release-notes.md
