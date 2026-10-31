@@ -10,6 +10,7 @@
     "moduleResolution": "bundler",
     "strict": true,
     "declaration": true,
+    "isolatedDeclarations": true,
     "sourceMap": true,
     "noImplicitOverride": true,
     "noUnusedLocals": true,

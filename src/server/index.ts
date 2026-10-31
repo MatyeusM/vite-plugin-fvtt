@@ -11,7 +11,7 @@ import socketProxy from './socket-proxy'
 import { handlebarsTracker } from './trackers/handlebars-tracker'
 import { languageTracker } from './trackers/language-tracker'
 
-export default function setupDevelopmentServer(server: ViteDevServer) {
+export default function setupDevelopmentServer(server: ViteDevServer): void {
   // initialize the tracking of templates && language files
   handlebarsTracker.initialize(server)
   languageTracker.initialize(server)

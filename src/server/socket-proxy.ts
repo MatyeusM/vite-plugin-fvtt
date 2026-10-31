@@ -54,7 +54,7 @@ async function tryServeLocalTemplate(
   }
 }
 
-export default function socketProxy(server: ViteDevServer) {
+export default function socketProxy(server: ViteDevServer): void {
   const environment = context.env as ENVOptions
   const ioProxy = new SocketServer(server.httpServer as HttpServer, { path: '/socket.io' })
 

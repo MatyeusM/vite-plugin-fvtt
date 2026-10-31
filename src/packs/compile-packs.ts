@@ -7,7 +7,7 @@ import { context } from '@/context'
 import * as Logger from '@/utils/logger'
 import * as PathUtils from '@/utils/path-utilities'
 
-export async function compileManifestPacks() {
+export async function compileManifestPacks(): Promise<void> {
   if (!context.manifest?.packs) return
 
   await Promise.all(

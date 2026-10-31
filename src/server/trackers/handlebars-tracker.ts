@@ -16,4 +16,4 @@ export class HandlebarsTracker extends AbstractFileTracker<string> {
   }
 }
 
-export const handlebarsTracker = new HandlebarsTracker()
+export const handlebarsTracker: HandlebarsTracker = new HandlebarsTracker()

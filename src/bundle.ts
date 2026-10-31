@@ -120,7 +120,10 @@ async function emitLanguageAssets(pluginContext: PluginContext) {
   )
 }
 
-export async function generateBundle(pluginContext: PluginContext, bundle: OutputBundle) {
+export async function generateBundle(
+  pluginContext: PluginContext,
+  bundle: OutputBundle,
+): Promise<void> {
   await Promise.all([
     emitManifestAssets(pluginContext, bundle),
     emitLanguageAssets(pluginContext),

@@ -15,4 +15,4 @@ export class LanguageTracker extends AbstractFileTracker<string> {
   }
 }
 
-export const languageTracker = new LanguageTracker()
+export const languageTracker: LanguageTracker = new LanguageTracker()

@@ -40,7 +40,7 @@ function handleLanguageRequest(lang: string, response: ClosableResponse) {
     })
 }
 
-export default function httpMiddlewareHook(server: ViteDevServer) {
+export default function httpMiddlewareHook(server: ViteDevServer): void {
   server.middlewares.use((request, response, next) => {
     const requestUrl = request.url ?? ''
     if (!PathUtils.isFoundryVTTUrl(requestUrl)) {

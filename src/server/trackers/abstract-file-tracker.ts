@@ -23,7 +23,7 @@ export abstract class AbstractFileTracker<T> {
 
   protected abstract getEventData(filePath: string, value: T): object
 
-  initialize(server: ViteDevServer) {
+  initialize(server: ViteDevServer): void {
     if (this.initialized) return
     this.initialized = true
     this.watcher = server.watcher
@@ -43,7 +43,7 @@ export abstract class AbstractFileTracker<T> {
     })
   }
 
-  addFile(value: T, filePath: string) {
+  addFile(value: T, filePath: string): void {
     const absPath = path.resolve(filePath)
     if (!this.tracked.has(absPath)) {
       this.tracked.set(absPath, value)
