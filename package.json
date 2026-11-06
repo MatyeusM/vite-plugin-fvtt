@@ -46,15 +46,15 @@
   },
   "devDependencies": {
     "lint-staged": "^17.6.0",
-    "oxfmt": "^0.75.0",
-    "oxlint": "^1.90.0",
+    "oxfmt": "^0.76.0",
+    "oxlint": "^1.91.0",
     "playwright": "^1.64.1",
-    "rolldown": "^1.2.15",
+    "rolldown": "^1.2.16",
     "simple-git-hooks": "^2.14.0",
-    "tsdown": "^0.23.2",
+    "tsdown": "^0.23.4",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "peerDependencies": {
     "vite": "^7.0.0 || ^8.0.0"
